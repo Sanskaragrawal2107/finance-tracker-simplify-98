@@ -62,39 +62,39 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
+      <PopoverContent className="w-full p-0" sideOffset={4}>
+        <Command className="w-full">
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`} 
             value={searchQuery}
             onValueChange={setSearchQuery}
+            className="h-9"
           />
-          {filteredOptions.length === 0 ? (
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-          ) : (
-            <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredOptions.map((option) => (
-                <CommandItem
-                  key={option}
-                  value={option}
-                  onSelect={() => {
-                    onValueChange(option);
-                    setOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          )}
+          <CommandEmpty className="py-3 text-center text-sm">
+            {emptyMessage}
+          </CommandEmpty>
+          <CommandGroup className="max-h-60 overflow-y-auto">
+            {filteredOptions.map((option) => (
+              <CommandItem
+                key={option}
+                value={option}
+                onSelect={() => {
+                  onValueChange(option);
+                  setOpen(false);
+                  setSearchQuery('');
+                }}
+                className="cursor-pointer"
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    value === option ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {option}
+              </CommandItem>
+            ))}
+          </CommandGroup>
         </Command>
       </PopoverContent>
     </Popover>
