@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { Expense, ExpenseCategory } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CONTRACTORS, EXPENSE_CATEGORIES, SUPERVISORS } from '@/lib/constants';
+import SearchableDropdown from './SearchableDropdown';
 
 const formSchema = z.object({
   date: z.date({
@@ -68,12 +69,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-interface ExpenseFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (expense: Partial<Expense>) => void;
-}
 
 interface ExpenseItem {
   id: string;
@@ -388,43 +383,23 @@ Return ONLY the category name, with no additional text or explanation.
                         {...field} 
                       />
                     ) : form.watch("recipientType") === "contractor" ? (
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <SearchableDropdown
+                        options={recipientOptions}
                         value={field.value}
-                        defaultValue=""
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select contractor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-popover" searchable>
-                          {CONTRACTORS.map((contractor) => (
-                            <SelectItem key={contractor} value={contractor}>
-                              {contractor}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChange={field.onChange}
+                        placeholder="Select contractor"
+                        emptyMessage="No contractors found"
+                        className="w-full"
+                      />
                     ) : form.watch("recipientType") === "supervisor" ? (
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <SearchableDropdown
+                        options={recipientOptions}
                         value={field.value}
-                        defaultValue=""
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select supervisor" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent className="bg-popover" searchable>
-                          {SUPERVISORS.map((supervisor) => (
-                            <SelectItem key={supervisor} value={supervisor}>
-                              {supervisor}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onValueChange={field.onChange}
+                        placeholder="Select supervisor"
+                        emptyMessage="No supervisors found"
+                        className="w-full"
+                      />
                     ) : (
                       <Input 
                         placeholder="First select a recipient type" 
@@ -478,7 +453,7 @@ Return ONLY the category name, with no additional text or explanation.
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="bg-popover" searchable>
+                    <SelectContent>
                       {EXPENSE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
