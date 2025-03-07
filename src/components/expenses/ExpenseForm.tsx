@@ -77,6 +77,8 @@ interface ExpenseFormProps {
 
 interface ExpenseItem extends FormValues {
   id: string;
+  recipientType: string;
+  recipientName: string;
 }
 
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -198,8 +200,11 @@ Return ONLY the category name, with no additional text or explanation.
     const newExpense: ExpenseItem = {
       ...values,
       id: Date.now().toString(),
+      recipientType: values.recipientType,
+      recipientName: values.recipientName
     };
     
+    console.log("Adding expense to list:", newExpense);
     setExpenses([...expenses, newExpense]);
     form.reset({
       date: new Date(),
@@ -219,6 +224,7 @@ Return ONLY the category name, with no additional text or explanation.
   };
 
   const submitAllExpenses = () => {
+    console.log("Submitting all expenses:", expenses);
     expenses.forEach(expense => {
       const newExpense: Partial<Expense> = {
         date: expense.date,
@@ -226,7 +232,7 @@ Return ONLY the category name, with no additional text or explanation.
         category: expense.category as unknown as ExpenseCategory,
         amount: expense.amount,
         status: "pending" as any,
-        createdBy: "Current User",
+        createdBy: `${expense.recipientType}: ${expense.recipientName}`,
         createdAt: new Date(),
       };
       
@@ -249,7 +255,7 @@ Return ONLY the category name, with no additional text or explanation.
       category: values.category as unknown as ExpenseCategory,
       amount: values.amount,
       status: "pending" as any,
-      createdBy: "Current User",
+      createdBy: `${values.recipientType}: ${values.recipientName}`,
       createdAt: new Date(),
     };
 
@@ -385,7 +391,7 @@ Return ONLY the category name, with no additional text or explanation.
                             <SelectValue placeholder="Select contractor" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-popover">
+                        <SelectContent className="bg-popover" searchable>
                           {CONTRACTORS.map((contractor) => (
                             <SelectItem key={contractor} value={contractor}>
                               {contractor}
@@ -404,7 +410,7 @@ Return ONLY the category name, with no additional text or explanation.
                             <SelectValue placeholder="Select supervisor" />
                           </SelectTrigger>
                         </FormControl>
-                        <SelectContent className="bg-popover">
+                        <SelectContent className="bg-popover" searchable>
                           {SUPERVISORS.map((supervisor) => (
                             <SelectItem key={supervisor} value={supervisor}>
                               {supervisor}
@@ -465,7 +471,7 @@ Return ONLY the category name, with no additional text or explanation.
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="bg-popover">
+                    <SelectContent className="bg-popover" searchable>
                       {EXPENSE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
@@ -527,7 +533,7 @@ Return ONLY the category name, with no additional text or explanation.
                   {expenses.map((expense) => (
                     <tr key={expense.id} className="border-t">
                       <td className="p-2">{format(expense.date, 'MMM dd')}</td>
-                      <td className="p-2">{expense.recipientName}</td>
+                      <td className="p-2">{expense.recipientType}: {expense.recipientName}</td>
                       <td className="p-2">{expense.purpose}</td>
                       <td className="p-2 text-right">₹{expense.amount}</td>
                       <td className="p-2 text-center">
