@@ -11,7 +11,7 @@ import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useToast } from '@/hooks/use-toast';
 
 // Mock data for demonstration
-const invoices: Invoice[] = [
+const initialInvoices: Invoice[] = [
   {
     id: '1',
     date: new Date('2023-07-05'),
@@ -122,6 +122,7 @@ const Invoices: React.FC = () => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const { toast } = useToast();
 
   const filteredInvoices = invoices.filter(invoice => 
@@ -131,11 +132,19 @@ const Invoices: React.FC = () => {
   );
 
   const handleCreateInvoice = (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    // In a real app, this would make an API call to create the invoice
+    const newInvoice: Invoice = {
+      ...invoice,
+      id: (invoices.length + 1).toString(),
+      createdAt: new Date(),
+    };
+    
+    setInvoices([newInvoice, ...invoices]);
+    
     toast({
       title: "Invoice Created",
       description: `Invoice for ${invoice.partyName} has been created successfully.`,
     });
+    
     setIsCreateDialogOpen(false);
   };
 

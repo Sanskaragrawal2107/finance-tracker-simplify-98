@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { PaymentStatus, Invoice } from '@/lib/types';
-import { Calendar as CalendarIcon, Upload, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Upload, Loader2, Camera } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -227,8 +227,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(date) => date && setDate(date)}
+                onSelect={(newDate) => newDate && setDate(newDate)}
                 initialFocus
+                className={cn("p-3 pointer-events-auto")}
               />
             </PopoverContent>
           </Popover>
@@ -421,13 +422,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               type="file"
               id="bill"
               className="hidden"
-              accept=".pdf,.jpg,.jpeg,.png"
+              accept=".pdf,.jpg,.jpeg,.png,image/*"
               onChange={handleFileChange}
+              capture="environment"
             />
             <label htmlFor="bill" className="cursor-pointer flex flex-col items-center">
-              <Upload className="h-6 w-6 text-muted-foreground mb-2" />
-              <span className="text-sm text-muted-foreground">
-                {billFile ? billFile.name : "Click to upload bill (PDF, JPG, PNG)"}
+              <div className="flex gap-2">
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                <Camera className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <span className="text-sm text-muted-foreground mt-2">
+                {billFile ? billFile.name : "Click to upload or take a photo"}
               </span>
             </label>
           </div>
