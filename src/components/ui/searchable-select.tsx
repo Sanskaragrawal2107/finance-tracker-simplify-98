@@ -18,19 +18,21 @@ const SearchableSelectContent = React.forwardRef<
   
   // Filter viewport children based on search query
   const filteredChildren = React.Children.map(children, child => {
+    // Check if child is a valid React element
     if (!React.isValidElement(child)) return child;
     
     if (child.type === SelectPrimitive.Viewport) {
+      // Clone viewport element with filtered children
       return React.cloneElement(
-        child as React.ReactElement<React.PropsWithChildren<any>>, 
+        child,
         child.props, 
         React.Children.map(child.props.children, (viewportChild) => {
           if (!React.isValidElement(viewportChild)) return viewportChild;
           
           if (searchQuery && viewportChild.props) {
             let childText = '';
-            if (!viewportChild.props) return null;
             
+            // Extract text content from various child structures
             const childrenProp = viewportChild.props.children;
             
             if (typeof childrenProp === 'string') {
@@ -83,49 +85,9 @@ const SearchableSelectContent = React.forwardRef<
           />
         </div>
         
-        <SelectPrimitive.Viewport
-          className={cn(
-            "p-1",
-            position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
-          )}
-        >
-          {React.Children.map(children, child => {
-            if (!React.isValidElement(child) || child.type !== SelectPrimitive.Viewport) {
-              return null;
-            }
-            
-            return React.Children.map(child.props.children, (item) => {
-              if (!React.isValidElement(item)) return null;
-              
-              // Check if the item is a SelectItem and its child text includes the search query
-              let itemText = '';
-              
-              if (item.props) {
-                const itemContent = item.props.children;
-                
-                if (typeof itemContent === 'string') {
-                  itemText = itemContent;
-                } else if (itemContent && 
-                          typeof itemContent === 'object' && 
-                          itemContent !== null &&
-                          'props' in itemContent && 
-                          typeof itemContent.props === 'object' &&
-                          itemContent.props !== null &&
-                          'children' in itemContent.props) {
-                  const nestedChildren = itemContent.props.children;
-                  itemText = typeof nestedChildren === 'string' ? nestedChildren : '';
-                }
-              }
-                   
-              if (searchQuery && itemText && !itemText.toLowerCase().includes(searchQuery.toLowerCase())) {
-                return null;
-              }
-              
-              return item;
-            });
-          })}
-        </SelectPrimitive.Viewport>
+        {React.Children.map(filteredChildren, child => {
+          return child;
+        })}
         
         <SelectPrimitive.ScrollDownButton className="flex cursor-default items-center justify-center py-1">
           <ChevronDown className="h-4 w-4" />
