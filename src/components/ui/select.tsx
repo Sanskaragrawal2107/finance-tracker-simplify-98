@@ -77,7 +77,7 @@ const SelectContent = React.forwardRef<
 >(({ className, children, position = "popper", searchable = false, ...props }, ref) => {
   const [searchQuery, setSearchQuery] = React.useState("");
   
-  // Clone and filter children
+  // Type check and filter children
   const filteredChildren = React.Children.map(children, child => {
     if (!React.isValidElement(child)) return child;
     
@@ -144,7 +144,7 @@ const SelectContent = React.forwardRef<
               const itemText = typeof itemContent === 'string' 
                 ? itemContent 
                 : (itemContent && typeof itemContent === 'object' && 'props' in itemContent)
-                  ? String(itemContent.props.children)
+                  ? String(itemContent.props?.children || '')
                   : '';
                   
               if (searchQuery && !itemText.toLowerCase().includes(searchQuery.toLowerCase())) {

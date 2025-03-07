@@ -75,10 +75,14 @@ interface ExpenseFormProps {
   onSubmit: (expense: Partial<Expense>) => void;
 }
 
-interface ExpenseItem extends FormValues {
+interface ExpenseItem {
   id: string;
-  recipientType: string;
+  date: Date;
+  recipientType: "contractor" | "worker" | "supervisor";
   recipientName: string;
+  purpose: string;
+  category: string;
+  amount: number;
 }
 
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -198,10 +202,13 @@ Return ONLY the category name, with no additional text or explanation.
 
   const addExpenseToList = (values: FormValues) => {
     const newExpense: ExpenseItem = {
-      ...values,
       id: Date.now().toString(),
+      date: values.date,
       recipientType: values.recipientType,
-      recipientName: values.recipientName
+      recipientName: values.recipientName,
+      purpose: values.purpose,
+      category: values.category,
+      amount: values.amount,
     };
     
     console.log("Adding expense to list:", newExpense);
