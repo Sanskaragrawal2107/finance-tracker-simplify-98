@@ -12,13 +12,14 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+
 type InvoiceFormProps = {
   onSubmit: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
   initialData?: Partial<Invoice>;
 };
 
-// Mock data - would come from API in real application
 const gstRates = [5, 12, 18, 28];
+
 const InvoiceForm: React.FC<InvoiceFormProps> = ({
   onSubmit,
   initialData
@@ -31,22 +32,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
 
-  // For new material input
   const [materialInput, setMaterialInput] = useState<string>('');
   const [quantityInput, setQuantityInput] = useState<number>(0);
   const [rateInput, setRateInput] = useState<number>(0);
   const [gstPercentageInput, setGstPercentageInput] = useState<number>(18);
 
-  // Material items list
   const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
-
-  // Grand totals
   const [grandGrossAmount, setGrandGrossAmount] = useState<number>(0);
   const [grandNetAmount, setGrandNetAmount] = useState<number>(0);
   const [billFile, setBillFile] = useState<File | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(initialData?.paymentStatus || PaymentStatus.PENDING);
 
-  // Bank details
   const [accountNumber, setAccountNumber] = useState<string>(initialData?.bankDetails?.accountNumber || '');
   const [bankName, setBankName] = useState<string>(initialData?.bankDetails?.bankName || '');
   const [ifscCode, setIfscCode] = useState<string>(initialData?.bankDetails?.ifscCode || '');
@@ -55,10 +51,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [ifscValidationMessage, setIfscValidationMessage] = useState<string>('');
   const [isFetchingBankDetails, setIsFetchingBankDetails] = useState<boolean>(false);
 
-  // Add approver type selection
   const [approverType, setApproverType] = useState<"ho" | "supervisor">("ho");
 
-  // Fix party name when entered
   const handlePartyNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!partyNameFixed) {
       setPartyName(e.target.value);
@@ -70,7 +64,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }
   };
 
-  // Calculate total amounts whenever material items change
   useEffect(() => {
     let totalGross = 0;
     let totalNet = 0;
@@ -85,13 +78,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setGrandGrossAmount(totalGross);
     setGrandNetAmount(totalNet);
 
-    // Auto-select HO for amounts greater than 5000
     if (totalNet > 5000) {
       setApproverType("ho");
     }
   }, [materialItems]);
 
-  // Add new material item
   const addMaterialItem = () => {
     if (!materialInput.trim()) {
       toast({
@@ -128,68 +119,54 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     };
     setMaterialItems([...materialItems, newItem]);
 
-    // Reset input fields
     setMaterialInput('');
     setQuantityInput(0);
     setRateInput(0);
   };
 
-  // Remove material item
   const removeMaterialItem = (index: number) => {
     const updatedItems = [...materialItems];
     updatedItems.splice(index, 1);
     setMaterialItems(updatedItems);
   };
 
-  // Handle account number input
   const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    const value = e.target.value.replace(/\D/g, '');
     if (value.length <= 16) {
       setAccountNumber(value);
     }
   };
 
-  // Validate IFSC code
   const validateIfsc = (code: string) => {
-    // Basic IFSC validation: must be 11 characters
     if (code.length !== 11) {
       return false;
     }
-
-    // Check if 5th digit is '0'
     return code[4] === '0';
   };
 
-  // Handle IFSC code change
   const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.toUpperCase();
     setIfscCode(value);
 
-    // Clear validation message when user is typing
     if (value.length < 11) {
       setIfscValidationMessage('');
     }
   };
 
-  // Handle IFSC code validation and bank details fetching
   const handleIfscBlur = async () => {
-    // If IFSC is not 11 characters yet, don't validate
     if (ifscCode.length !== 11) {
       setIfscValidationMessage('IFSC code must be 11 characters');
       return;
     }
 
-    // Validate 5th digit must be '0'
     if (ifscCode[4] !== '0') {
       setIfscValidationMessage('5th digit of IFSC code must be 0');
       setBankName('');
       return;
     }
 
-    // Clear validation message if valid
     setIfscValidationMessage('');
 
-    // Fetch bank details from Razorpay API
     try {
       setIsFetchingBankDetails(true);
       const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`);
@@ -201,7 +178,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           description: "Bank details have been automatically filled"
         });
       } else {
-        // Handle invalid IFSC
         setIfscValidationMessage('Invalid IFSC code');
         setBankName('');
       }
@@ -213,44 +189,20 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }
   };
 
-  // Handle bill file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setBillFile(e.target.files[0]);
     }
   };
 
-  // Reset party name
   const resetPartyName = () => {
     setPartyNameFixed(false);
     setPartyName('');
   };
 
-  // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate IFSC before submission
-    if (!validateIfsc(ifscCode)) {
-      toast({
-        title: "Invalid IFSC code",
-        description: "Please provide a valid IFSC code with 5th digit as '0'",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate at least one material item has data
-    if (materialItems.length === 0) {
-      toast({
-        title: "No materials added",
-        description: "Please add at least one material item",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate Party ID
     if (!partyId.trim()) {
       toast({
         title: "Missing Invoice Number",
@@ -260,10 +212,26 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       return;
     }
 
-    // Use the first material for backward compatibility with the Invoice type
+    if (materialItems.length === 0) {
+      toast({
+        title: "No materials added",
+        description: "Please add at least one material item",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (approverType === "ho" && !validateIfsc(ifscCode)) {
+      toast({
+        title: "Invalid IFSC code",
+        description: "Please provide a valid IFSC code with 5th digit as '0'",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const primaryMaterial = materialItems[0];
 
-    // Create invoice object from form data
     const invoiceData: Omit<Invoice, 'id' | 'createdAt'> = {
       date,
       partyId,
@@ -276,22 +244,21 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       netAmount: grandNetAmount,
       materialItems: materialItems,
       bankDetails: {
-        accountNumber,
-        bankName,
-        ifscCode,
-        email,
-        mobile
+        accountNumber: approverType === "ho" ? accountNumber : "",
+        bankName: approverType === "ho" ? bankName : "",
+        ifscCode: approverType === "ho" ? ifscCode : "",
+        email: approverType === "ho" ? email : "",
+        mobile: approverType === "ho" ? mobile : "",
       },
       billUrl: billFile ? URL.createObjectURL(billFile) : undefined,
       paymentStatus,
       createdBy: 'Current User',
-      // In a real app, this would come from auth context
       approverType: approverType
     };
     onSubmit(invoiceData);
   };
+
   return <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Invoice Information */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Invoice Date</Label>
@@ -332,13 +299,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       <Separator />
 
-      {/* Materials Section */}
       <div>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Materials</h3>
         </div>
         
-        {/* Add Material Form */}
         <div className="p-4 border rounded-md mb-4 bg-muted/30">
           <h4 className="font-medium mb-3">Add New Material</h4>
           
@@ -379,7 +344,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           </Button>
         </div>
         
-        {/* Material Items List */}
         {materialItems.length > 0 && <div className="mb-4">
             <h4 className="font-medium mb-2">Material Items List</h4>
             <div className="overflow-x-auto rounded-md border">
@@ -414,7 +378,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             </div>
           </div>}
         
-        {/* Grand Total */}
         <div className="bg-muted p-4 rounded-md mt-4">
           <div className="flex flex-col md:flex-row md:justify-end md:items-center gap-4">
             <div className="space-y-2 md:w-1/4">
@@ -432,7 +395,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       <Separator />
 
-      {/* Approver Type Section */}
       <div>
         <h3 className="text-lg font-medium mb-4">Payment made by</h3>
         <div className="bg-muted/30 p-4 rounded-md">
@@ -458,49 +420,50 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       <Separator />
 
-      {/* Bank Details */}
-      <div>
-        <h3 className="text-lg font-medium mb-4">Bank Details</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="accountNumber">Account Number (max 16 digits)</Label>
-            <Input id="accountNumber" value={accountNumber} onChange={handleAccountNumberChange} placeholder="Enter Account Number (max 16 digits)" required maxLength={16} />
-          </div>
+      {approverType === "ho" && (
+        <div>
+          <h3 className="text-lg font-medium mb-4">Bank Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="accountNumber">Account Number (max 16 digits)</Label>
+              <Input id="accountNumber" value={accountNumber} onChange={handleAccountNumberChange} placeholder="Enter Account Number (max 16 digits)" required maxLength={16} />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="ifscCode">IFSC Code</Label>
-            <div className="relative">
-              <Input id="ifscCode" value={ifscCode} onChange={handleIfscChange} onBlur={handleIfscBlur} placeholder="Enter IFSC Code (11 characters)" maxLength={11} required className={ifscValidationMessage ? "border-red-500" : ""} />
-              {isFetchingBankDetails && <div className="absolute top-0 right-0 h-full flex items-center pr-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                </div>}
-              {ifscValidationMessage && <p className="text-red-500 text-sm mt-1">{ifscValidationMessage}</p>}
-              <p className="text-xs text-muted-foreground mt-1">
-                Must be 11 characters and 5th digit must be '0'
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="ifscCode">IFSC Code</Label>
+              <div className="relative">
+                <Input id="ifscCode" value={ifscCode} onChange={handleIfscChange} onBlur={handleIfscBlur} placeholder="Enter IFSC Code (11 characters)" maxLength={11} required className={ifscValidationMessage ? "border-red-500" : ""} />
+                {isFetchingBankDetails && <div className="absolute top-0 right-0 h-full flex items-center pr-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>}
+                {ifscValidationMessage && <p className="text-red-500 text-sm mt-1">{ifscValidationMessage}</p>}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Must be 11 characters and 5th digit must be '0'
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bankName">Bank Name & Branch</Label>
+              <Input id="bankName" value={bankName} onChange={e => setBankName(e.target.value)} placeholder="Bank Name (auto-filled from IFSC)" required readOnly={bankName !== ''} className={bankName ? "bg-muted" : ""} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email (Optional)</Label>
+              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mobile">Mobile Number (Optional)</Label>
+              <Input id="mobile" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} placeholder="Mobile Number" maxLength={10} />
             </div>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="bankName">Bank Name & Branch</Label>
-            <Input id="bankName" value={bankName} onChange={e => setBankName(e.target.value)} placeholder="Bank Name (auto-filled from IFSC)" required readOnly={bankName !== ''} className={bankName ? "bg-muted" : ""} />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email (Optional)</Label>
-            <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile Number (Optional)</Label>
-            <Input id="mobile" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} placeholder="Mobile Number" maxLength={10} />
-          </div>
+          <Separator className="mt-6" />
         </div>
-      </div>
+      )}
 
       <Separator />
 
-      {/* Bill Upload & Status */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="bill">Upload Bill</Label>
@@ -538,4 +501,5 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       </div>
     </form>;
 };
+
 export default InvoiceForm;

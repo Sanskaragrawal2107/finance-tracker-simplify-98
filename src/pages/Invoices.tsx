@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -25,8 +24,24 @@ import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-// Mock data for demonstration
+const getStatusColor = (status: PaymentStatus) => {
+  switch (status) {
+    case PaymentStatus.PAID:
+      return 'bg-green-100 text-green-800';
+    case PaymentStatus.PENDING:
+      return 'bg-yellow-100 text-yellow-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const paymentFormSchema = z.object({
+  bankOption: z.enum(["sbi", "hdfc", "icici", "axis"]),
+  rememberChoice: z.boolean().optional()
+});
+
 const initialInvoices: Invoice[] = [
   {
     id: '1',
@@ -160,33 +175,6 @@ const initialInvoices: Invoice[] = [
   },
 ];
 
-const getStatusColor = (status: PaymentStatus) => {
-  switch (status) {
-    case PaymentStatus.PAID:
-      return 'bg-green-100 text-green-800';
-    case PaymentStatus.PENDING:
-      return 'bg-yellow-100 text-yellow-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-// Payment form schema
-const paymentFormSchema = z.object({
-  cardNumber: z.string().min(16, {
-    message: "Card number must be 16 digits.",
-  }).max(16),
-  cardHolder: z.string().min(2, {
-    message: "Card holder name is required.",
-  }),
-  expiryDate: z.string().min(5, {
-    message: "Expiry date is required (MM/YY).",
-  }),
-  cvv: z.string().min(3, {
-    message: "CVV must be 3 digits.",
-  }).max(3),
-});
-
 const Invoices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
@@ -195,14 +183,14 @@ const Invoices: React.FC = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const { toast } = useToast();
+  const [paymentProcessing, setPaymentProcessing] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
   
   const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
-      cardNumber: "",
-      cardHolder: "",
-      expiryDate: "",
-      cvv: "",
+      bankOption: "sbi",
+      rememberChoice: false
     },
   });
 
@@ -253,34 +241,40 @@ const Invoices: React.FC = () => {
   const handleMakePayment = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
     setIsViewDialogOpen(false);
+    setPaymentSuccess(false);
     setTimeout(() => setIsPaymentDialogOpen(true), 100);
   };
   
   const onSubmitPayment = (values: z.infer<typeof paymentFormSchema>) => {
-    // In a real app, this would call a payment API
     if (!selectedInvoice) return;
     
-    // Update the invoice payment status
-    const updatedInvoices = invoices.map(invoice => {
-      if (invoice.id === selectedInvoice.id) {
-        return {
-          ...invoice,
-          paymentStatus: PaymentStatus.PAID
-        };
-      }
-      return invoice;
-    });
+    setPaymentProcessing(true);
     
-    setInvoices(updatedInvoices);
-    
-    // Show success toast
-    toast({
-      title: "Payment Successful",
-      description: `Payment of ₹${selectedInvoice.netAmount.toLocaleString()} has been processed successfully.`,
-    });
-    
-    // Close the payment dialog
-    setIsPaymentDialogOpen(false);
+    setTimeout(() => {
+      const updatedInvoices = invoices.map(invoice => {
+        if (invoice.id === selectedInvoice.id) {
+          return {
+            ...invoice,
+            paymentStatus: PaymentStatus.PAID
+          };
+        }
+        return invoice;
+      });
+      
+      setInvoices(updatedInvoices);
+      setPaymentProcessing(false);
+      setPaymentSuccess(true);
+      
+      toast({
+        title: "Payment Successful",
+        description: `Payment of ₹${selectedInvoice.netAmount.toLocaleString()} has been processed successfully.`,
+      });
+      
+      setTimeout(() => {
+        setIsPaymentDialogOpen(false);
+        setPaymentSuccess(false);
+      }, 2000);
+    }, 2000);
   };
 
   return (
@@ -385,7 +379,6 @@ const Invoices: React.FC = () => {
         </div>
       </CustomCard>
 
-      {/* Create Invoice Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Create New Invoice</DialogTitle>
@@ -396,7 +389,6 @@ const Invoices: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* View Invoice Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Invoice Details</DialogTitle>
@@ -404,12 +396,11 @@ const Invoices: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Payment Dialog */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogTitle>Make Payment</DialogTitle>
           <DialogDescription>
-            Complete the payment for invoice #{selectedInvoice?.partyId}
+            Select your bank to complete the payment for invoice #{selectedInvoice?.partyId}
           </DialogDescription>
           
           {selectedInvoice && (
@@ -418,14 +409,20 @@ const Invoices: React.FC = () => {
                 <span className="text-sm">Payee:</span>
                 <span className="font-medium">{selectedInvoice.partyName}</span>
               </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm">Account:</span>
-                <span className="font-medium">{selectedInvoice.bankDetails.accountNumber}</span>
-              </div>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm">Bank:</span>
-                <span className="font-medium">{selectedInvoice.bankDetails.bankName}</span>
-              </div>
+              
+              {selectedInvoice.approverType === "ho" && (
+                <>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm">Account:</span>
+                    <span className="font-medium">{selectedInvoice.bankDetails.accountNumber}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm">Bank:</span>
+                    <span className="font-medium">{selectedInvoice.bankDetails.bankName}</span>
+                  </div>
+                </>
+              )}
+              
               <div className="flex justify-between font-medium text-primary">
                 <span>Amount:</span>
                 <span>₹{selectedInvoice.netAmount.toLocaleString()}</span>
@@ -433,108 +430,120 @@ const Invoices: React.FC = () => {
             </div>
           )}
           
-          <Separator className="my-4" />
-          
-          <Form {...paymentForm}>
-            <form onSubmit={paymentForm.handleSubmit(onSubmitPayment)} className="space-y-4">
-              <FormField
-                control={paymentForm.control}
-                name="cardNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Card Number</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="1234 5678 9012 3456" 
-                        {...field} 
-                        maxLength={16}
-                        onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
-                          field.onChange(value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={paymentForm.control}
-                name="cardHolder"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Card Holder Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={paymentForm.control}
-                  name="expiryDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expiry Date</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="MM/YY" 
-                          {...field} 
-                          maxLength={5}
-                          onChange={(e) => {
-                            let value = e.target.value.replace(/[^\d/]/g, '');
-                            if (value.length === 2 && !value.includes('/') && field.value.length !== 3) {
-                              value += '/';
-                            }
-                            field.onChange(value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                
-                <FormField
-                  control={paymentForm.control}
-                  name="cvv"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CVV</FormLabel>
-                      <FormControl>
-                        <Input 
-                          type="password" 
-                          placeholder="123" 
-                          {...field} 
-                          maxLength={3}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            field.onChange(value);
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          {paymentSuccess ? (
+            <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
+              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-full bg-green-500 text-white flex items-center justify-center">
+                  ✓
+                </div>
               </div>
+              <h3 className="text-xl font-medium">Payment Successful!</h3>
+              <p className="text-muted-foreground">Your payment has been processed successfully.</p>
+            </div>
+          ) : (
+            <>
+              <Separator className="my-4" />
               
-              <div className="flex justify-end gap-2 pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => setIsPaymentDialogOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit">Pay Now</Button>
-              </div>
-            </form>
-          </Form>
+              <Form {...paymentForm}>
+                <form onSubmit={paymentForm.handleSubmit(onSubmitPayment)} className="space-y-4">
+                  {selectedInvoice?.approverType === "supervisor" && (
+                    <div className="mb-2 flex items-center p-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      <p className="text-sm">This payment will be made directly without bank transfer as it was approved by a supervisor.</p>
+                    </div>
+                  )}
+                  
+                  <FormField
+                    control={paymentForm.control}
+                    name="bankOption"
+                    render={({ field }) => (
+                      <FormItem className="space-y-1">
+                        <FormLabel>Select Your Bank</FormLabel>
+                        <FormDescription>
+                          Choose the bank you want to use for this payment
+                        </FormDescription>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="grid grid-cols-2 gap-4 pt-2"
+                          >
+                            <div className="flex flex-col items-center space-y-2">
+                              <Label
+                                htmlFor="sbi"
+                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                              >
+                                <Building className="mb-2 h-8 w-8" />
+                                <span className="text-center font-medium">SBI</span>
+                              </Label>
+                              <RadioGroupItem value="sbi" id="sbi" className="sr-only" />
+                            </div>
+                            
+                            <div className="flex flex-col items-center space-y-2">
+                              <Label
+                                htmlFor="hdfc"
+                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                              >
+                                <Building className="mb-2 h-8 w-8" />
+                                <span className="text-center font-medium">HDFC</span>
+                              </Label>
+                              <RadioGroupItem value="hdfc" id="hdfc" className="sr-only" />
+                            </div>
+                            
+                            <div className="flex flex-col items-center space-y-2">
+                              <Label
+                                htmlFor="icici"
+                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                              >
+                                <Building className="mb-2 h-8 w-8" />
+                                <span className="text-center font-medium">ICICI</span>
+                              </Label>
+                              <RadioGroupItem value="icici" id="icici" className="sr-only" />
+                            </div>
+                            
+                            <div className="flex flex-col items-center space-y-2">
+                              <Label
+                                htmlFor="axis"
+                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+                              >
+                                <Building className="mb-2 h-8 w-8" />
+                                <span className="text-center font-medium">AXIS</span>
+                              </Label>
+                              <RadioGroupItem value="axis" id="axis" className="sr-only" />
+                            </div>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex justify-end gap-2 pt-2">
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={() => setIsPaymentDialogOpen(false)}
+                      disabled={paymentProcessing}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={paymentProcessing}
+                      className="min-w-24"
+                    >
+                      {paymentProcessing ? (
+                        <>
+                          <span className="loading loading-spinner loading-xs mr-2"></span>
+                          Processing...
+                        </>
+                      ) : "Proceed to Pay"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
