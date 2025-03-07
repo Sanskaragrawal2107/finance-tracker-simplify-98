@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
@@ -9,6 +10,12 @@ import { useToast } from '@/hooks/use-toast';
 interface InvoiceDetailsProps {
   invoice: Invoice;
   onMakePayment?: (invoice: Invoice) => void;
+}
+
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
 }
 
 const getStatusColor = (status: PaymentStatus) => {
@@ -24,6 +31,18 @@ const getStatusColor = (status: PaymentStatus) => {
 
 const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment }) => {
   const { toast } = useToast();
+  
+  useEffect(() => {
+    // Load Razorpay script
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.body.appendChild(script);
+    
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
   
   const materials = Array.isArray(invoice.materialItems) 
     ? invoice.materialItems 
@@ -63,6 +82,75 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
     }
   };
 
+  const initializeRazorpayPayment = () => {
+    if (!window.Razorpay) {
+      toast({
+        title: "Payment gateway error",
+        description: "Razorpay payment gateway is not loaded. Please try again later.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Convert amount to paise (Razorpay expects amount in smallest currency unit)
+    const amountInPaise = Math.round(invoice.netAmount * 100);
+    
+    const options = {
+      key: "rzp_live_47mpRvV2Yh9XLZ", // Your Razorpay Key ID
+      amount: amountInPaise.toString(),
+      currency: "INR",
+      name: "Construction ERP",
+      description: `Payment for Invoice #${invoice.id}`,
+      image: "", // Add your company logo URL here
+      order_id: "", // This would come from your backend in production
+      handler: function (response: any) {
+        // Update payment status in your system
+        console.log("Payment successful", response);
+        
+        if (onMakePayment) {
+          onMakePayment(invoice);
+        }
+        
+        toast({
+          title: "Payment successful",
+          description: `Payment of ₹${invoice.netAmount.toLocaleString()} has been completed successfully.`,
+        });
+      },
+      prefill: {
+        name: invoice.partyName,
+        email: invoice.bankDetails?.email || "",
+        contact: invoice.bankDetails?.mobile || "",
+      },
+      notes: {
+        invoice_id: invoice.id,
+        party_id: invoice.partyId,
+      },
+      theme: {
+        color: "#3B82F6", // Primary color
+      },
+      modal: {
+        ondismiss: function() {
+          toast({
+            title: "Payment cancelled",
+            description: "The payment process was cancelled.",
+          });
+        },
+      },
+    };
+
+    try {
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error("Razorpay Error:", error);
+      toast({
+        title: "Payment gateway error",
+        description: "There was an error initializing the payment gateway.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handlePayment = () => {
     if (invoice.approverType !== "ho") {
       toast({
@@ -73,14 +161,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
       return;
     }
     
-    if (onMakePayment) {
-      onMakePayment(invoice);
-    } else {
-      toast({
-        title: "Payment processing",
-        description: "Payment functionality is not available in the demo version.",
-      });
-    }
+    initializeRazorpayPayment();
   };
   
   return (
@@ -169,32 +250,28 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
         </div>
       </div>
       
-      <div>
-        <h4 className="font-medium mb-2">Bank Details</h4>
-        <div className="bg-muted rounded-md p-4 space-y-2">
-          {invoice.approverType === "ho" ? (
-            <>
-              <p><span className="font-medium">Account Number:</span> {invoice.bankDetails.accountNumber}</p>
-              <p><span className="font-medium">Bank & Branch:</span> {invoice.bankDetails.bankName}</p>
-              <p><span className="font-medium">IFSC Code:</span> {invoice.bankDetails.ifscCode}</p>
-              {invoice.bankDetails.email && (
-                <p className="flex items-center">
-                  <Mail className="h-4 w-4 mr-1" />
-                  <span className="font-medium mr-1">Email:</span> {invoice.bankDetails.email}
-                </p>
-              )}
-              {invoice.bankDetails.mobile && (
-                <p className="flex items-center">
-                  <Phone className="h-4 w-4 mr-1" />
-                  <span className="font-medium mr-1">Mobile:</span> {invoice.bankDetails.mobile}
-                </p>
-              )}
-            </>
-          ) : (
-            <p className="text-muted-foreground">Bank details not applicable for supervisor-approved invoices.</p>
-          )}
+      {invoice.approverType === "ho" && (
+        <div>
+          <h4 className="font-medium mb-2">Bank Details</h4>
+          <div className="bg-muted rounded-md p-4 space-y-2">
+            <p><span className="font-medium">Account Number:</span> {invoice.bankDetails.accountNumber}</p>
+            <p><span className="font-medium">Bank & Branch:</span> {invoice.bankDetails.bankName}</p>
+            <p><span className="font-medium">IFSC Code:</span> {invoice.bankDetails.ifscCode}</p>
+            {invoice.bankDetails.email && (
+              <p className="flex items-center">
+                <Mail className="h-4 w-4 mr-1" />
+                <span className="font-medium mr-1">Email:</span> {invoice.bankDetails.email}
+              </p>
+            )}
+            {invoice.bankDetails.mobile && (
+              <p className="flex items-center">
+                <Phone className="h-4 w-4 mr-1" />
+                <span className="font-medium mr-1">Mobile:</span> {invoice.bankDetails.mobile}
+              </p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       
       {invoice.billUrl && (
         <div>

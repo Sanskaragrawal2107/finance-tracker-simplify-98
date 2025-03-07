@@ -269,75 +269,24 @@ const Invoices: React.FC = () => {
   };
   
   const handleMakePayment = (invoice: Invoice) => {
-    if (invoice.approverType !== "ho") {
-      toast({
-        title: "Payment not available",
-        description: "Only Head Office approved invoices can be paid through the system.",
-        variant: "destructive"
-      });
-      return;
-    }
+    // Update the invoice payment status
+    const updatedInvoices = invoices.map(inv => {
+      if (inv.id === invoice.id) {
+        return {
+          ...inv,
+          paymentStatus: PaymentStatus.PAID
+        };
+      }
+      return inv;
+    });
     
-    setSelectedInvoice(invoice);
+    setInvoices(updatedInvoices);
     setIsViewDialogOpen(false);
-    setPaymentSuccess(false);
-    setTimeout(() => setIsPaymentDialogOpen(true), 100);
-  };
-  
-  const onSubmitPayment = (values: z.infer<typeof paymentFormSchema>) => {
-    if (!selectedInvoice) return;
     
-    setSelectedBank(values.bankOption);
-    setIsPaymentDialogOpen(false);
-    
-    setTimeout(() => {
-      setIsBankPageOpen(true);
-      setBankPageStep(1);
-    }, 100);
-  };
-  
-  const handleBankPageContinue = () => {
-    if (bankPageStep < 3) {
-      setBankPageStep(prev => prev + 1);
-    } else {
-      setPaymentProcessing(true);
-      
-      setTimeout(() => {
-        const updatedInvoices = invoices.map(invoice => {
-          if (invoice.id === selectedInvoice?.id) {
-            return {
-              ...invoice,
-              paymentStatus: PaymentStatus.PAID
-            };
-          }
-          return invoice;
-        });
-        
-        setInvoices(updatedInvoices);
-        setPaymentProcessing(false);
-        setPaymentSuccess(true);
-        
-        toast({
-          title: "Payment Successful",
-          description: `Payment of ₹${selectedInvoice?.netAmount.toLocaleString()} has been processed successfully.`,
-        });
-        
-        setTimeout(() => {
-          setIsBankPageOpen(false);
-          setPaymentSuccess(false);
-          setBankPageStep(1);
-        }, 2000);
-      }, 2000);
-    }
-  };
-  
-  const handleBankPageBack = () => {
-    if (bankPageStep > 1) {
-      setBankPageStep(prev => prev - 1);
-    } else {
-      setIsBankPageOpen(false);
-      setTimeout(() => setIsPaymentDialogOpen(true), 100);
-    }
+    toast({
+      title: "Payment Successful",
+      description: `Payment of ₹${invoice.netAmount.toLocaleString()} has been processed successfully.`,
+    });
   };
 
   return (
@@ -416,7 +365,7 @@ const Invoices: React.FC = () => {
                         variant="ghost" 
                         size="icon" 
                         className="h-8 w-8" 
-                        onClick={() => handleMakePayment(invoice)}
+                        onClick={() => handleViewInvoice(invoice)}
                       >
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                       </Button>
@@ -456,284 +405,6 @@ const Invoices: React.FC = () => {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Invoice Details</DialogTitle>
           {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} onMakePayment={handleMakePayment} />}
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogTitle>Choose Your Bank</DialogTitle>
-          <DialogDescription>
-            Select your bank to complete the payment for invoice #{selectedInvoice?.partyId}
-          </DialogDescription>
-          
-          {selectedInvoice && (
-            <div className="mb-4 p-3 bg-muted rounded-md">
-              <div className="flex justify-between mb-2">
-                <span className="text-sm">Payee:</span>
-                <span className="font-medium">{selectedInvoice.partyName}</span>
-              </div>
-              
-              {selectedInvoice.approverType === "ho" && (
-                <>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm">Account:</span>
-                    <span className="font-medium">{selectedInvoice.bankDetails.accountNumber}</span>
-                  </div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm">Bank:</span>
-                    <span className="font-medium">{selectedInvoice.bankDetails.bankName}</span>
-                  </div>
-                </>
-              )}
-              
-              <div className="flex justify-between font-medium text-primary">
-                <span>Amount:</span>
-                <span>₹{selectedInvoice.netAmount.toLocaleString()}</span>
-              </div>
-            </div>
-          )}
-          
-          <Separator className="my-4" />
-          
-          <Form {...paymentForm}>
-            <form onSubmit={paymentForm.handleSubmit(onSubmitPayment)} className="space-y-6">
-              {selectedInvoice?.approverType === "supervisor" && (
-                <div className="mb-2 flex items-center p-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  <p className="text-sm">This payment will be made directly without bank transfer as it was approved by a supervisor.</p>
-                </div>
-              )}
-              
-              <FormField
-                control={paymentForm.control}
-                name="bankOption"
-                render={({ field }) => (
-                  <FormItem className="space-y-1">
-                    <FormLabel>Select Your Bank</FormLabel>
-                    <FormControl>
-                      <BankRadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="space-y-3"
-                      >
-                        <BankRadioGroupItem 
-                          value="sbi" 
-                          id="sbi" 
-                          bankName="State Bank of India" 
-                          bankLogo="SBI"
-                        />
-                        <BankRadioGroupItem 
-                          value="hdfc" 
-                          id="hdfc" 
-                          bankName="HDFC Bank" 
-                          bankLogo="HDFC"
-                        />
-                        <BankRadioGroupItem 
-                          value="icici" 
-                          id="icici" 
-                          bankName="ICICI Bank" 
-                          bankLogo="ICICI"
-                        />
-                        <BankRadioGroupItem 
-                          value="axis" 
-                          id="axis" 
-                          bankName="Axis Bank" 
-                          bankLogo="AXIS"
-                        />
-                      </BankRadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="flex justify-end gap-2 pt-2">
-                <Button 
-                  type="button" 
-                  variant="outline"
-                  onClick={() => setIsPaymentDialogOpen(false)}
-                  disabled={paymentProcessing}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={paymentProcessing}
-                  className="min-w-24"
-                >
-                  Proceed to Net Banking
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-      
-      <Dialog open={isBankPageOpen} onOpenChange={(open) => {
-        if (!open && !paymentSuccess) setIsBankPageOpen(false);
-      }}>
-        <DialogContent className="max-w-lg p-0 overflow-hidden">
-          {selectedBank && (
-            <>
-              <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">{bankDetails[selectedBank as keyof typeof bankDetails].name}</h3>
-                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Secure Connection</span>
-                </div>
-                <p className="text-xs mt-1 opacity-80">Net Banking Payment Portal</p>
-              </div>
-              
-              <div className="p-6">
-                {paymentSuccess ? (
-                  <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                      <div className="h-10 w-10 rounded-full bg-green-500 text-white flex items-center justify-center">
-                        <Check className="h-5 w-5" />
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-medium">Payment Successful!</h3>
-                    <p className="text-muted-foreground">Your payment has been processed successfully.</p>
-                    <p className="text-xs text-muted-foreground">Transaction ID: {Math.random().toString(36).substring(2, 12).toUpperCase()}</p>
-                    <Button 
-                      onClick={() => {
-                        setIsBankPageOpen(false);
-                        setPaymentSuccess(false);
-                      }}
-                      className="mt-4"
-                    >
-                      Return to Invoice
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center mb-6">
-                      <div className="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center text-primary font-bold text-sm">
-                        1
-                      </div>
-                      <div className="h-1 w-16 bg-muted mx-2">
-                        <div className={`h-full bg-primary ${bankPageStep >= 2 ? 'w-full' : 'w-0'} transition-all duration-300`}></div>
-                      </div>
-                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${bankPageStep >= 2 ? 'border-primary text-primary' : 'border-muted text-muted-foreground'}`}>
-                        2
-                      </div>
-                      <div className="h-1 w-16 bg-muted mx-2">
-                        <div className={`h-full bg-primary ${bankPageStep >= 3 ? 'w-full' : 'w-0'} transition-all duration-300`}></div>
-                      </div>
-                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${bankPageStep >= 3 ? 'border-primary text-primary' : 'border-muted text-muted-foreground'}`}>
-                        3
-                      </div>
-                    </div>
-                    
-                    {bankPageStep === 1 && (
-                      <div className="space-y-6">
-                        <h3 className="text-lg font-medium">Login to Your Account</h3>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="username">Username / Customer ID</Label>
-                            <Input 
-                              id="username" 
-                              defaultValue={`user${Math.floor(Math.random() * 10000)}`} 
-                              className="bg-muted/50"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input id="password" type="password" defaultValue="********" className="bg-muted/50" />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {bankPageStep === 2 && (
-                      <div className="space-y-6">
-                        <h3 className="text-lg font-medium">Verify Payment Details</h3>
-                        <div className="border rounded-md overflow-hidden">
-                          <div className="bg-muted p-3 font-medium">Transaction Details</div>
-                          <div className="p-4 space-y-3">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Merchant</span>
-                              <span className="font-medium">{selectedInvoice?.partyName}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Amount</span>
-                              <span className="font-medium">₹{selectedInvoice?.netAmount.toLocaleString()}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Invoice Number</span>
-                              <span className="font-medium">{selectedInvoice?.partyId}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Date</span>
-                              <span className="font-medium">{format(new Date(), 'dd MMM yyyy')}</span>
-                            </div>
-                            {selectedInvoice?.approverType === "ho" && (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Beneficiary Account</span>
-                                  <span className="font-medium">{selectedInvoice?.bankDetails.accountNumber}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Beneficiary Bank</span>
-                                  <span className="font-medium">{selectedInvoice?.bankDetails.bankName}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">IFSC Code</span>
-                                  <span className="font-medium">{selectedInvoice?.bankDetails.ifscCode}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {bankPageStep === 3 && (
-                      <div className="space-y-6">
-                        <h3 className="text-lg font-medium">Authenticate Payment</h3>
-                        <div className="border rounded-md p-4 space-y-4">
-                          <p className="text-center text-sm">We've sent a One Time Password (OTP) to your registered mobile number</p>
-                          <div className="bg-muted/70 rounded-md p-3 text-center">
-                            <p className="text-xs text-muted-foreground">Phone Number</p>
-                            <p className="font-medium">******{Math.floor(Math.random() * 10000)}</p>
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="otp">Enter OTP</Label>
-                            <Input id="otp" className="text-center letter-spacing-wide" defaultValue={Math.floor(Math.random() * 1000000).toString().padStart(6, '0')} />
-                          </div>
-                          <p className="text-xs text-muted-foreground text-center">This OTP is valid for 5 minutes</p>
-                        </div>
-                      </div>
-                    )}
-                    
-                    <div className="flex justify-between mt-8">
-                      <Button 
-                        type="button" 
-                        variant="outline"
-                        onClick={handleBankPageBack}
-                        className="gap-1"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back
-                      </Button>
-                      <Button 
-                        type="button" 
-                        onClick={handleBankPageContinue}
-                        disabled={paymentProcessing}
-                        className="min-w-24"
-                      >
-                        {paymentProcessing ? (
-                          <>
-                            <span className="loading loading-spinner loading-xs mr-2"></span>
-                            Processing...
-                          </>
-                        ) : bankPageStep === 3 ? "Confirm Payment" : "Continue"}
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )}
         </DialogContent>
       </Dialog>
     </div>
