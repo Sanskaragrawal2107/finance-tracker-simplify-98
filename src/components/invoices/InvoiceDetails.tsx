@@ -5,6 +5,7 @@ import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -22,31 +23,47 @@ const getStatusColor = (status: PaymentStatus) => {
 };
 
 const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
-  // Parse multiple materials if they exist
-  const materials = invoice.material.split(', ');
+  const { toast } = useToast();
   
-  // For backward compatibility - older invoices might not have individual material details
-  const materialDetails = materials.map((material, index) => {
-    if (index === 0) {
-      return {
-        material,
-        quantity: invoice.quantity,
-        rate: invoice.rate,
-        gstPercentage: invoice.gstPercentage,
-        amount: invoice.quantity * invoice.rate
-      };
+  // Parse multiple materials if they exist
+  const materials = Array.isArray(invoice.materialItems) 
+    ? invoice.materialItems 
+    : invoice.material.split(', ').map((material, index) => {
+        if (index === 0) {
+          return {
+            material,
+            quantity: invoice.quantity,
+            rate: invoice.rate,
+            gstPercentage: invoice.gstPercentage,
+            amount: invoice.quantity * invoice.rate
+          };
+        } else {
+          // For multi-material invoices that don't have individual details
+          return {
+            material,
+            quantity: null,
+            rate: null,
+            gstPercentage: null,
+            amount: null
+          };
+        }
+      });
+  
+  const handleDownload = () => {
+    if (invoice.billUrl) {
+      window.open(invoice.billUrl, '_blank');
+      toast({
+        title: "Download initiated",
+        description: "The bill download has been initiated."
+      });
     } else {
-      // For multi-material invoices that don't have individual details yet,
-      // we'll show the material name but no other details
-      return {
-        material,
-        quantity: null,
-        rate: null,
-        gstPercentage: null,
-        amount: null
-      };
+      toast({
+        title: "No bill available",
+        description: "There is no bill attachment available for this invoice.",
+        variant: "destructive"
+      });
     }
-  });
+  };
   
   return (
     <div className="space-y-6">
@@ -101,7 +118,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
               </tr>
             </thead>
             <tbody>
-              {materialDetails.map((material, index) => (
+              {materials.map((material, index) => (
                 <tr key={index} className="border-t">
                   <td className="py-3 px-4">{index + 1}</td>
                   <td className="py-3 px-4">{material.material}</td>
@@ -160,7 +177,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
           <h4 className="font-medium mb-2">Attached Bill</h4>
           <div className="bg-muted/50 border rounded-md p-4 flex items-center justify-between">
             <span>Bill attachment</span>
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownload}>
               <Download className="h-4 w-4" />
               Download
             </Button>

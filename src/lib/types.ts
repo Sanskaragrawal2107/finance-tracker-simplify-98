@@ -103,6 +103,15 @@ export interface BankDetails {
   mobile?: string;
 }
 
+export interface MaterialItem {
+  id?: string;
+  material: string;
+  quantity: number | null;
+  rate: number | null;
+  gstPercentage: number | null;
+  amount: number | null;
+}
+
 export interface Invoice {
   id: string;
   date: Date;
@@ -114,6 +123,7 @@ export interface Invoice {
   gstPercentage: number;
   grossAmount: number;
   netAmount: number;
+  materialItems?: MaterialItem[];
   bankDetails: BankDetails;
   billUrl?: string;
   paymentStatus: PaymentStatus;

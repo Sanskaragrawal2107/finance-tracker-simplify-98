@@ -4,7 +4,7 @@ import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
-import { Invoice, PaymentStatus } from '@/lib/types';
+import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
@@ -24,6 +24,15 @@ const initialInvoices: Invoice[] = [
     gstPercentage: 18,
     grossAmount: 250000,
     netAmount: 295000,
+    materialItems: [
+      {
+        material: 'TMT Steel Bars',
+        quantity: 5,
+        rate: 50000,
+        gstPercentage: 18,
+        amount: 250000
+      }
+    ],
     bankDetails: {
       accountNumber: '12345678901',
       bankName: 'State Bank of India',
@@ -31,7 +40,7 @@ const initialInvoices: Invoice[] = [
       email: 'accounts@steelsuppliers.com',
       mobile: '9876543210',
     },
-    billUrl: '#',
+    billUrl: 'https://sample-files.com/pdf/sample.pdf',
     paymentStatus: PaymentStatus.PAID,
     createdBy: 'Admin',
     createdAt: new Date('2023-07-05'),
@@ -41,12 +50,28 @@ const initialInvoices: Invoice[] = [
     date: new Date('2023-07-04'),
     partyId: '102',
     partyName: 'Cement Corporation',
-    material: 'Portland Cement',
+    material: 'Portland Cement, White Cement',
     quantity: 100,
     rate: 350,
     gstPercentage: 18,
-    grossAmount: 35000,
-    netAmount: 41300,
+    grossAmount: 45000,
+    netAmount: 53100,
+    materialItems: [
+      {
+        material: 'Portland Cement',
+        quantity: 100,
+        rate: 350,
+        gstPercentage: 18,
+        amount: 35000
+      },
+      {
+        material: 'White Cement',
+        quantity: 20,
+        rate: 500,
+        gstPercentage: 18,
+        amount: 10000
+      }
+    ],
     bankDetails: {
       accountNumber: '98765432101',
       bankName: 'HDFC Bank',
@@ -54,7 +79,7 @@ const initialInvoices: Invoice[] = [
       email: 'accounts@cementcorp.com',
       mobile: '8765432109',
     },
-    billUrl: '#',
+    billUrl: 'https://sample-files.com/pdf/sample.pdf',
     paymentStatus: PaymentStatus.PAID,
     createdBy: 'Supervisor',
     createdAt: new Date('2023-07-04'),
@@ -70,6 +95,15 @@ const initialInvoices: Invoice[] = [
     gstPercentage: 12,
     grossAmount: 80000,
     netAmount: 89600,
+    materialItems: [
+      {
+        material: 'Red Bricks',
+        quantity: 10000,
+        rate: 8,
+        gstPercentage: 12,
+        amount: 80000
+      }
+    ],
     bankDetails: {
       accountNumber: '45678901234',
       bankName: 'ICICI Bank',
@@ -77,7 +111,7 @@ const initialInvoices: Invoice[] = [
       email: 'accounts@brickmanufacturers.com',
       mobile: '7654321098',
     },
-    billUrl: '#',
+    billUrl: 'https://sample-files.com/pdf/sample.pdf',
     paymentStatus: PaymentStatus.PENDING,
     createdBy: 'Supervisor',
     createdAt: new Date('2023-07-03'),
@@ -154,6 +188,22 @@ const Invoices: React.FC = () => {
     setIsViewDialogOpen(true);
   };
 
+  const handleDownloadInvoice = (invoice: Invoice) => {
+    if (invoice.billUrl) {
+      window.open(invoice.billUrl, '_blank');
+      toast({
+        title: "Download Initiated",
+        description: "The invoice download has been initiated.",
+      });
+    } else {
+      toast({
+        title: "No Bill Available",
+        description: "There is no bill attachment available for this invoice.",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in">
       <PageTitle 
@@ -222,7 +272,7 @@ const Invoices: React.FC = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadInvoice(invoice)}>
                       <Download className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </td>

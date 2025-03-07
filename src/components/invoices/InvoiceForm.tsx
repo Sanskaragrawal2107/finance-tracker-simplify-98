@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { PaymentStatus, Invoice } from '@/lib/types';
+import { PaymentStatus, Invoice, MaterialItem } from '@/lib/types';
 import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2, FileText, User } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -24,16 +24,6 @@ type InvoiceFormProps = {
   initialData?: Partial<Invoice>;
 };
 
-interface MaterialItem {
-  id: string;
-  material: string;
-  quantity: number;
-  rate: number;
-  gstPercentage: number;
-  grossAmount: number;
-  netAmount: number;
-}
-
 // Mock data - would come from API in real application
 const gstRates = [5, 12, 18, 28];
 
@@ -46,20 +36,15 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [partyId, setPartyId] = useState<string>(initialData?.partyId || '');
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
-  const [manualPartyId, setManualPartyId] = useState<boolean>(false);
+  
+  // For new material input
+  const [materialInput, setMaterialInput] = useState<string>('');
+  const [quantityInput, setQuantityInput] = useState<number>(0);
+  const [rateInput, setRateInput] = useState<number>(0);
+  const [gstPercentageInput, setGstPercentageInput] = useState<number>(18);
   
   // Material items list
-  const [materialItems, setMaterialItems] = useState<MaterialItem[]>([
-    {
-      id: '1',
-      material: '',
-      quantity: 0,
-      rate: 0,
-      gstPercentage: 18,
-      grossAmount: 0,
-      netAmount: 0
-    }
-  ]);
+  const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
   
   // Grand totals
   const [grandGrossAmount, setGrandGrossAmount] = useState<number>(0);
@@ -89,20 +74,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const handlePartyNameBlur = () => {
     if (partyName.trim() !== '') {
       setPartyNameFixed(true);
-      
-      // Only generate a party ID if user hasn't entered one manually
-      if (!manualPartyId && partyId === '') {
-        // Create a simple ID from the party name (in a real app this would be from a database)
-        const generatedId = Math.floor(100 + Math.random() * 900).toString();
-        setPartyId(generatedId);
-      }
     }
-  };
-
-  // Handle party ID input
-  const handlePartyIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPartyId(e.target.value);
-    setManualPartyId(true);
   };
 
   // Calculate total amounts whenever material items change
@@ -111,64 +83,71 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     let totalNet = 0;
     
     materialItems.forEach(item => {
-      totalGross += item.grossAmount;
-      totalNet += item.netAmount;
+      if (item.amount !== null) {
+        totalGross += item.amount;
+        if (item.gstPercentage !== null) {
+          totalNet += item.amount + (item.amount * (item.gstPercentage / 100));
+        }
+      }
     });
     
     setGrandGrossAmount(totalGross);
     setGrandNetAmount(totalNet);
   }, [materialItems]);
 
-  // Handle material item changes
-  const updateMaterialItem = (index: number, field: keyof MaterialItem, value: any) => {
-    const updatedItems = [...materialItems];
-    const item = { ...updatedItems[index], [field]: value };
-    
-    // Recalculate amounts if quantity, rate or GST changes
-    if (field === 'quantity' || field === 'rate' || field === 'gstPercentage') {
-      const quantity = field === 'quantity' ? value : item.quantity;
-      const rate = field === 'rate' ? value : item.rate;
-      const grossAmount = quantity * rate;
-      const gstPercentage = field === 'gstPercentage' ? value : item.gstPercentage;
-      const netAmount = grossAmount + (grossAmount * (gstPercentage / 100));
-      
-      item.grossAmount = grossAmount;
-      item.netAmount = netAmount;
-    }
-    
-    updatedItems[index] = item;
-    setMaterialItems(updatedItems);
-  };
-
   // Add new material item
   const addMaterialItem = () => {
-    setMaterialItems([
-      ...materialItems,
-      {
-        id: Date.now().toString(),
-        material: '',
-        quantity: 0,
-        rate: 0,
-        gstPercentage: 18,
-        grossAmount: 0,
-        netAmount: 0
-      }
-    ]);
+    if (!materialInput.trim()) {
+      toast({
+        title: "Material name is required",
+        description: "Please enter a material name",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (quantityInput <= 0) {
+      toast({
+        title: "Invalid quantity",
+        description: "Quantity must be greater than zero",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (rateInput <= 0) {
+      toast({
+        title: "Invalid rate",
+        description: "Rate must be greater than zero",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const grossAmount = quantityInput * rateInput;
+    
+    const newItem: MaterialItem = {
+      id: Date.now().toString(),
+      material: materialInput,
+      quantity: quantityInput,
+      rate: rateInput,
+      gstPercentage: gstPercentageInput,
+      amount: grossAmount
+    };
+    
+    setMaterialItems([...materialItems, newItem]);
+    
+    // Reset input fields
+    setMaterialInput('');
+    setQuantityInput(0);
+    setRateInput(0);
   };
 
   // Remove material item
   const removeMaterialItem = (index: number) => {
-    if (materialItems.length > 1) {
-      const updatedItems = [...materialItems];
-      updatedItems.splice(index, 1);
-      setMaterialItems(updatedItems);
-    } else {
-      toast({
-        title: "Cannot remove item",
-        description: "At least one material item is required",
-        variant: "destructive",
-      });
-    }
+    const updatedItems = [...materialItems];
+    updatedItems.splice(index, 1);
+    setMaterialItems(updatedItems);
   };
 
   // Handle account number input
@@ -255,9 +234,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const resetPartyName = () => {
     setPartyNameFixed(false);
     setPartyName('');
-    if (!manualPartyId) {
-      setPartyId('');
-    }
   };
 
   // Handle form submission
@@ -275,14 +251,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }
     
     // Validate at least one material item has data
-    const validMaterials = materialItems.filter(item => 
-      item.material && item.quantity > 0 && item.rate > 0
-    );
-    
-    if (validMaterials.length === 0) {
+    if (materialItems.length === 0) {
       toast({
-        title: "Invalid materials",
-        description: "Please add at least one material with quantity and rate",
+        title: "No materials added",
+        description: "Please add at least one material item",
         variant: "destructive",
       });
       return;
@@ -299,7 +271,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }
     
     // Use the first material for backward compatibility with the Invoice type
-    // In a real application, you would modify the Invoice type to support multiple materials
     const primaryMaterial = materialItems[0];
     
     // Create invoice object from form data
@@ -308,11 +279,12 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       partyId,
       partyName,
       material: materialItems.map(item => item.material).join(', '),
-      quantity: primaryMaterial.quantity,
-      rate: primaryMaterial.rate,
-      gstPercentage: primaryMaterial.gstPercentage,
+      quantity: primaryMaterial.quantity || 0,
+      rate: primaryMaterial.rate || 0,
+      gstPercentage: primaryMaterial.gstPercentage || 18,
       grossAmount: grandGrossAmount,
       netAmount: grandNetAmount,
+      materialItems: materialItems,
       bankDetails: {
         accountNumber,
         bankName,
@@ -397,11 +369,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           <Input 
             id="partyId"
             value={partyId}
-            onChange={handlePartyIdChange}
+            onChange={(e) => setPartyId(e.target.value)}
             placeholder="Enter party ID"
             required
-            disabled={partyNameFixed && !manualPartyId}
-            className={partyNameFixed && !manualPartyId ? "bg-muted" : ""}
           />
         </div>
       </div>
@@ -412,114 +382,120 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       <div>
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium">Materials</h3>
+        </div>
+        
+        {/* Add Material Form */}
+        <div className="p-4 border rounded-md mb-4 bg-muted/30">
+          <h4 className="font-medium mb-3">Add New Material</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="material-input">Material Name</Label>
+              <Input 
+                id="material-input"
+                value={materialInput} 
+                onChange={(e) => setMaterialInput(e.target.value)} 
+                placeholder="e.g., TMT Steel Bars"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="quantity-input">Quantity</Label>
+              <Input 
+                id="quantity-input"
+                type="number" 
+                value={quantityInput || ''} 
+                onChange={(e) => setQuantityInput(Number(e.target.value))} 
+                min="0"
+                step="0.01"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="rate-input">Rate (₹)</Label>
+              <Input 
+                id="rate-input"
+                type="number" 
+                value={rateInput || ''} 
+                onChange={(e) => setRateInput(Number(e.target.value))} 
+                min="0"
+                step="0.01"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="gst-input">GST Percentage (%)</Label>
+              <Select 
+                value={gstPercentageInput.toString()} 
+                onValueChange={(value) => setGstPercentageInput(Number(value))}
+              >
+                <SelectTrigger id="gst-input">
+                  <SelectValue placeholder="Select GST rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gstRates.map(rate => (
+                    <SelectItem key={rate} value={rate.toString()}>
+                      {rate}%
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
           <Button 
-            type="button" 
-            size="sm"
+            type="button"
             onClick={addMaterialItem}
-            className="gap-1"
+            className="gap-1.5"
           >
             <Plus className="h-4 w-4" />
             Add Material
           </Button>
         </div>
         
-        {materialItems.map((item, index) => (
-          <div key={item.id} className="p-4 border rounded-md mb-4 bg-muted/30">
-            <div className="flex justify-between items-center mb-2">
-              <h4 className="font-medium">Material #{index + 1}</h4>
-              {materialItems.length > 1 && (
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => removeMaterialItem(index)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
-              <div className="space-y-2">
-                <Label htmlFor={`material-${index}`}>Material Name</Label>
-                <Input 
-                  id={`material-${index}`} 
-                  value={item.material} 
-                  onChange={(e) => updateMaterialItem(index, 'material', e.target.value)} 
-                  placeholder="e.g., TMT Steel Bars"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`quantity-${index}`}>Quantity</Label>
-                <Input 
-                  id={`quantity-${index}`} 
-                  type="number" 
-                  value={item.quantity || ''} 
-                  onChange={(e) => updateMaterialItem(index, 'quantity', Number(e.target.value))} 
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`rate-${index}`}>Rate (₹)</Label>
-                <Input 
-                  id={`rate-${index}`} 
-                  type="number" 
-                  value={item.rate || ''} 
-                  onChange={(e) => updateMaterialItem(index, 'rate', Number(e.target.value))} 
-                  min="0"
-                  step="0.01"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`gst-${index}`}>GST Percentage (%)</Label>
-                <Select 
-                  value={item.gstPercentage.toString()} 
-                  onValueChange={(value) => updateMaterialItem(index, 'gstPercentage', Number(value))}
-                >
-                  <SelectTrigger id={`gst-${index}`}>
-                    <SelectValue placeholder="Select GST rate" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gstRates.map(rate => (
-                      <SelectItem key={rate} value={rate.toString()}>
-                        {rate}%
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor={`gross-${index}`}>Gross Amount (₹)</Label>
-                <Input 
-                  id={`gross-${index}`} 
-                  value={item.grossAmount.toLocaleString()} 
-                  readOnly 
-                  className="bg-muted"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor={`net-${index}`}>Net Amount (₹)</Label>
-                <Input 
-                  id={`net-${index}`} 
-                  value={item.netAmount.toLocaleString()} 
-                  readOnly 
-                  className="bg-muted"
-                />
-              </div>
+        {/* Material Items List */}
+        {materialItems.length > 0 && (
+          <div className="mb-4">
+            <h4 className="font-medium mb-2">Material Items List</h4>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full">
+                <thead className="bg-muted text-left">
+                  <tr>
+                    <th className="py-2 px-4 font-medium">#</th>
+                    <th className="py-2 px-4 font-medium">Material</th>
+                    <th className="py-2 px-4 font-medium text-right">Quantity</th>
+                    <th className="py-2 px-4 font-medium text-right">Rate (₹)</th>
+                    <th className="py-2 px-4 font-medium text-right">GST %</th>
+                    <th className="py-2 px-4 font-medium text-right">Amount (₹)</th>
+                    <th className="py-2 px-4 font-medium text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {materialItems.map((item, index) => (
+                    <tr key={item.id} className="border-t">
+                      <td className="py-3 px-4">{index + 1}</td>
+                      <td className="py-3 px-4">{item.material}</td>
+                      <td className="py-3 px-4 text-right">{item.quantity}</td>
+                      <td className="py-3 px-4 text-right">{item.rate?.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-right">{item.gstPercentage}%</td>
+                      <td className="py-3 px-4 text-right">{item.amount?.toLocaleString()}</td>
+                      <td className="py-3 px-4 text-center">
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => removeMaterialItem(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        ))}
+        )}
         
         {/* Grand Total */}
         <div className="bg-muted p-4 rounded-md mt-4">
