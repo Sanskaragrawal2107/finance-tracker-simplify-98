@@ -1,3 +1,15 @@
+export enum ExpenseCategory {
+  MATERIAL = "Material",
+  LABOR = "Labor",
+  TRAVEL = "Travel",
+  OFFICE = "Office",
+  MISC = "Miscellaneous",
+  TRANSPORT = "Transport",
+  FOOD = "Food",
+  ACCOMMODATION = "Accommodation",
+  EQUIPMENT = "Equipment",
+  MAINTENANCE = "Maintenance",
+}
 
 export const EXPENSE_CATEGORIES = [
   "STAFF TRAVELLING CHARGES",
@@ -10,6 +22,7 @@ export const EXPENSE_CATEGORIES = [
   "ROOM RENT FOR LABOUR"
 ];
 
+// Updated contractor and supervisor lists
 export const CONTRACTORS = [
   "Kailash Meena",
   "Devnath Prajapati",
@@ -25,7 +38,7 @@ export const SUPERVISORS = [
   "Vivek Giri Goswami",
   "M.P. Naidu",
   "Dinesh Nath",
-  "Jaspal Singh",
+  "Jaspal Singh", 
   "Sanjay Shukla",
   "Kundan Kumar",
   "Mahendra Pandey",

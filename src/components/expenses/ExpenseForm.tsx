@@ -44,7 +44,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import SearchableDropdown from './SearchableDropdown';
 import { CONTRACTORS, EXPENSE_CATEGORIES, SUPERVISORS } from '@/lib/constants';
 
-// Define the validation schema for the expense form
 const formSchema = z.object({
   date: z.date({
     required_error: "Date is required",
@@ -77,7 +76,6 @@ interface ExpenseFormProps {
   onSubmit: (expense: Partial<Expense>) => void;
 }
 
-// For tracking multiple expenses
 interface ExpenseItem extends FormValues {
   id: string;
 }
@@ -99,34 +97,29 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     },
   });
 
-  // Update recipient options when recipient type changes
   useEffect(() => {
     const recipientType = form.watch("recipientType");
     
     if (recipientType === "supervisor") {
       setRecipientOptions(SUPERVISORS);
+      console.log("Setting supervisor options:", SUPERVISORS);
     } else if (recipientType === "contractor") {
       setRecipientOptions(CONTRACTORS);
+      console.log("Setting contractor options:", CONTRACTORS);
     } else {
       setRecipientOptions([]);
     }
 
-    // Clear the recipient name when changing type
     if (form.getValues("recipientName")) {
       form.setValue("recipientName", "");
     }
-    
-    console.log("Recipient type changed to:", recipientType);
-    console.log("Available options set to:", recipientType === "supervisor" ? SUPERVISORS : recipientType === "contractor" ? CONTRACTORS : []);
   }, [form.watch("recipientType")]);
 
-  // Function to analyze purpose text with reduced character limit
   const analyzePurpose = async (purposeText: string) => {
     if (!purposeText || purposeText.length < 3) return;
     
     setIsAnalyzing(true);
     try {
-      // Note: This API key might be invalid or the API might have changed
       const apiKey = "AIzaSyDwqj1YcFKVzpLc_4ZyC_s9YAMCONx57RI";
       const url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
       
@@ -177,12 +170,10 @@ Return ONLY the category name, with no additional text or explanation.
       const data = await response.json();
       console.log("Gemini API response:", data);
       
-      // Extract the category from the response
       if (data.candidates && data.candidates[0] && data.candidates[0].content) {
         const categoryText = data.candidates[0].content.parts[0].text.trim();
         console.log("Detected category text:", categoryText);
         
-        // Check if the returned category is in our list
         const matchedCategory = EXPENSE_CATEGORIES.find(cat => 
           categoryText.includes(cat)
         );
@@ -198,7 +189,6 @@ Return ONLY the category name, with no additional text or explanation.
       }
     } catch (error) {
       console.error("Error analyzing purpose:", error);
-      // Instead of showing error toast, just quietly continue
       console.log("Continuing without category detection");
     } finally {
       setIsAnalyzing(false);
@@ -208,13 +198,13 @@ Return ONLY the category name, with no additional text or explanation.
   const addExpenseToList = (values: FormValues) => {
     const newExpense: ExpenseItem = {
       ...values,
-      id: Date.now().toString(), // unique id
+      id: Date.now().toString(),
     };
     
     setExpenses([...expenses, newExpense]);
     form.reset({
       date: new Date(),
-      recipientType: values.recipientType, // Keep the selected type for convenience
+      recipientType: values.recipientType,
       recipientName: "",
       purpose: "",
       category: "",
@@ -230,15 +220,14 @@ Return ONLY the category name, with no additional text or explanation.
   };
 
   const submitAllExpenses = () => {
-    // Submit all expenses and close the form
     expenses.forEach(expense => {
       const newExpense: Partial<Expense> = {
         date: expense.date,
         description: expense.purpose,
         category: expense.category as unknown as ExpenseCategory,
         amount: expense.amount,
-        status: "pending" as any, // Default status
-        createdBy: "Current User", // This should be replaced with actual user
+        status: "pending" as any,
+        createdBy: "Current User",
         createdAt: new Date(),
       };
       
@@ -255,14 +244,13 @@ Return ONLY the category name, with no additional text or explanation.
   };
 
   const handleSingleSubmit = (values: FormValues) => {
-    // Create a new expense object
     const newExpense: Partial<Expense> = {
       date: values.date,
       description: values.purpose,
       category: values.category as unknown as ExpenseCategory,
       amount: values.amount,
-      status: "pending" as any, // Default status
-      createdBy: "Current User", // This should be replaced with actual user
+      status: "pending" as any,
+      createdBy: "Current User",
       createdAt: new Date(),
     };
 
@@ -273,7 +261,6 @@ Return ONLY the category name, with no additional text or explanation.
     toast.success("Expense submitted successfully");
   };
 
-  // Blur handler for purpose field to trigger analysis
   const handlePurposeBlur = () => {
     const purposeValue = form.getValues("purpose");
     if (purposeValue && purposeValue.length >= 3) {
@@ -293,7 +280,6 @@ Return ONLY the category name, with no additional text or explanation.
         
         <Form {...form}>
           <form onSubmit={form.handleSubmit(addExpenseToList)} className="space-y-4">
-            {/* Date Field */}
             <FormField
               control={form.control}
               name="date"
@@ -334,7 +320,6 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Recipient Type Field */}
             <FormField
               control={form.control}
               name="recipientType"
@@ -378,7 +363,6 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Recipient Name Field */}
             <FormField
               control={form.control}
               name="recipientName"
@@ -395,7 +379,10 @@ Return ONLY the category name, with no additional text or explanation.
                       <SearchableDropdown
                         options={recipientOptions}
                         value={field.value}
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          console.log("Selected recipient:", value);
+                          field.onChange(value);
+                        }}
                         placeholder="Select recipient"
                         emptyMessage="No recipient found"
                       />
@@ -412,7 +399,6 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Purpose Field */}
             <FormField
               control={form.control}
               name="purpose"
@@ -432,7 +418,6 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Category Field */}
             <FormField
               control={form.control}
               name="category"
@@ -467,7 +452,6 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Amount Field */}
             <FormField
               control={form.control}
               name="amount"
@@ -499,7 +483,6 @@ Return ONLY the category name, with no additional text or explanation.
           </form>
         </Form>
 
-        {/* Show expenses list if any are added */}
         {expenses.length > 0 && (
           <div className="mt-6 space-y-4">
             <h3 className="text-sm font-medium">Expenses List ({expenses.length})</h3>

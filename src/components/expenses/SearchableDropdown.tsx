@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,8 +39,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
   
-  console.log("SearchableDropdown - Options:", safeOptions);
-  console.log("SearchableDropdown - Current Value:", value);
+  console.log("SearchableDropdown render - Options:", safeOptions);
+  console.log("SearchableDropdown render - Current Value:", value);
   
   // Filter options based on search query
   const filteredOptions = searchQuery === '' 
@@ -62,7 +62,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" sideOffset={4}>
+      <PopoverContent className="w-full p-0 bg-popover" align="start" sideOffset={4}>
         <Command className="w-full">
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`} 
@@ -79,6 +79,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
                 key={option}
                 value={option}
                 onSelect={() => {
+                  console.log("Item selected:", option);
                   onValueChange(option);
                   setOpen(false);
                   setSearchQuery('');
