@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle, ArrowLeft, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,7 @@ import * as z from "zod";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { BankRadioGroup, BankRadioGroupItem } from "@/components/ui/radio-group";
 
 const getStatusColor = (status: PaymentStatus) => {
   switch (status) {
@@ -175,16 +176,46 @@ const initialInvoices: Invoice[] = [
   },
 ];
 
+const bankDetails = {
+  sbi: {
+    name: "State Bank of India",
+    logo: "SBI",
+    color: "#2d76b7",
+    website: "https://www.onlinesbi.sbi/",
+  },
+  hdfc: {
+    name: "HDFC Bank",
+    logo: "HDFC",
+    color: "#004c8f",
+    website: "https://www.hdfcbank.com/",
+  },
+  icici: {
+    name: "ICICI Bank",
+    logo: "ICICI",
+    color: "#F58220",
+    website: "https://www.icicibank.com/",
+  },
+  axis: {
+    name: "Axis Bank",
+    logo: "AXIS",
+    color: "#97144d",
+    website: "https://www.axisbank.com/",
+  }
+};
+
 const Invoices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isBankPageOpen, setIsBankPageOpen] = useState(false);
+  const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const { toast } = useToast();
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [bankPageStep, setBankPageStep] = useState(1);
   
   const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
     resolver: zodResolver(paymentFormSchema),
@@ -248,33 +279,57 @@ const Invoices: React.FC = () => {
   const onSubmitPayment = (values: z.infer<typeof paymentFormSchema>) => {
     if (!selectedInvoice) return;
     
-    setPaymentProcessing(true);
+    setSelectedBank(values.bankOption);
+    setIsPaymentDialogOpen(false);
     
     setTimeout(() => {
-      const updatedInvoices = invoices.map(invoice => {
-        if (invoice.id === selectedInvoice.id) {
-          return {
-            ...invoice,
-            paymentStatus: PaymentStatus.PAID
-          };
-        }
-        return invoice;
-      });
-      
-      setInvoices(updatedInvoices);
-      setPaymentProcessing(false);
-      setPaymentSuccess(true);
-      
-      toast({
-        title: "Payment Successful",
-        description: `Payment of ₹${selectedInvoice.netAmount.toLocaleString()} has been processed successfully.`,
-      });
+      setIsBankPageOpen(true);
+      setBankPageStep(1);
+    }, 100);
+  };
+  
+  const handleBankPageContinue = () => {
+    if (bankPageStep < 3) {
+      setBankPageStep(prev => prev + 1);
+    } else {
+      setPaymentProcessing(true);
       
       setTimeout(() => {
-        setIsPaymentDialogOpen(false);
-        setPaymentSuccess(false);
+        const updatedInvoices = invoices.map(invoice => {
+          if (invoice.id === selectedInvoice?.id) {
+            return {
+              ...invoice,
+              paymentStatus: PaymentStatus.PAID
+            };
+          }
+          return invoice;
+        });
+        
+        setInvoices(updatedInvoices);
+        setPaymentProcessing(false);
+        setPaymentSuccess(true);
+        
+        toast({
+          title: "Payment Successful",
+          description: `Payment of ₹${selectedInvoice?.netAmount.toLocaleString()} has been processed successfully.`,
+        });
+        
+        setTimeout(() => {
+          setIsBankPageOpen(false);
+          setPaymentSuccess(false);
+          setBankPageStep(1);
+        }, 2000);
       }, 2000);
-    }, 2000);
+    }
+  };
+  
+  const handleBankPageBack = () => {
+    if (bankPageStep > 1) {
+      setBankPageStep(prev => prev - 1);
+    } else {
+      setIsBankPageOpen(false);
+      setTimeout(() => setIsPaymentDialogOpen(true), 100);
+    }
   };
 
   return (
@@ -398,7 +453,7 @@ const Invoices: React.FC = () => {
       
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent className="max-w-md">
-          <DialogTitle>Make Payment</DialogTitle>
+          <DialogTitle>Choose Your Bank</DialogTitle>
           <DialogDescription>
             Select your bank to complete the payment for invoice #{selectedInvoice?.partyId}
           </DialogDescription>
@@ -430,118 +485,245 @@ const Invoices: React.FC = () => {
             </div>
           )}
           
-          {paymentSuccess ? (
-            <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
-              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                <div className="h-10 w-10 rounded-full bg-green-500 text-white flex items-center justify-center">
-                  ✓
+          <Separator className="my-4" />
+          
+          <Form {...paymentForm}>
+            <form onSubmit={paymentForm.handleSubmit(onSubmitPayment)} className="space-y-6">
+              {selectedInvoice?.approverType === "supervisor" && (
+                <div className="mb-2 flex items-center p-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  <p className="text-sm">This payment will be made directly without bank transfer as it was approved by a supervisor.</p>
                 </div>
-              </div>
-              <h3 className="text-xl font-medium">Payment Successful!</h3>
-              <p className="text-muted-foreground">Your payment has been processed successfully.</p>
-            </div>
-          ) : (
-            <>
-              <Separator className="my-4" />
+              )}
               
-              <Form {...paymentForm}>
-                <form onSubmit={paymentForm.handleSubmit(onSubmitPayment)} className="space-y-4">
-                  {selectedInvoice?.approverType === "supervisor" && (
-                    <div className="mb-2 flex items-center p-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
-                      <AlertTriangle className="h-4 w-4 mr-2" />
-                      <p className="text-sm">This payment will be made directly without bank transfer as it was approved by a supervisor.</p>
+              <FormField
+                control={paymentForm.control}
+                name="bankOption"
+                render={({ field }) => (
+                  <FormItem className="space-y-1">
+                    <FormLabel>Select Your Bank</FormLabel>
+                    <FormControl>
+                      <BankRadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="space-y-3"
+                      >
+                        <BankRadioGroupItem 
+                          value="sbi" 
+                          id="sbi" 
+                          bankName="State Bank of India" 
+                          bankLogo="SBI"
+                        />
+                        <BankRadioGroupItem 
+                          value="hdfc" 
+                          id="hdfc" 
+                          bankName="HDFC Bank" 
+                          bankLogo="HDFC"
+                        />
+                        <BankRadioGroupItem 
+                          value="icici" 
+                          id="icici" 
+                          bankName="ICICI Bank" 
+                          bankLogo="ICICI"
+                        />
+                        <BankRadioGroupItem 
+                          value="axis" 
+                          id="axis" 
+                          bankName="Axis Bank" 
+                          bankLogo="AXIS"
+                        />
+                      </BankRadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => setIsPaymentDialogOpen(false)}
+                  disabled={paymentProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  disabled={paymentProcessing}
+                  className="min-w-24"
+                >
+                  Proceed to Net Banking
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={isBankPageOpen} onOpenChange={(open) => {
+        if (!open && !paymentSuccess) setIsBankPageOpen(false);
+      }}>
+        <DialogContent className="max-w-lg p-0 overflow-hidden">
+          {selectedBank && (
+            <>
+              <div className="p-4 bg-gradient-to-r from-primary/90 to-primary text-primary-foreground">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{bankDetails[selectedBank as keyof typeof bankDetails].name}</h3>
+                  <span className="text-xs bg-white/20 px-2 py-1 rounded-full">Secure Connection</span>
+                </div>
+                <p className="text-xs mt-1 opacity-80">Net Banking Payment Portal</p>
+              </div>
+              
+              <div className="p-6">
+                {paymentSuccess ? (
+                  <div className="py-8 flex flex-col items-center justify-center text-center space-y-4">
+                    <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                      <div className="h-10 w-10 rounded-full bg-green-500 text-white flex items-center justify-center">
+                        <Check className="h-5 w-5" />
+                      </div>
                     </div>
-                  )}
-                  
-                  <FormField
-                    control={paymentForm.control}
-                    name="bankOption"
-                    render={({ field }) => (
-                      <FormItem className="space-y-1">
-                        <FormLabel>Select Your Bank</FormLabel>
-                        <FormDescription>
-                          Choose the bank you want to use for this payment
-                        </FormDescription>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="grid grid-cols-2 gap-4 pt-2"
-                          >
-                            <div className="flex flex-col items-center space-y-2">
-                              <Label
-                                htmlFor="sbi"
-                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                              >
-                                <Building className="mb-2 h-8 w-8" />
-                                <span className="text-center font-medium">SBI</span>
-                              </Label>
-                              <RadioGroupItem value="sbi" id="sbi" className="sr-only" />
-                            </div>
-                            
-                            <div className="flex flex-col items-center space-y-2">
-                              <Label
-                                htmlFor="hdfc"
-                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                              >
-                                <Building className="mb-2 h-8 w-8" />
-                                <span className="text-center font-medium">HDFC</span>
-                              </Label>
-                              <RadioGroupItem value="hdfc" id="hdfc" className="sr-only" />
-                            </div>
-                            
-                            <div className="flex flex-col items-center space-y-2">
-                              <Label
-                                htmlFor="icici"
-                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                              >
-                                <Building className="mb-2 h-8 w-8" />
-                                <span className="text-center font-medium">ICICI</span>
-                              </Label>
-                              <RadioGroupItem value="icici" id="icici" className="sr-only" />
-                            </div>
-                            
-                            <div className="flex flex-col items-center space-y-2">
-                              <Label
-                                htmlFor="axis"
-                                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                              >
-                                <Building className="mb-2 h-8 w-8" />
-                                <span className="text-center font-medium">AXIS</span>
-                              </Label>
-                              <RadioGroupItem value="axis" id="axis" className="sr-only" />
-                            </div>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2 pt-2">
+                    <h3 className="text-xl font-medium">Payment Successful!</h3>
+                    <p className="text-muted-foreground">Your payment has been processed successfully.</p>
+                    <p className="text-xs text-muted-foreground">Transaction ID: {Math.random().toString(36).substring(2, 12).toUpperCase()}</p>
                     <Button 
-                      type="button" 
-                      variant="outline"
-                      onClick={() => setIsPaymentDialogOpen(false)}
-                      disabled={paymentProcessing}
+                      onClick={() => {
+                        setIsBankPageOpen(false);
+                        setPaymentSuccess(false);
+                      }}
+                      className="mt-4"
                     >
-                      Cancel
-                    </Button>
-                    <Button 
-                      type="submit" 
-                      disabled={paymentProcessing}
-                      className="min-w-24"
-                    >
-                      {paymentProcessing ? (
-                        <>
-                          <span className="loading loading-spinner loading-xs mr-2"></span>
-                          Processing...
-                        </>
-                      ) : "Proceed to Pay"}
+                      Return to Invoice
                     </Button>
                   </div>
-                </form>
-              </Form>
+                ) : (
+                  <>
+                    <div className="flex items-center mb-6">
+                      <div className="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center text-primary font-bold text-sm">
+                        1
+                      </div>
+                      <div className="h-1 w-16 bg-muted mx-2">
+                        <div className={`h-full bg-primary ${bankPageStep >= 2 ? 'w-full' : 'w-0'} transition-all duration-300`}></div>
+                      </div>
+                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${bankPageStep >= 2 ? 'border-primary text-primary' : 'border-muted text-muted-foreground'}`}>
+                        2
+                      </div>
+                      <div className="h-1 w-16 bg-muted mx-2">
+                        <div className={`h-full bg-primary ${bankPageStep >= 3 ? 'w-full' : 'w-0'} transition-all duration-300`}></div>
+                      </div>
+                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm ${bankPageStep >= 3 ? 'border-primary text-primary' : 'border-muted text-muted-foreground'}`}>
+                        3
+                      </div>
+                    </div>
+                    
+                    {bankPageStep === 1 && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-medium">Login to Your Account</h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="username">Username / Customer ID</Label>
+                            <Input 
+                              id="username" 
+                              defaultValue={`user${Math.floor(Math.random() * 10000)}`} 
+                              className="bg-muted/50"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input id="password" type="password" defaultValue="********" className="bg-muted/50" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {bankPageStep === 2 && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-medium">Verify Payment Details</h3>
+                        <div className="border rounded-md overflow-hidden">
+                          <div className="bg-muted p-3 font-medium">Transaction Details</div>
+                          <div className="p-4 space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Merchant</span>
+                              <span className="font-medium">{selectedInvoice?.partyName}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Amount</span>
+                              <span className="font-medium">₹{selectedInvoice?.netAmount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Invoice Number</span>
+                              <span className="font-medium">{selectedInvoice?.partyId}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Date</span>
+                              <span className="font-medium">{format(new Date(), 'dd MMM yyyy')}</span>
+                            </div>
+                            {selectedInvoice?.approverType === "ho" && (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Beneficiary Account</span>
+                                  <span className="font-medium">{selectedInvoice?.bankDetails.accountNumber}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Beneficiary Bank</span>
+                                  <span className="font-medium">{selectedInvoice?.bankDetails.bankName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">IFSC Code</span>
+                                  <span className="font-medium">{selectedInvoice?.bankDetails.ifscCode}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {bankPageStep === 3 && (
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-medium">Authenticate Payment</h3>
+                        <div className="border rounded-md p-4 space-y-4">
+                          <p className="text-center text-sm">We've sent a One Time Password (OTP) to your registered mobile number</p>
+                          <div className="bg-muted/70 rounded-md p-3 text-center">
+                            <p className="text-xs text-muted-foreground">Phone Number</p>
+                            <p className="font-medium">******{Math.floor(Math.random() * 10000)}</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="otp">Enter OTP</Label>
+                            <Input id="otp" className="text-center letter-spacing-wide" defaultValue={Math.floor(Math.random() * 1000000).toString().padStart(6, '0')} />
+                          </div>
+                          <p className="text-xs text-muted-foreground text-center">This OTP is valid for 5 minutes</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between mt-8">
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={handleBankPageBack}
+                        className="gap-1"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        Back
+                      </Button>
+                      <Button 
+                        type="button" 
+                        onClick={handleBankPageContinue}
+                        disabled={paymentProcessing}
+                        className="min-w-24"
+                      >
+                        {paymentProcessing ? (
+                          <>
+                            <span className="loading loading-spinner loading-xs mr-2"></span>
+                            Processing...
+                          </>
+                        ) : bankPageStep === 3 ? "Confirm Payment" : "Continue"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
             </>
           )}
         </DialogContent>
