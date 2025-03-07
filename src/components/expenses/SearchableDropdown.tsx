@@ -1,19 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Check, ChevronsUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Option {
@@ -43,72 +30,98 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   emptyMessage = "No results found.",
   className,
 }) => {
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
   
-  console.log("SearchableDropdown render - Options:", safeOptions);
-  console.log("SearchableDropdown render - Current Value:", selectedVal);
-  
-  // Filter options based on search query
-  const filteredOptions = query === '' 
-    ? safeOptions 
-    : safeOptions.filter(option => 
-        option[label].toLowerCase().includes(query.toLowerCase())
-      );
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectOption = (option: Option) => {
+    setQuery("");
+    handleChange(option[label]);
+    setIsOpen(false);
+  };
+
+  const getDisplayValue = () => {
+    if (query) return query;
+    if (selectedVal) return selectedVal;
+    return placeholder;
+  };
+
+  const filteredOptions = safeOptions.filter(
+    (option) => option[label].toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className={cn("w-full justify-between", className)}
+    <div 
+      ref={dropdownRef}
+      className={cn(
+        "relative w-full",
+        className
+      )}
+    >
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={getDisplayValue()}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!isOpen) setIsOpen(true);
+            if (e.target.value === "") handleChange(null);
+          }}
+          onClick={() => setIsOpen(true)}
+          onFocus={() => setIsOpen(true)}
+          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+          placeholder={placeholder}
+        />
+        <div 
+          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+          onClick={() => setIsOpen(!isOpen)}
         >
-          {selectedVal || placeholder}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[250px] p-0 bg-popover" align="start" sideOffset={4}>
-        <Command className="w-full">
-          <CommandInput 
-            placeholder={`Search ${placeholder.toLowerCase()}...`} 
-            value={query}
-            onValueChange={setQuery}
-            className="h-9"
-          />
-          <CommandEmpty className="py-3 text-center text-sm">
-            {emptyMessage}
-          </CommandEmpty>
-          <CommandGroup className="max-h-60 overflow-y-auto">
-            {filteredOptions.map((option) => (
-              <CommandItem
-                key={option[id]}
-                value={option[label]}
-                onSelect={() => {
-                  console.log("Item selected:", option[label]);
-                  handleChange(option[label]);
-                  setOpen(false);
-                  setQuery('');
-                }}
-                className="cursor-pointer"
+          <ChevronDown className={cn(
+            "h-4 w-4 text-muted-foreground transition-transform duration-200",
+            isOpen && "transform rotate-180"
+          )} />
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-popover border rounded-md shadow-md max-h-60 overflow-y-auto">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((option, index) => (
+              <div
+                key={`${option[id]}-${index}`}
+                onClick={() => selectOption(option)}
+                className={cn(
+                  "px-3 py-2 cursor-pointer hover:bg-muted transition-colors",
+                  option[label] === selectedVal && "bg-primary/10 font-medium"
+                )}
               >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    selectedVal === option[label] ? "opacity-100" : "opacity-0"
-                  )}
-                />
                 {option[label]}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        </Command>
-      </PopoverContent>
-    </Popover>
+              </div>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-muted-foreground">
+              {emptyMessage}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 };
 

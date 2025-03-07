@@ -39,14 +39,13 @@ const SearchableSelectContent = React.forwardRef<
               if (typeof childrenProp === 'string') {
                 childText = childrenProp;
               } else if (React.isValidElement(childrenProp)) {
-                // Fix type error by using type assertion with specific property check
-                const childProps = childrenProp.props;
-                
-                if (childProps && 
-                    typeof childProps === 'object' &&
-                    'children' in childProps && 
-                    typeof childProps.children === 'string') {
-                  childText = childProps.children as string;
+                if (childrenProp.props && 
+                    typeof childrenProp.props === 'object' &&
+                    'children' in childrenProp.props) {
+                  const children = childrenProp.props.children;
+                  if (typeof children === 'string') {
+                    childText = children;
+                  }
                 }
               }
             }
