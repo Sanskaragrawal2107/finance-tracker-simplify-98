@@ -85,15 +85,20 @@ const SelectContent = React.forwardRef<
       return React.cloneElement(
         child as React.ReactElement<React.PropsWithChildren<any>>, 
         child.props, 
-        React.Children.map(child.props.children, viewportChild => {
-          if (React.isValidElement(viewportChild) && searchQuery && 
-              viewportChild.props?.children) {
+        React.Children.map(child.props.children, (viewportChild) => {
+          if (!React.isValidElement(viewportChild)) return viewportChild;
+          
+          if (searchQuery && viewportChild.props) {
             let childText = '';
-            if (typeof viewportChild.props.children === 'string') {
-              childText = viewportChild.props.children;
-            } else if (React.isValidElement(viewportChild.props.children) && 
-                      viewportChild.props.children.props?.children) {
-              childText = String(viewportChild.props.children.props.children || '');
+            const childrenProp = viewportChild.props.children;
+            
+            if (typeof childrenProp === 'string') {
+              childText = childrenProp;
+            } else if (React.isValidElement(childrenProp) && 
+                      childrenProp.props && 
+                      'children' in childrenProp.props) {
+              const nestedChildren = childrenProp.props.children;
+              childText = typeof nestedChildren === 'string' ? nestedChildren : '';
             }
             
             if (childText && !childText.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -145,19 +150,27 @@ const SelectContent = React.forwardRef<
               return null;
             }
             
-            return React.Children.map(child.props.children, item => {
+            return React.Children.map(child.props.children, (item) => {
               if (!React.isValidElement(item)) return null;
               
               // Check if the item is a SelectItem and its child text includes the search query
               let itemText = '';
-              const itemContent = item.props?.children;
               
-              if (typeof itemContent === 'string') {
-                itemText = itemContent;
-              } else if (itemContent && typeof itemContent === 'object' && 'props' in itemContent) {
-                itemText = String(itemContent.props?.children || '');
+              if (item.props) {
+                const itemContent = item.props.children;
+                
+                if (typeof itemContent === 'string') {
+                  itemText = itemContent;
+                } else if (itemContent && 
+                          typeof itemContent === 'object' && 
+                          'props' in itemContent && 
+                          itemContent.props && 
+                          'children' in itemContent.props) {
+                  const nestedChildren = itemContent.props.children;
+                  itemText = typeof nestedChildren === 'string' ? nestedChildren : '';
+                }
               }
-                  
+                   
               if (searchQuery && itemText && !itemText.toLowerCase().includes(searchQuery.toLowerCase())) {
                 return null;
               }
