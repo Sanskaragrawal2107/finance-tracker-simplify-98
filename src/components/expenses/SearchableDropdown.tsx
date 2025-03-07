@@ -62,7 +62,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0 bg-popover" align="start" sideOffset={4}>
+      <PopoverContent className="w-[200px] p-0 bg-popover" align="start" sideOffset={4}>
         <Command className="w-full">
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`} 
