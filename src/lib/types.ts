@@ -1,4 +1,3 @@
-
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -43,7 +42,15 @@ export enum ExpenseCategory {
   FOOD = "food",
   ACCOMMODATION = "accommodation",
   EQUIPMENT = "equipment",
-  MAINTENANCE = "maintenance"
+  MAINTENANCE = "maintenance",
+  STAFF_TRAVELLING_CHARGES = "STAFF TRAVELLING CHARGES",
+  STATIONARY_PRINTING = "STATIONARY & PRINTING",
+  DIESEL_FUEL_CHARGES = "DIESEL & FUEL CHARGES",
+  LABOUR_TRAVELLING_EXP = "LABOUR TRAVELLING EXP.",
+  LOADGING_BOARDING_STAFF = "LOADGING & BOARDING FOR STAFF",
+  FOOD_CHARGES_LABOUR = "FOOD CHARGES FOR LABOUR",
+  SITE_EXPENSES = "SITE EXPENSES",
+  ROOM_RENT_LABOUR = "ROOM RENT FOR LABOUR"
 }
 
 export enum AdvancePurpose {
@@ -68,7 +75,7 @@ export interface Expense {
   id: string;
   date: Date;
   description: string;
-  category: ExpenseCategory;
+  category: ExpenseCategory | string;
   amount: number;
   status: ApprovalStatus;
   createdBy: string;
