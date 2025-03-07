@@ -40,8 +40,10 @@ const SearchableSelectContent = React.forwardRef<
                 childText = childrenProp;
               } else if (React.isValidElement(childrenProp)) {
                 const childElement = childrenProp as React.ReactElement;
-                // Check if props and children exist before accessing
-                if (childElement.props && typeof childElement.props === 'object' && 
+                // The issue is here - we need to ensure childElement.props is an object
+                // and safely check if it has a children property that's a string
+                if (childElement.props && 
+                    typeof childElement.props === 'object' && 
                     'children' in childElement.props && 
                     typeof childElement.props.children === 'string') {
                   childText = childElement.props.children;
