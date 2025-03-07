@@ -37,23 +37,31 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredOptions, setFilteredOptions] = useState<string[]>([]);
 
+  // Ensure options is always an array
+  const safeOptions = Array.isArray(options) ? options : [];
+
   // Update filtered options when options prop or search query changes
   useEffect(() => {
-    if (!options || options.length === 0) {
+    if (!safeOptions || safeOptions.length === 0) {
       setFilteredOptions([]);
       return;
     }
     
     if (!searchQuery) {
-      setFilteredOptions(options);
+      setFilteredOptions(safeOptions);
       return;
     }
     
-    const filtered = options.filter(option => 
+    const filtered = safeOptions.filter(option => 
       option.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredOptions(filtered);
-  }, [options, searchQuery]);
+  }, [safeOptions, searchQuery]);
+
+  // Debug logs to help understand the component state
+  console.log("SearchableDropdown - Options:", safeOptions);
+  console.log("SearchableDropdown - Filtered Options:", filteredOptions);
+  console.log("SearchableDropdown - Current Value:", value);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -76,29 +84,32 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
-          <CommandEmpty>{emptyMessage}</CommandEmpty>
-          <CommandGroup className="max-h-60 overflow-y-auto">
-            {Array.isArray(filteredOptions) && filteredOptions.map((option) => (
-              <CommandItem
-                key={option}
-                value={option}
-                onSelect={() => {
-                  onValueChange(option);
-                  setOpen(false);
-                  setSearchQuery('');
-                }}
-                className="cursor-pointer"
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === option ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                {option}
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          {filteredOptions.length === 0 ? (
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
+          ) : (
+            <CommandGroup className="max-h-60 overflow-y-auto">
+              {filteredOptions.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  onSelect={() => {
+                    onValueChange(option);
+                    setOpen(false);
+                    setSearchQuery('');
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === option ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {option}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </Command>
       </PopoverContent>
     </Popover>
