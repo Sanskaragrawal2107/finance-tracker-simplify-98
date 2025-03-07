@@ -25,14 +25,6 @@ type InvoiceFormProps = {
 };
 
 // Mock data - would come from API in real application
-const parties = [
-  { id: '101', name: 'Steel Suppliers Ltd' },
-  { id: '102', name: 'Cement Corporation' },
-  { id: '103', name: 'Brick Manufacturers' },
-  { id: '104', name: 'Electrical Solutions' },
-  { id: '105', name: 'Sanitary Fittings Co.' },
-];
-
 const gstRates = [5, 12, 18, 28];
 
 const InvoiceForm: React.FC<InvoiceFormProps> = ({ 
@@ -75,14 +67,14 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setNetAmount(grossAmount + gstAmount);
   }, [grossAmount, gstPercentage]);
 
-  // Handle party selection
-  const handlePartySelect = (selectedPartyId: string) => {
-    setPartyId(selectedPartyId);
-    const selectedParty = parties.find(party => party.id === selectedPartyId);
-    if (selectedParty) {
-      setPartyName(selectedParty.name);
+  // Set party ID when party name changes
+  useEffect(() => {
+    if (partyName) {
+      // Create a simple ID from the party name (in a real app this would be from a database)
+      const generatedId = Math.floor(100 + Math.random() * 900).toString();
+      setPartyId(generatedId);
     }
-  };
+  }, [partyName]);
 
   // Handle account number input
   const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -237,18 +229,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
         <div className="space-y-2">
           <Label htmlFor="party">Party Name</Label>
-          <Select value={partyId} onValueChange={handlePartySelect}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select party" />
-            </SelectTrigger>
-            <SelectContent>
-              {parties.map(party => (
-                <SelectItem key={party.id} value={party.id}>
-                  {party.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input 
+            id="party" 
+            value={partyName} 
+            onChange={(e) => setPartyName(e.target.value)} 
+            placeholder="Enter party name"
+            required
+          />
         </div>
 
         <div className="space-y-2">
@@ -398,14 +385,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mobile">Mobile Number</Label>
+            <Label htmlFor="mobile">Mobile Number (Optional)</Label>
             <Input 
               id="mobile" 
               value={mobile} 
               onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} 
               placeholder="Mobile Number"
               maxLength={10}
-              required
             />
           </div>
         </div>

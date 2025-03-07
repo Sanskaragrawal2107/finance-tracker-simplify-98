@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Download, Printer, Copy } from 'lucide-react';
+import { Download, Printer, Copy, Eye } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -13,6 +14,7 @@ interface InvoiceDetailsProps {
 
 const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
   const { toast } = useToast();
+  const [isImageViewOpen, setIsImageViewOpen] = useState(false);
 
   const getStatusColor = (status: PaymentStatus) => {
     switch (status) {
@@ -40,6 +42,29 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
       title: "Copied to clipboard",
       description: "Invoice details have been copied to clipboard",
     });
+  };
+
+  const handleDownloadBill = () => {
+    if (invoice.billUrl) {
+      // Create a temporary link element
+      const link = document.createElement('a');
+      link.href = invoice.billUrl;
+      link.download = `Invoice_${invoice.id}_Bill.${getFileExtension(invoice.billUrl)}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: "Download started",
+        description: "The bill is being downloaded",
+      });
+    }
+  };
+
+  const getFileExtension = (url: string): string => {
+    // Extract file extension from URL or default to "jpg"
+    const match = url.match(/\.([a-z0-9]+)(?:[\?#]|$)/i);
+    return match ? match[1] : 'jpg';
   };
 
   return (
@@ -121,11 +146,17 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
             <h3 className="text-lg font-medium mb-2">Bill Attachment</h3>
             <div className="border rounded-md p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm">Bill_{invoice.id}.pdf</p>
-                <Button variant="outline" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
+                <p className="text-sm">Bill_{invoice.id}.{getFileExtension(invoice.billUrl)}</p>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsImageViewOpen(true)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleDownloadBill}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
@@ -150,6 +181,28 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
           )}
         </div>
       </div>
+
+      {/* Image View Dialog */}
+      <Dialog open={isImageViewOpen} onOpenChange={setIsImageViewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto flex flex-col items-center">
+          <DialogTitle>Bill Attachment</DialogTitle>
+          <div className="w-full p-4 flex justify-center">
+            {invoice.billUrl && (
+              <img 
+                src={invoice.billUrl} 
+                alt="Bill attachment" 
+                className="max-w-full max-h-[70vh] object-contain" 
+              />
+            )}
+          </div>
+          <div className="w-full flex justify-end">
+            <Button variant="outline" onClick={handleDownloadBill}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

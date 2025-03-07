@@ -1,11 +1,12 @@
+
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, FileEdit, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useToast } from '@/hooks/use-toast';
@@ -222,9 +223,6 @@ const Invoices: React.FC = () => {
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <FileEdit className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Download className="h-4 w-4 text-muted-foreground" />
                     </Button>
                   </td>
@@ -252,6 +250,9 @@ const Invoices: React.FC = () => {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Create New Invoice</DialogTitle>
+          <DialogDescription>
+            Fill out the form below to create a new invoice
+          </DialogDescription>
           <InvoiceForm onSubmit={handleCreateInvoice} />
         </DialogContent>
       </Dialog>
