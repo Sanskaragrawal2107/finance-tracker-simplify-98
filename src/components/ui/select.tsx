@@ -1,10 +1,9 @@
-
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { Check, ChevronDown, ChevronUp, Search } from "lucide-react"
+import { Check, ChevronDown, ChevronUp } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Input } from "./input"
+import { SearchableSelectContent } from "./searchable-select"
 
 const Select = SelectPrimitive.Root
 
@@ -75,44 +74,19 @@ const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   SelectContentProps
 >(({ className, children, position = "popper", searchable = false, ...props }, ref) => {
-  const [searchQuery, setSearchQuery] = React.useState("");
-  
-  // Type check and filter children
-  const filteredChildren = React.Children.map(children, child => {
-    if (!React.isValidElement(child)) return child;
-    
-    if (child.type === SelectPrimitive.Viewport) {
-      return React.cloneElement(
-        child as React.ReactElement<React.PropsWithChildren<any>>, 
-        child.props, 
-        React.Children.map(child.props.children, (viewportChild) => {
-          if (!React.isValidElement(viewportChild)) return viewportChild;
-          
-          if (searchQuery && viewportChild.props) {
-            let childText = '';
-            const childrenProp = viewportChild.props.children;
-            
-            if (typeof childrenProp === 'string') {
-              childText = childrenProp;
-            } else if (React.isValidElement(childrenProp) && 
-                      childrenProp.props && 
-                      typeof childrenProp.props === 'object' &&
-                      childrenProp.props !== null &&
-                      'children' in childrenProp.props) {
-              const nestedChildren = childrenProp.props.children;
-              childText = typeof nestedChildren === 'string' ? nestedChildren : '';
-            }
-            
-            if (childText && !childText.toLowerCase().includes(searchQuery.toLowerCase())) {
-              return null;
-            }
-          }
-          return viewportChild;
-        })
-      );
-    }
-    return child;
-  });
+  if (searchable) {
+    return (
+      <SearchableSelectContent
+        ref={ref}
+        className={className}
+        position={position}
+        searchable={searchable}
+        {...props}
+      >
+        {children}
+      </SearchableSelectContent>
+    )
+  }
 
   return (
     <SelectPrimitive.Portal>
@@ -128,18 +102,6 @@ const SelectContent = React.forwardRef<
         {...props}
       >
         <SelectScrollUpButton />
-        {searchable && (
-          <div className="sticky top-0 flex items-center p-1 bg-popover border-b">
-            <Search className="h-4 w-4 ml-2 text-muted-foreground absolute" />
-            <Input
-              className="pl-8 h-8"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-        )}
         <SelectPrimitive.Viewport
           className={cn(
             "p-1",
@@ -147,42 +109,7 @@ const SelectContent = React.forwardRef<
               "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)]"
           )}
         >
-          {searchable ? React.Children.map(children, child => {
-            if (!React.isValidElement(child) || child.type !== SelectPrimitive.Viewport) {
-              return null;
-            }
-            
-            return React.Children.map(child.props.children, (item) => {
-              if (!React.isValidElement(item)) return null;
-              
-              // Check if the item is a SelectItem and its child text includes the search query
-              let itemText = '';
-              
-              if (item.props) {
-                const itemContent = item.props.children;
-                
-                if (typeof itemContent === 'string') {
-                  itemText = itemContent;
-                } else if (itemContent && 
-                          typeof itemContent === 'object' && 
-                          itemContent !== null &&
-                          'props' in itemContent && 
-                          itemContent.props && 
-                          typeof itemContent.props === 'object' &&
-                          itemContent.props !== null &&
-                          'children' in itemContent.props) {
-                  const nestedChildren = itemContent.props.children;
-                  itemText = typeof nestedChildren === 'string' ? nestedChildren : '';
-                }
-              }
-                   
-              if (searchQuery && itemText && !itemText.toLowerCase().includes(searchQuery.toLowerCase())) {
-                return null;
-              }
-              
-              return item;
-            });
-          }) : children}
+          {children}
         </SelectPrimitive.Viewport>
         <SelectScrollDownButton />
       </SelectPrimitive.Content>
@@ -251,3 +178,4 @@ export {
   SelectScrollUpButton,
   SelectScrollDownButton,
 }
+
