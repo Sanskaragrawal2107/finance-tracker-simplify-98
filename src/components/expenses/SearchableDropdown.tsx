@@ -32,6 +32,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 }) => {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
@@ -42,6 +43,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setIsFocused(false);
       }
     };
     
@@ -57,8 +59,8 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 
   const getDisplayValue = () => {
     if (query) return query;
-    if (selectedVal) return selectedVal;
-    return placeholder;
+    if (selectedVal && !isFocused) return selectedVal;
+    return "";
   };
 
   const filteredOptions = safeOptions.filter(
@@ -83,14 +85,24 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
             if (!isOpen) setIsOpen(true);
             if (e.target.value === "") handleChange(null);
           }}
-          onClick={() => setIsOpen(true)}
-          onFocus={() => setIsOpen(true)}
+          onClick={() => {
+            setIsOpen(true);
+            setIsFocused(true);
+          }}
+          onFocus={() => {
+            setIsOpen(true);
+            setIsFocused(true);
+          }}
+          onBlur={() => {
+            if (!selectedVal && query === "") {
+              setIsFocused(false);
+            }
+          }}
           className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          placeholder={placeholder}
+          placeholder={isFocused ? "" : placeholder}
         />
         <div 
           className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
-          onClick={() => setIsOpen(!isOpen)}
         >
           <ChevronDown className={cn(
             "h-4 w-4 text-muted-foreground transition-transform duration-200",
