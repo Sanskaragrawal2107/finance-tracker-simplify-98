@@ -3,12 +3,13 @@ import React from 'react';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
-import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText } from 'lucide-react';
+import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
+  onMakePayment?: (invoice: Invoice) => void;
 }
 
 const getStatusColor = (status: PaymentStatus) => {
@@ -22,7 +23,7 @@ const getStatusColor = (status: PaymentStatus) => {
   }
 };
 
-const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
+const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment }) => {
   const { toast } = useToast();
   
   // Parse multiple materials if they exist
@@ -64,6 +65,17 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
       });
     }
   };
+
+  const handlePayment = () => {
+    if (onMakePayment) {
+      onMakePayment(invoice);
+    } else {
+      toast({
+        title: "Payment processing",
+        description: "Payment functionality is not available in the demo version.",
+      });
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -97,8 +109,13 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
           <p className="font-medium">{invoice.partyName}</p>
           <p className="text-sm mt-1 flex items-center">
             <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
-            Party ID: {invoice.partyId}
+            Invoice Number: {invoice.partyId}
           </p>
+          {invoice.approverType && (
+            <p className="text-sm mt-1">
+              Approved by: <span className="font-medium capitalize">{invoice.approverType}</span>
+            </p>
+          )}
         </div>
       </div>
       
@@ -133,7 +150,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
             </tbody>
             <tfoot className="bg-muted/50 font-medium">
               <tr className="border-t">
-                <td colSpan={5} className="py-3 px-4 text-right">Gross Amount:</td>
+                <td colSpan={5} className="py-3 px-4 text-right">Net Taxable Amount:</td>
                 <td className="py-3 px-4 text-right">₹{invoice.grossAmount.toLocaleString()}</td>
               </tr>
               <tr className="border-t">
@@ -141,7 +158,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
                 <td className="py-3 px-4 text-right">₹{(invoice.netAmount - invoice.grossAmount).toLocaleString()}</td>
               </tr>
               <tr className="border-t">
-                <td colSpan={5} className="py-3 px-4 text-right font-bold">Net Amount:</td>
+                <td colSpan={5} className="py-3 px-4 text-right font-bold">Grand Net Total:</td>
                 <td className="py-3 px-4 text-right font-bold text-primary">₹{invoice.netAmount.toLocaleString()}</td>
               </tr>
             </tfoot>
@@ -185,7 +202,20 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
         </div>
       )}
       
-      <div className="flex justify-end pt-2">
+      <div className="flex justify-between pt-2">
+        <div>
+          {invoice.paymentStatus === PaymentStatus.PENDING && (
+            <Button 
+              variant="default" 
+              size="sm" 
+              className="gap-1.5"
+              onClick={handlePayment}
+            >
+              <CreditCard className="h-4 w-4" />
+              Make Payment
+            </Button>
+          )}
+        </div>
         <Button variant="outline" size="sm" className="gap-1.5">
           <Download className="h-4 w-4" />
           Export Invoice

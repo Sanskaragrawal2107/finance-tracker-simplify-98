@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { PaymentStatus, Invoice, MaterialItem } from '@/lib/types';
-import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2, FileText, User } from 'lucide-react';
+import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2, FileText, User, AlertTriangle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type InvoiceFormProps = {
   onSubmit: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
@@ -63,6 +64,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [mobile, setMobile] = useState<string>(initialData?.bankDetails?.mobile || '');
   const [ifscValidationMessage, setIfscValidationMessage] = useState<string>('');
   const [isFetchingBankDetails, setIsFetchingBankDetails] = useState<boolean>(false);
+  
+  // Add approver type selection
+  const [approverType, setApproverType] = useState<"ho" | "supervisor">("ho");
 
   // Fix party name when entered
   const handlePartyNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,6 +97,11 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     
     setGrandGrossAmount(totalGross);
     setGrandNetAmount(totalNet);
+    
+    // Auto-select HO for amounts greater than 5000
+    if (totalNet > 5000) {
+      setApproverType("ho");
+    }
   }, [materialItems]);
 
   // Add new material item
@@ -263,8 +272,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     // Validate Party ID
     if (!partyId.trim()) {
       toast({
-        title: "Missing Party ID",
-        description: "Please provide a Party ID",
+        title: "Missing Invoice Number",
+        description: "Please provide an Invoice Number",
         variant: "destructive",
       });
       return;
@@ -295,6 +304,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       billUrl: billFile ? URL.createObjectURL(billFile) : undefined,
       paymentStatus,
       createdBy: 'Current User', // In a real app, this would come from auth context
+      approverType: approverType,
     };
     
     onSubmit(invoiceData);
@@ -364,13 +374,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         <div className="space-y-2">
           <Label htmlFor="partyId" className="flex items-center">
             <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
-            Party ID
+            Invoice Number
           </Label>
           <Input 
             id="partyId"
             value={partyId}
             onChange={(e) => setPartyId(e.target.value)}
-            placeholder="Enter party ID"
+            placeholder="Enter invoice number"
             required
           />
         </div>
@@ -501,7 +511,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         <div className="bg-muted p-4 rounded-md mt-4">
           <div className="flex flex-col md:flex-row md:justify-end md:items-center gap-4">
             <div className="space-y-2 md:w-1/4">
-              <Label htmlFor="grandGross">Grand Gross Total (₹)</Label>
+              <Label htmlFor="grandGross">Net Taxable Amount (₹)</Label>
               <Input 
                 id="grandGross" 
                 value={grandGrossAmount.toLocaleString()} 
@@ -520,6 +530,45 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               />
             </div>
           </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Approver Type Section */}
+      <div>
+        <h3 className="text-lg font-medium mb-4">Approver</h3>
+        <div className="bg-muted/30 p-4 rounded-md">
+          <RadioGroup 
+            value={approverType} 
+            onValueChange={(value) => setApproverType(value as "ho" | "supervisor")}
+            className="flex flex-col md:flex-row gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="ho" id="ho" />
+              <Label htmlFor="ho">Head Office</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem 
+                value="supervisor" 
+                id="supervisor" 
+                disabled={grandNetAmount > 5000}
+              />
+              <Label 
+                htmlFor="supervisor" 
+                className={grandNetAmount > 5000 ? "text-muted-foreground" : ""}
+              >
+                Supervisor
+              </Label>
+            </div>
+          </RadioGroup>
+          
+          {grandNetAmount > 5000 && (
+            <div className="mt-3 flex items-center text-amber-600 text-sm">
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              <span>Amounts over ₹5,000 must be approved by Head Office</span>
+            </div>
+          )}
         </div>
       </div>
 

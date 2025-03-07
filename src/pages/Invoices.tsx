@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,21 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useToast } from '@/hooks/use-toast';
+import { 
+  Form, 
+  FormField, 
+  FormItem, 
+  FormLabel, 
+  FormControl, 
+  FormDescription, 
+  FormMessage 
+} from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 
 // Mock data for demonstration
 const initialInvoices: Invoice[] = [
@@ -44,6 +59,7 @@ const initialInvoices: Invoice[] = [
     paymentStatus: PaymentStatus.PAID,
     createdBy: 'Admin',
     createdAt: new Date('2023-07-05'),
+    approverType: 'ho',
   },
   {
     id: '2',
@@ -83,6 +99,7 @@ const initialInvoices: Invoice[] = [
     paymentStatus: PaymentStatus.PAID,
     createdBy: 'Supervisor',
     createdAt: new Date('2023-07-04'),
+    approverType: 'supervisor',
   },
   {
     id: '3',
@@ -115,6 +132,7 @@ const initialInvoices: Invoice[] = [
     paymentStatus: PaymentStatus.PENDING,
     createdBy: 'Supervisor',
     createdAt: new Date('2023-07-03'),
+    approverType: 'supervisor',
   },
   {
     id: '4',
@@ -138,6 +156,7 @@ const initialInvoices: Invoice[] = [
     paymentStatus: PaymentStatus.PENDING,
     createdBy: 'Admin',
     createdAt: new Date('2023-07-02'),
+    approverType: 'ho',
   },
 ];
 
@@ -152,13 +171,40 @@ const getStatusColor = (status: PaymentStatus) => {
   }
 };
 
+// Payment form schema
+const paymentFormSchema = z.object({
+  cardNumber: z.string().min(16, {
+    message: "Card number must be 16 digits.",
+  }).max(16),
+  cardHolder: z.string().min(2, {
+    message: "Card holder name is required.",
+  }),
+  expiryDate: z.string().min(5, {
+    message: "Expiry date is required (MM/YY).",
+  }),
+  cvv: z.string().min(3, {
+    message: "CVV must be 3 digits.",
+  }).max(3),
+});
+
 const Invoices: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const { toast } = useToast();
+  
+  const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
+    resolver: zodResolver(paymentFormSchema),
+    defaultValues: {
+      cardNumber: "",
+      cardHolder: "",
+      expiryDate: "",
+      cvv: "",
+    },
+  });
 
   const filteredInvoices = invoices.filter(invoice => 
     invoice.partyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -202,6 +248,39 @@ const Invoices: React.FC = () => {
         variant: "destructive"
       });
     }
+  };
+  
+  const handleMakePayment = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsViewDialogOpen(false);
+    setTimeout(() => setIsPaymentDialogOpen(true), 100);
+  };
+  
+  const onSubmitPayment = (values: z.infer<typeof paymentFormSchema>) => {
+    // In a real app, this would call a payment API
+    if (!selectedInvoice) return;
+    
+    // Update the invoice payment status
+    const updatedInvoices = invoices.map(invoice => {
+      if (invoice.id === selectedInvoice.id) {
+        return {
+          ...invoice,
+          paymentStatus: PaymentStatus.PAID
+        };
+      }
+      return invoice;
+    });
+    
+    setInvoices(updatedInvoices);
+    
+    // Show success toast
+    toast({
+      title: "Payment Successful",
+      description: `Payment of ₹${selectedInvoice.netAmount.toLocaleString()} has been processed successfully.`,
+    });
+    
+    // Close the payment dialog
+    setIsPaymentDialogOpen(false);
   };
 
   return (
@@ -247,9 +326,9 @@ const Invoices: React.FC = () => {
                 <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
                 <th className="pb-3 font-medium text-muted-foreground">Party Name</th>
                 <th className="pb-3 font-medium text-muted-foreground">Material</th>
-                <th className="pb-3 font-medium text-muted-foreground">Gross Amount</th>
+                <th className="pb-3 font-medium text-muted-foreground">Net Taxable Amount</th>
                 <th className="pb-3 font-medium text-muted-foreground">GST</th>
-                <th className="pb-3 font-medium text-muted-foreground">Net Amount</th>
+                <th className="pb-3 font-medium text-muted-foreground">Grand Net Total</th>
                 <th className="pb-3 font-medium text-muted-foreground">Status</th>
                 <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
               </tr>
@@ -275,6 +354,16 @@ const Invoices: React.FC = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadInvoice(invoice)}>
                       <Download className="h-4 w-4 text-muted-foreground" />
                     </Button>
+                    {invoice.paymentStatus === PaymentStatus.PENDING && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8" 
+                        onClick={() => handleMakePayment(invoice)}
+                      >
+                        <CreditCard className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -311,7 +400,141 @@ const Invoices: React.FC = () => {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Invoice Details</DialogTitle>
-          {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} />}
+          {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} onMakePayment={handleMakePayment} />}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogTitle>Make Payment</DialogTitle>
+          <DialogDescription>
+            Complete the payment for invoice #{selectedInvoice?.partyId}
+          </DialogDescription>
+          
+          {selectedInvoice && (
+            <div className="mb-4 p-3 bg-muted rounded-md">
+              <div className="flex justify-between mb-2">
+                <span className="text-sm">Payee:</span>
+                <span className="font-medium">{selectedInvoice.partyName}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm">Account:</span>
+                <span className="font-medium">{selectedInvoice.bankDetails.accountNumber}</span>
+              </div>
+              <div className="flex justify-between mb-2">
+                <span className="text-sm">Bank:</span>
+                <span className="font-medium">{selectedInvoice.bankDetails.bankName}</span>
+              </div>
+              <div className="flex justify-between font-medium text-primary">
+                <span>Amount:</span>
+                <span>₹{selectedInvoice.netAmount.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+          
+          <Separator className="my-4" />
+          
+          <Form {...paymentForm}>
+            <form onSubmit={paymentForm.handleSubmit(onSubmitPayment)} className="space-y-4">
+              <FormField
+                control={paymentForm.control}
+                name="cardNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Card Number</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="1234 5678 9012 3456" 
+                        {...field} 
+                        maxLength={16}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={paymentForm.control}
+                name="cardHolder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Card Holder Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={paymentForm.control}
+                  name="expiryDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expiry Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="MM/YY" 
+                          {...field} 
+                          maxLength={5}
+                          onChange={(e) => {
+                            let value = e.target.value.replace(/[^\d/]/g, '');
+                            if (value.length === 2 && !value.includes('/') && field.value.length !== 3) {
+                              value += '/';
+                            }
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={paymentForm.control}
+                  name="cvv"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>CVV</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="password" 
+                          placeholder="123" 
+                          {...field} 
+                          maxLength={3}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value);
+                          }}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  type="button" 
+                  variant="outline"
+                  onClick={() => setIsPaymentDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">Pay Now</Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </div>
