@@ -39,6 +39,9 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
   
+  console.log("SearchableDropdown - Options:", safeOptions);
+  console.log("SearchableDropdown - Current Value:", value);
+  
   // Filter options based on search query
   const filteredOptions = searchQuery === '' 
     ? safeOptions 
@@ -59,7 +62,7 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0" align="start">
+      <PopoverContent className="w-full p-0">
         <Command>
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`} 

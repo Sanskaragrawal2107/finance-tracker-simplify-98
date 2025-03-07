@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -115,6 +116,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     if (form.getValues("recipientName")) {
       form.setValue("recipientName", "");
     }
+    
+    console.log("Recipient type changed to:", recipientType);
+    console.log("Available options set to:", recipientType === "supervisor" ? SUPERVISORS : recipientType === "contractor" ? CONTRACTORS : []);
   }, [form.watch("recipientType")]);
 
   // Function to analyze purpose text with reduced character limit
