@@ -81,7 +81,7 @@ const SelectContent = React.forwardRef<
         ref={ref}
         className={className}
         position={position}
-        searchable={searchable}
+        searchable={true}
         {...props}
       >
         {children}

@@ -25,7 +25,7 @@ const SearchableSelectContent = React.forwardRef<
       // Clone viewport element with filtered children
       return React.cloneElement(
         child,
-        child.props, 
+        { ...child.props }, 
         React.Children.map(child.props.children, (viewportChild) => {
           if (!React.isValidElement(viewportChild)) return viewportChild;
           
@@ -33,16 +33,15 @@ const SearchableSelectContent = React.forwardRef<
             let childText = '';
             
             // Extract text content from various child structures
-            const childrenProp = viewportChild.props.children;
-            
-            if (typeof childrenProp === 'string') {
-              childText = childrenProp;
-            } else if (React.isValidElement(childrenProp)) {
-              // Access nested children safely
-              if (childrenProp.props && 'children' in childrenProp.props) {
-                const nestedChildren = childrenProp.props.children;
-                if (typeof nestedChildren === 'string') {
-                  childText = nestedChildren;
+            if (viewportChild.props.children !== undefined) {
+              const childrenProp = viewportChild.props.children;
+              
+              if (typeof childrenProp === 'string') {
+                childText = childrenProp;
+              } else if (React.isValidElement(childrenProp)) {
+                // Check if props and children exist before accessing
+                if (childrenProp.props && typeof childrenProp.props.children === 'string') {
+                  childText = childrenProp.props.children;
                 }
               }
             }
@@ -75,16 +74,18 @@ const SearchableSelectContent = React.forwardRef<
           <ChevronUp className="h-4 w-4" />
         </SelectPrimitive.ScrollUpButton>
         
-        <div className="sticky top-0 flex items-center p-1 bg-popover border-b">
-          <Search className="h-4 w-4 ml-2 text-muted-foreground absolute" />
-          <Input
-            className="pl-8 h-8"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+        {searchable && (
+          <div className="sticky top-0 flex items-center p-1 bg-popover border-b">
+            <Search className="h-4 w-4 ml-2 text-muted-foreground absolute" />
+            <Input
+              className="pl-8 h-8"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
         
         {filteredChildren}
         
