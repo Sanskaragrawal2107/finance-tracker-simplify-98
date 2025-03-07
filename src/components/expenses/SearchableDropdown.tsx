@@ -26,7 +26,7 @@ interface SearchableDropdownProps {
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
-  options,
+  options = [], // Provide default empty array to prevent undefined issues
   value,
   onValueChange,
   placeholder,
@@ -34,27 +34,26 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   className,
 }) => {
   const [open, setOpen] = useState(false);
-  const [filteredOptions, setFilteredOptions] = useState<string[]>(options);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filteredOptions, setFilteredOptions] = useState<string[]>([]);
 
-  // Update filtered options when options prop changes
+  // Update filtered options when options prop or search query changes
   useEffect(() => {
-    setFilteredOptions(options);
-  }, [options]);
-
-  // Handle search input change
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    if (!query) {
+    if (!options || options.length === 0) {
+      setFilteredOptions([]);
+      return;
+    }
+    
+    if (!searchQuery) {
       setFilteredOptions(options);
       return;
     }
     
     const filtered = options.filter(option => 
-      option.toLowerCase().includes(query.toLowerCase())
+      option.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setFilteredOptions(filtered);
-  };
+  }, [options, searchQuery]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -70,39 +69,37 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <div className="w-full relative">
-          <Command className="w-full">
-            <CommandInput 
-              placeholder={`Search ${placeholder.toLowerCase()}...`} 
-              className="flex-1"
-              value={searchQuery}
-              onValueChange={handleSearchChange}
-            />
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup className="max-h-60 overflow-y-auto">
-              {filteredOptions.map((option) => (
-                <CommandItem
-                  key={option}
-                  value={option}
-                  onSelect={() => {
-                    onValueChange(option);
-                    setOpen(false);
-                    setSearchQuery('');
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </Command>
-        </div>
+        <Command className="w-full">
+          <CommandInput 
+            placeholder={`Search ${placeholder.toLowerCase()}...`} 
+            className="flex-1"
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+          />
+          <CommandEmpty>{emptyMessage}</CommandEmpty>
+          <CommandGroup className="max-h-60 overflow-y-auto">
+            {Array.isArray(filteredOptions) && filteredOptions.map((option) => (
+              <CommandItem
+                key={option}
+                value={option}
+                onSelect={() => {
+                  onValueChange(option);
+                  setOpen(false);
+                  setSearchQuery('');
+                }}
+                className="cursor-pointer"
+              >
+                <Check
+                  className={cn(
+                    "mr-2 h-4 w-4",
+                    value === option ? "opacity-100" : "opacity-0"
+                  )}
+                />
+                {option}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </Command>
       </PopoverContent>
     </Popover>
   );

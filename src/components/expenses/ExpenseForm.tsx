@@ -83,6 +83,30 @@ interface ExpenseItem extends FormValues {
   id: string;
 }
 
+// Define supervisors list
+const SUPERVISOR_LIST = [
+  "mithlesh singh",
+  "shubham urmaliya",
+  "yogesh sharma",
+  "vivek giri goswami",
+  "m.p. naidu",
+  "dinesh nath",
+  "jaspal singh",
+  "sanjay shukla",
+  "kundan kumar",
+  "mahendra pandey",
+  "mithlesh paul"
+];
+
+// Define contractors list
+const CONTRACTOR_LIST = [
+  "kailash meena",
+  "devnath prajapati",
+  "mahendra pandey",
+  "mew worker",
+  "mew staff"
+];
+
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
@@ -100,16 +124,26 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     },
   });
 
-  // Update recipient options when recipient type changes
+  // Reset recipients list based on selected recipient type
   useEffect(() => {
     const recipientType = form.watch("recipientType");
+    
     if (recipientType === "supervisor") {
-      setRecipientOptions(SUPERVISORS);
+      setRecipientOptions(SUPERVISOR_LIST);
     } else if (recipientType === "contractor") {
-      setRecipientOptions(CONTRACTORS);
+      setRecipientOptions(CONTRACTOR_LIST);
     } else {
       setRecipientOptions([]);
     }
+
+    // Clear the recipient name when changing type
+    if (form.getValues("recipientName")) {
+      form.setValue("recipientName", "");
+    }
+    
+    console.log("Recipient type changed:", recipientType);
+    console.log("Available options:", recipientType === "supervisor" ? SUPERVISOR_LIST : 
+                                    recipientType === "contractor" ? CONTRACTOR_LIST : []);
   }, [form.watch("recipientType")]);
 
   // Function to analyze purpose text with reduced character limit
