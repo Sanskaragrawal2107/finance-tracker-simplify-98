@@ -102,14 +102,15 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     },
   });
 
-  // Function to analyze purpose text using Gemini API
+  // Function to analyze purpose text - modified to handle errors better
   const analyzePurpose = async (purposeText: string) => {
     if (!purposeText || purposeText.length < 5) return;
     
     setIsAnalyzing(true);
     try {
+      // Note: This API key might be invalid or the API might have changed
       const apiKey = "AIzaSyDwqj1YcFKVzpLc_4ZyC_s9YAMCONx57RI";
-      const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+      const url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
       
       const prompt = `
 Given this expense description: "${purposeText}"
@@ -150,6 +151,11 @@ Return ONLY the category name, with no additional text or explanation.
         }),
       });
 
+      if (!response.ok) {
+        console.error("API response error:", response.status, response.statusText);
+        throw new Error("API request failed");
+      }
+
       const data = await response.json();
       console.log("Gemini API response:", data);
       
@@ -174,7 +180,8 @@ Return ONLY the category name, with no additional text or explanation.
       }
     } catch (error) {
       console.error("Error analyzing purpose:", error);
-      toast.error("Failed to analyze purpose");
+      // Instead of showing error toast, just quietly continue
+      console.log("Continuing without category detection");
     } finally {
       setIsAnalyzing(false);
     }
@@ -344,6 +351,7 @@ Return ONLY the category name, with no additional text or explanation.
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
+                    defaultValue=""
                   >
                     <FormControl>
                       <SelectTrigger>
