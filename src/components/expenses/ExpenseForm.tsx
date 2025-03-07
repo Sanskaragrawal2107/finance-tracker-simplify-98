@@ -94,8 +94,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: new Date(),
-      amount: undefined,
+      recipientType: undefined, // Initialize as undefined to avoid controlled/uncontrolled warning
+      recipientName: "",
       purpose: "",
+      category: "",
+      amount: undefined,
     },
   });
 
@@ -148,10 +151,12 @@ Return ONLY the category name, with no additional text or explanation.
       });
 
       const data = await response.json();
+      console.log("Gemini API response:", data);
       
       // Extract the category from the response
       if (data.candidates && data.candidates[0] && data.candidates[0].content) {
         const categoryText = data.candidates[0].content.parts[0].text.trim();
+        console.log("Detected category text:", categoryText);
         
         // Check if the returned category is in our list
         const matchedCategory = EXPENSE_CATEGORIES.find(cat => 
@@ -159,9 +164,11 @@ Return ONLY the category name, with no additional text or explanation.
         );
         
         if (matchedCategory) {
+          console.log("Setting category to:", matchedCategory);
           form.setValue("category", matchedCategory);
-          toast.success("Category detected");
+          toast.success(`Category detected: ${matchedCategory}`);
         } else {
+          console.log("No matching category found in:", categoryText);
           toast.warning("Could not determine category");
         }
       }
@@ -261,7 +268,7 @@ Return ONLY the category name, with no additional text or explanation.
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="flex space-x-4"
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
@@ -336,7 +343,7 @@ Return ONLY the category name, with no additional text or explanation.
                   </FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    defaultValue={field.value}
+                    value={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -367,7 +374,7 @@ Return ONLY the category name, with no additional text or explanation.
                     <Input
                       type="number"
                       placeholder="0.00"
-                      {...field}
+                      value={field.value || ''}
                       onChange={(e) => {
                         const value = e.target.value;
                         field.onChange(value ? parseFloat(value) : undefined);
