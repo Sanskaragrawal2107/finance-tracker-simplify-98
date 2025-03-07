@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -86,6 +86,7 @@ interface ExpenseItem extends FormValues {
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [recipientOptions, setRecipientOptions] = useState<string[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -98,6 +99,18 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
       amount: undefined,
     },
   });
+
+  // Update recipient options when recipient type changes
+  useEffect(() => {
+    const recipientType = form.watch("recipientType");
+    if (recipientType === "supervisor") {
+      setRecipientOptions(SUPERVISORS);
+    } else if (recipientType === "contractor") {
+      setRecipientOptions(CONTRACTORS);
+    } else {
+      setRecipientOptions([]);
+    }
+  }, [form.watch("recipientType")]);
 
   // Function to analyze purpose text with reduced character limit
   const analyzePurpose = async (purposeText: string) => {
@@ -260,16 +273,6 @@ Return ONLY the category name, with no additional text or explanation.
     }
   };
 
-  // Get appropriate options based on recipient type
-  const getRecipientOptions = () => {
-    const recipientType = form.getValues("recipientType");
-    if (recipientType === "supervisor") {
-      return SUPERVISORS;
-    } else {
-      return CONTRACTORS;
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
@@ -375,9 +378,14 @@ Return ONLY the category name, with no additional text or explanation.
                 <FormItem>
                   <FormLabel>Recipient Name</FormLabel>
                   <FormControl>
-                    {form.watch("recipientType") ? (
+                    {form.watch("recipientType") === "worker" ? (
+                      <Input 
+                        placeholder="Enter recipient name" 
+                        {...field} 
+                      />
+                    ) : form.watch("recipientType") ? (
                       <SearchableDropdown
-                        options={getRecipientOptions()}
+                        options={recipientOptions}
                         value={field.value}
                         onValueChange={field.onChange}
                         placeholder="Select recipient"
@@ -385,9 +393,9 @@ Return ONLY the category name, with no additional text or explanation.
                       />
                     ) : (
                       <Input 
-                        placeholder="Enter recipient name" 
-                        {...field} 
-                        disabled={!form.watch("recipientType")} 
+                        placeholder="First select a recipient type" 
+                        disabled={true} 
+                        {...field}
                       />
                     )}
                   </FormControl>
