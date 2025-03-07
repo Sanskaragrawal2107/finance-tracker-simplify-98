@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
@@ -270,6 +269,15 @@ const Invoices: React.FC = () => {
   };
   
   const handleMakePayment = (invoice: Invoice) => {
+    if (invoice.approverType !== "ho") {
+      toast({
+        title: "Payment not available",
+        description: "Only Head Office approved invoices can be paid through the system.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSelectedInvoice(invoice);
     setIsViewDialogOpen(false);
     setPaymentSuccess(false);
@@ -403,7 +411,7 @@ const Invoices: React.FC = () => {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadInvoice(invoice)}>
                       <Download className="h-4 w-4 text-muted-foreground" />
                     </Button>
-                    {invoice.paymentStatus === PaymentStatus.PENDING && (
+                    {invoice.paymentStatus === PaymentStatus.PENDING && invoice.approverType === "ho" && (
                       <Button 
                         variant="ghost" 
                         size="icon" 

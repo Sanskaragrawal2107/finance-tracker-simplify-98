@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
@@ -26,7 +25,6 @@ const getStatusColor = (status: PaymentStatus) => {
 const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment }) => {
   const { toast } = useToast();
   
-  // Parse multiple materials if they exist
   const materials = Array.isArray(invoice.materialItems) 
     ? invoice.materialItems 
     : invoice.material.split(', ').map((material, index) => {
@@ -39,7 +37,6 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
             amount: invoice.quantity * invoice.rate
           };
         } else {
-          // For multi-material invoices that don't have individual details
           return {
             material,
             quantity: null,
@@ -49,7 +46,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
           };
         }
       });
-  
+
   const handleDownload = () => {
     if (invoice.billUrl) {
       window.open(invoice.billUrl, '_blank');
@@ -67,6 +64,15 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
   };
 
   const handlePayment = () => {
+    if (invoice.approverType !== "ho") {
+      toast({
+        title: "Payment not available",
+        description: "Only Head Office approved invoices can be paid through the system.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (onMakePayment) {
       onMakePayment(invoice);
     } else {
@@ -79,7 +85,6 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
   
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col md:flex-row justify-between">
         <div>
           <h3 className="text-xl font-semibold flex items-center">
@@ -102,7 +107,6 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
       
       <Separator />
       
-      {/* Party Details */}
       <div>
         <h4 className="font-medium mb-2">Party Details</h4>
         <div className="bg-muted rounded-md p-4">
@@ -119,7 +123,6 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
         </div>
       </div>
       
-      {/* Materials and Amounts */}
       <div>
         <h4 className="font-medium mb-2">Materials & Amounts</h4>
         <div className="overflow-x-auto rounded-md border">
@@ -166,29 +169,33 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
         </div>
       </div>
       
-      {/* Bank Details */}
       <div>
         <h4 className="font-medium mb-2">Bank Details</h4>
         <div className="bg-muted rounded-md p-4 space-y-2">
-          <p><span className="font-medium">Account Number:</span> {invoice.bankDetails.accountNumber}</p>
-          <p><span className="font-medium">Bank & Branch:</span> {invoice.bankDetails.bankName}</p>
-          <p><span className="font-medium">IFSC Code:</span> {invoice.bankDetails.ifscCode}</p>
-          {invoice.bankDetails.email && (
-            <p className="flex items-center">
-              <Mail className="h-4 w-4 mr-1" />
-              <span className="font-medium mr-1">Email:</span> {invoice.bankDetails.email}
-            </p>
-          )}
-          {invoice.bankDetails.mobile && (
-            <p className="flex items-center">
-              <Phone className="h-4 w-4 mr-1" />
-              <span className="font-medium mr-1">Mobile:</span> {invoice.bankDetails.mobile}
-            </p>
+          {invoice.approverType === "ho" ? (
+            <>
+              <p><span className="font-medium">Account Number:</span> {invoice.bankDetails.accountNumber}</p>
+              <p><span className="font-medium">Bank & Branch:</span> {invoice.bankDetails.bankName}</p>
+              <p><span className="font-medium">IFSC Code:</span> {invoice.bankDetails.ifscCode}</p>
+              {invoice.bankDetails.email && (
+                <p className="flex items-center">
+                  <Mail className="h-4 w-4 mr-1" />
+                  <span className="font-medium mr-1">Email:</span> {invoice.bankDetails.email}
+                </p>
+              )}
+              {invoice.bankDetails.mobile && (
+                <p className="flex items-center">
+                  <Phone className="h-4 w-4 mr-1" />
+                  <span className="font-medium mr-1">Mobile:</span> {invoice.bankDetails.mobile}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-muted-foreground">Bank details not applicable for supervisor-approved invoices.</p>
           )}
         </div>
       </div>
       
-      {/* Bill & Actions */}
       {invoice.billUrl && (
         <div>
           <h4 className="font-medium mb-2">Attached Bill</h4>
@@ -204,7 +211,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
       
       <div className="flex justify-between pt-2">
         <div>
-          {invoice.paymentStatus === PaymentStatus.PENDING && (
+          {invoice.paymentStatus === PaymentStatus.PENDING && invoice.approverType === "ho" && (
             <Button 
               variant="default" 
               size="sm" 
