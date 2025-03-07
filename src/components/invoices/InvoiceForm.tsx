@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { PaymentStatus, Invoice } from '@/lib/types';
-import { Calendar as CalendarIcon, Upload } from 'lucide-react';
+import { Calendar as CalendarIcon, Upload, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -38,6 +39,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   onSubmit,
   initialData
 }) => {
+  const { toast } = useToast();
   const [date, setDate] = useState<Date>(initialData?.date || new Date());
   const [partyId, setPartyId] = useState<string>(initialData?.partyId || '');
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
@@ -58,6 +60,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [ifscCode, setIfscCode] = useState<string>(initialData?.bankDetails?.ifscCode || '');
   const [email, setEmail] = useState<string>(initialData?.bankDetails?.email || '');
   const [mobile, setMobile] = useState<string>(initialData?.bankDetails?.mobile || '');
+  const [ifscValidationMessage, setIfscValidationMessage] = useState<string>('');
+  const [isFetchingBankDetails, setIsFetchingBankDetails] = useState<boolean>(false);
 
   // Calculate gross amount when quantity or rate changes
   useEffect(() => {
@@ -80,13 +84,76 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     }
   };
 
+  // Handle account number input
+  const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+    if (value.length <= 16) {
+      setAccountNumber(value);
+    }
+  };
+
+  // Validate IFSC code
+  const validateIfsc = (code: string) => {
+    // Basic IFSC validation: must be 11 characters
+    if (code.length !== 11) {
+      return false;
+    }
+    
+    // Check if 5th digit is '0'
+    return code[4] === '0';
+  };
+
+  // Handle IFSC code change
+  const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setIfscCode(value);
+    
+    // Clear validation message when user is typing
+    if (value.length < 11) {
+      setIfscValidationMessage('');
+    }
+  };
+
   // Handle IFSC code validation and bank details fetching
-  const handleIfscBlur = () => {
-    // In a real app, this would make an API call to validate IFSC and fetch bank details
-    // For demo purposes, we'll simulate a successful lookup if the code meets our validation
-    if (ifscCode.length === 11 && ifscCode[4] === '0') {
-      setBankName('Simulated Bank Name');
-      // Additional bank details could be auto-filled here
+  const handleIfscBlur = async () => {
+    // If IFSC is not 11 characters yet, don't validate
+    if (ifscCode.length !== 11) {
+      setIfscValidationMessage('IFSC code must be 11 characters');
+      return;
+    }
+    
+    // Validate 5th digit must be '0'
+    if (ifscCode[4] !== '0') {
+      setIfscValidationMessage('5th digit of IFSC code must be 0');
+      setBankName('');
+      return;
+    }
+    
+    // Clear validation message if valid
+    setIfscValidationMessage('');
+    
+    // Fetch bank details from Razorpay API
+    try {
+      setIsFetchingBankDetails(true);
+      const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBankName(`${data.BANK}, ${data.BRANCH}, ${data.CITY}`);
+        toast({
+          title: "Bank details fetched",
+          description: "Bank details have been automatically filled",
+        });
+      } else {
+        // Handle invalid IFSC
+        setIfscValidationMessage('Invalid IFSC code');
+        setBankName('');
+      }
+    } catch (error) {
+      setIfscValidationMessage('Failed to fetch bank details');
+      console.error('Error fetching bank details:', error);
+    } finally {
+      setIsFetchingBankDetails(false);
     }
   };
 
@@ -100,6 +167,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate IFSC before submission
+    if (!validateIfsc(ifscCode)) {
+      toast({
+        title: "Invalid IFSC code",
+        description: "Please provide a valid IFSC code with 5th digit as '0'",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Create invoice object from form data
     const invoiceData: Omit<Invoice, 'id' | 'createdAt'> = {
@@ -257,37 +334,54 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         <h3 className="text-lg font-medium mb-4">Bank Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="accountNumber">Account Number</Label>
+            <Label htmlFor="accountNumber">Account Number (max 16 digits)</Label>
             <Input 
               id="accountNumber" 
               value={accountNumber} 
-              onChange={(e) => setAccountNumber(e.target.value)} 
-              placeholder="Account Number"
+              onChange={handleAccountNumberChange}
+              placeholder="Enter Account Number (max 16 digits)"
               required
+              maxLength={16}
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="ifscCode">IFSC Code</Label>
-            <Input 
-              id="ifscCode" 
-              value={ifscCode} 
-              onChange={(e) => setIfscCode(e.target.value)} 
-              onBlur={handleIfscBlur}
-              placeholder="IFSC Code"
-              maxLength={11}
-              required
-            />
+            <div className="relative">
+              <Input 
+                id="ifscCode" 
+                value={ifscCode} 
+                onChange={handleIfscChange}
+                onBlur={handleIfscBlur}
+                placeholder="Enter IFSC Code (11 characters)"
+                maxLength={11}
+                required
+                className={ifscValidationMessage ? "border-red-500" : ""}
+              />
+              {isFetchingBankDetails && (
+                <div className="absolute top-0 right-0 h-full flex items-center pr-3">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {ifscValidationMessage && (
+                <p className="text-red-500 text-sm mt-1">{ifscValidationMessage}</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Must be 11 characters and 5th digit must be '0'
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="bankName">Bank Name</Label>
+            <Label htmlFor="bankName">Bank Name & Branch</Label>
             <Input 
               id="bankName" 
               value={bankName} 
               onChange={(e) => setBankName(e.target.value)} 
-              placeholder="Bank Name"
+              placeholder="Bank Name (auto-filled from IFSC)"
               required
+              readOnly={bankName !== ''}
+              className={bankName ? "bg-muted" : ""}
             />
           </div>
 
@@ -307,7 +401,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             <Input 
               id="mobile" 
               value={mobile} 
-              onChange={(e) => setMobile(e.target.value)} 
+              onChange={(e) => setMobile(e.target.value.replace(/\D/g, ''))} 
               placeholder="Mobile Number"
               maxLength={10}
               required
