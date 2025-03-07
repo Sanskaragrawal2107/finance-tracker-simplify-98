@@ -44,6 +44,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { CONTRACTORS, EXPENSE_CATEGORIES, SUPERVISORS } from '@/lib/constants';
 import SearchableDropdown from './SearchableDropdown';
 
+interface ExpenseFormProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (expense: Partial<Expense>) => void;
+}
+
 const formSchema = z.object({
   date: z.date({
     required_error: "Date is required",
