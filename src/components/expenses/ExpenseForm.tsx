@@ -41,7 +41,6 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Expense, ExpenseCategory } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import SearchableDropdown from './SearchableDropdown';
 import { CONTRACTORS, EXPENSE_CATEGORIES, SUPERVISORS } from '@/lib/constants';
 
 const formSchema = z.object({
@@ -375,17 +374,44 @@ Return ONLY the category name, with no additional text or explanation.
                         placeholder="Enter recipient name" 
                         {...field} 
                       />
-                    ) : form.watch("recipientType") ? (
-                      <SearchableDropdown
-                        options={recipientOptions}
+                    ) : form.watch("recipientType") === "contractor" ? (
+                      <Select 
+                        onValueChange={field.onChange} 
                         value={field.value}
-                        onValueChange={(value) => {
-                          console.log("Selected recipient:", value);
-                          field.onChange(value);
-                        }}
-                        placeholder="Select recipient"
-                        emptyMessage="No recipient found"
-                      />
+                        defaultValue=""
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select contractor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-popover">
+                          {CONTRACTORS.map((contractor) => (
+                            <SelectItem key={contractor} value={contractor}>
+                              {contractor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : form.watch("recipientType") === "supervisor" ? (
+                      <Select 
+                        onValueChange={field.onChange} 
+                        value={field.value}
+                        defaultValue=""
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select supervisor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-popover">
+                          {SUPERVISORS.map((supervisor) => (
+                            <SelectItem key={supervisor} value={supervisor}>
+                              {supervisor}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <Input 
                         placeholder="First select a recipient type" 
@@ -439,7 +465,7 @@ Return ONLY the category name, with no additional text or explanation.
                         <SelectValue placeholder="Select a category" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-popover">
                       {EXPENSE_CATEGORIES.map((category) => (
                         <SelectItem key={category} value={category}>
                           {category}
