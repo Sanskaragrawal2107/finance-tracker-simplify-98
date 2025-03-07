@@ -96,6 +96,8 @@ const SelectContent = React.forwardRef<
               childText = childrenProp;
             } else if (React.isValidElement(childrenProp) && 
                       childrenProp.props && 
+                      typeof childrenProp.props === 'object' &&
+                      childrenProp.props !== null &&
                       'children' in childrenProp.props) {
               const nestedChildren = childrenProp.props.children;
               childText = typeof nestedChildren === 'string' ? nestedChildren : '';
@@ -163,8 +165,11 @@ const SelectContent = React.forwardRef<
                   itemText = itemContent;
                 } else if (itemContent && 
                           typeof itemContent === 'object' && 
+                          itemContent !== null &&
                           'props' in itemContent && 
                           itemContent.props && 
+                          typeof itemContent.props === 'object' &&
+                          itemContent.props !== null &&
                           'children' in itemContent.props) {
                   const nestedChildren = itemContent.props.children;
                   itemText = typeof nestedChildren === 'string' ? nestedChildren : '';
