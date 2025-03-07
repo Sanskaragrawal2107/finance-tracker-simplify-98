@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { PaymentStatus, Invoice } from '@/lib/types';
-import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2, FileText, User } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [partyId, setPartyId] = useState<string>(initialData?.partyId || '');
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
+  const [manualPartyId, setManualPartyId] = useState<boolean>(false);
   
   // Material items list
   const [materialItems, setMaterialItems] = useState<MaterialItem[]>([
@@ -87,10 +89,20 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const handlePartyNameBlur = () => {
     if (partyName.trim() !== '') {
       setPartyNameFixed(true);
-      // Create a simple ID from the party name (in a real app this would be from a database)
-      const generatedId = Math.floor(100 + Math.random() * 900).toString();
-      setPartyId(generatedId);
+      
+      // Only generate a party ID if user hasn't entered one manually
+      if (!manualPartyId && partyId === '') {
+        // Create a simple ID from the party name (in a real app this would be from a database)
+        const generatedId = Math.floor(100 + Math.random() * 900).toString();
+        setPartyId(generatedId);
+      }
     }
+  };
+
+  // Handle party ID input
+  const handlePartyIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPartyId(e.target.value);
+    setManualPartyId(true);
   };
 
   // Calculate total amounts whenever material items change
@@ -243,7 +255,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const resetPartyName = () => {
     setPartyNameFixed(false);
     setPartyName('');
-    setPartyId('');
+    if (!manualPartyId) {
+      setPartyId('');
+    }
   };
 
   // Handle form submission
@@ -269,6 +283,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       toast({
         title: "Invalid materials",
         description: "Please add at least one material with quantity and rate",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate Party ID
+    if (!partyId.trim()) {
+      toast({
+        title: "Missing Party ID",
+        description: "Please provide a Party ID",
         variant: "destructive",
       });
       return;
@@ -307,7 +331,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Invoice Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Invoice Date</Label>
           <Popover>
@@ -336,7 +360,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         </div>
 
         <div className="space-y-2 relative">
-          <Label htmlFor="party">Party Name</Label>
+          <Label htmlFor="party" className="flex items-center">
+            <User className="h-4 w-4 mr-1 text-muted-foreground" />
+            Party Name
+          </Label>
           <div className="flex gap-2">
             <Input 
               id="party" 
@@ -360,6 +387,22 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               </Button>
             )}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="partyId" className="flex items-center">
+            <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
+            Party ID
+          </Label>
+          <Input 
+            id="partyId"
+            value={partyId}
+            onChange={handlePartyIdChange}
+            placeholder="Enter party ID"
+            required
+            disabled={partyNameFixed && !manualPartyId}
+            className={partyNameFixed && !manualPartyId ? "bg-muted" : ""}
+          />
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import React from 'react';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
-import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt } from 'lucide-react';
+import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface InvoiceDetailsProps {
@@ -24,6 +24,29 @@ const getStatusColor = (status: PaymentStatus) => {
 const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
   // Parse multiple materials if they exist
   const materials = invoice.material.split(', ');
+  
+  // For backward compatibility - older invoices might not have individual material details
+  const materialDetails = materials.map((material, index) => {
+    if (index === 0) {
+      return {
+        material,
+        quantity: invoice.quantity,
+        rate: invoice.rate,
+        gstPercentage: invoice.gstPercentage,
+        amount: invoice.quantity * invoice.rate
+      };
+    } else {
+      // For multi-material invoices that don't have individual details yet,
+      // we'll show the material name but no other details
+      return {
+        material,
+        quantity: null,
+        rate: null,
+        gstPercentage: null,
+        amount: null
+      };
+    }
+  });
   
   return (
     <div className="space-y-6">
@@ -55,7 +78,10 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
         <h4 className="font-medium mb-2">Party Details</h4>
         <div className="bg-muted rounded-md p-4">
           <p className="font-medium">{invoice.partyName}</p>
-          <p className="text-sm mt-1">Party ID: {invoice.partyId}</p>
+          <p className="text-sm mt-1 flex items-center">
+            <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
+            Party ID: {invoice.partyId}
+          </p>
         </div>
       </div>
       
@@ -75,25 +101,16 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice }) => {
               </tr>
             </thead>
             <tbody>
-              {materials.map((material, index) => (
+              {materialDetails.map((material, index) => (
                 <tr key={index} className="border-t">
                   <td className="py-3 px-4">{index + 1}</td>
-                  <td className="py-3 px-4">{material}</td>
-                  {index === 0 ? (
-                    <>
-                      <td className="py-3 px-4 text-right">{invoice.quantity}</td>
-                      <td className="py-3 px-4 text-right">{invoice.rate.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right">{invoice.gstPercentage}%</td>
-                      <td className="py-3 px-4 text-right font-medium">{(invoice.quantity * invoice.rate).toLocaleString()}</td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="py-3 px-4 text-right">-</td>
-                      <td className="py-3 px-4 text-right">-</td>
-                      <td className="py-3 px-4 text-right">-</td>
-                      <td className="py-3 px-4 text-right">-</td>
-                    </>
-                  )}
+                  <td className="py-3 px-4">{material.material}</td>
+                  <td className="py-3 px-4 text-right">{material.quantity !== null ? material.quantity : '-'}</td>
+                  <td className="py-3 px-4 text-right">{material.rate !== null ? material.rate.toLocaleString() : '-'}</td>
+                  <td className="py-3 px-4 text-right">{material.gstPercentage !== null ? `${material.gstPercentage}%` : '-'}</td>
+                  <td className="py-3 px-4 text-right font-medium">
+                    {material.amount !== null ? material.amount.toLocaleString() : '-'}
+                  </td>
                 </tr>
               ))}
             </tbody>
