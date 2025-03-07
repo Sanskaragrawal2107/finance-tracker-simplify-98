@@ -37,13 +37,12 @@ const SearchableSelectContent = React.forwardRef<
             
             if (typeof childrenProp === 'string') {
               childText = childrenProp;
-            } else if (React.isValidElement(childrenProp) && 
-                      childrenProp.props && 
-                      typeof childrenProp.props === 'object' &&
-                      childrenProp.props !== null &&
-                      'children' in childrenProp.props) {
+            } else if (React.isValidElement(childrenProp) && childrenProp.props) {
+              // Access nested children safely
               const nestedChildren = childrenProp.props.children;
-              childText = typeof nestedChildren === 'string' ? nestedChildren : '';
+              if (typeof nestedChildren === 'string') {
+                childText = nestedChildren;
+              }
             }
             
             if (childText && !childText.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -85,9 +84,7 @@ const SearchableSelectContent = React.forwardRef<
           />
         </div>
         
-        {React.Children.map(filteredChildren, child => {
-          return child;
-        })}
+        {filteredChildren}
         
         <SelectPrimitive.ScrollDownButton className="flex cursor-default items-center justify-center py-1">
           <ChevronDown className="h-4 w-4" />
