@@ -37,11 +37,13 @@ const SearchableSelectContent = React.forwardRef<
             
             if (typeof childrenProp === 'string') {
               childText = childrenProp;
-            } else if (React.isValidElement(childrenProp) && childrenProp.props) {
+            } else if (React.isValidElement(childrenProp)) {
               // Access nested children safely
-              const nestedChildren = childrenProp.props.children;
-              if (typeof nestedChildren === 'string') {
-                childText = nestedChildren;
+              if (childrenProp.props && 'children' in childrenProp.props) {
+                const nestedChildren = childrenProp.props.children;
+                if (typeof nestedChildren === 'string') {
+                  childText = nestedChildren;
+                }
               }
             }
             
