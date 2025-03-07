@@ -41,8 +41,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Expense, ExpenseCategory } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CONTRACTORS, EXPENSE_CATEGORIES, SUPERVISORS } from '@/lib/constants';
+import { EXPENSE_CATEGORIES } from '@/lib/constants';
 import SearchableDropdown from './SearchableDropdown';
+import { contractors } from '@/data/contractors';
+import { supervisors } from '@/data/supervisors';
 
 interface ExpenseFormProps {
   isOpen: boolean;
@@ -89,7 +91,7 @@ interface ExpenseItem {
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [recipientOptions, setRecipientOptions] = useState<string[]>([]);
+  const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -107,11 +109,11 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     const recipientType = form.watch("recipientType");
     
     if (recipientType === "supervisor") {
-      setRecipientOptions(SUPERVISORS);
-      console.log("Setting supervisor options:", SUPERVISORS);
+      setRecipientOptions(supervisors);
+      console.log("Setting supervisor options:", supervisors);
     } else if (recipientType === "contractor") {
-      setRecipientOptions(CONTRACTORS);
-      console.log("Setting contractor options:", CONTRACTORS);
+      setRecipientOptions(contractors);
+      console.log("Setting contractor options:", contractors);
     } else {
       setRecipientOptions([]);
     }
@@ -391,8 +393,8 @@ Return ONLY the category name, with no additional text or explanation.
                     ) : form.watch("recipientType") === "contractor" ? (
                       <SearchableDropdown
                         options={recipientOptions}
-                        value={field.value}
-                        onValueChange={field.onChange}
+                        selectedVal={field.value}
+                        handleChange={(val) => field.onChange(val)}
                         placeholder="Select contractor"
                         emptyMessage="No contractors found"
                         className="w-full"
@@ -400,8 +402,8 @@ Return ONLY the category name, with no additional text or explanation.
                     ) : form.watch("recipientType") === "supervisor" ? (
                       <SearchableDropdown
                         options={recipientOptions}
-                        value={field.value}
-                        onValueChange={field.onChange}
+                        selectedVal={field.value}
+                        handleChange={(val) => field.onChange(val)}
                         placeholder="Select supervisor"
                         emptyMessage="No supervisors found"
                         className="w-full"

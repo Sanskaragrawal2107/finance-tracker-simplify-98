@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,37 +16,47 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+interface Option {
+  id: number;
+  name: string;
+  [key: string]: any;
+}
+
 interface SearchableDropdownProps {
-  options: string[];
-  value: string;
-  onValueChange: (value: string) => void;
-  placeholder: string;
+  options: Option[];
+  label?: string;
+  id?: string;
+  selectedVal: string;
+  handleChange: (value: string | null) => void;
+  placeholder?: string;
   emptyMessage?: string;
   className?: string;
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
   options,
-  value,
-  onValueChange,
-  placeholder,
+  label = "name",
+  id = "id",
+  selectedVal,
+  handleChange,
+  placeholder = "Select option...",
   emptyMessage = "No results found.",
   className,
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState('');
   
   // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
   
   console.log("SearchableDropdown render - Options:", safeOptions);
-  console.log("SearchableDropdown render - Current Value:", value);
+  console.log("SearchableDropdown render - Current Value:", selectedVal);
   
   // Filter options based on search query
-  const filteredOptions = searchQuery === '' 
+  const filteredOptions = query === '' 
     ? safeOptions 
     : safeOptions.filter(option => 
-        option.toLowerCase().includes(searchQuery.toLowerCase())
+        option[label].toLowerCase().includes(query.toLowerCase())
       );
 
   return (
@@ -58,16 +68,16 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           aria-expanded={open}
           className={cn("w-full justify-between", className)}
         >
-          {value || placeholder}
+          {selectedVal || placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[200px] p-0 bg-popover" align="start" sideOffset={4}>
+      <PopoverContent className="w-[250px] p-0 bg-popover" align="start" sideOffset={4}>
         <Command className="w-full">
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`} 
-            value={searchQuery}
-            onValueChange={setSearchQuery}
+            value={query}
+            onValueChange={setQuery}
             className="h-9"
           />
           <CommandEmpty className="py-3 text-center text-sm">
@@ -76,23 +86,23 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
           <CommandGroup className="max-h-60 overflow-y-auto">
             {filteredOptions.map((option) => (
               <CommandItem
-                key={option}
-                value={option}
+                key={option[id]}
+                value={option[label]}
                 onSelect={() => {
-                  console.log("Item selected:", option);
-                  onValueChange(option);
+                  console.log("Item selected:", option[label]);
+                  handleChange(option[label]);
                   setOpen(false);
-                  setSearchQuery('');
+                  setQuery('');
                 }}
                 className="cursor-pointer"
               >
                 <Check
                   className={cn(
                     "mr-2 h-4 w-4",
-                    value === option ? "opacity-100" : "opacity-0"
+                    selectedVal === option[label] ? "opacity-100" : "opacity-0"
                   )}
                 />
-                {option}
+                {option[label]}
               </CommandItem>
             ))}
           </CommandGroup>
