@@ -33,19 +33,18 @@ const SearchableSelectContent = React.forwardRef<
             let childText = '';
             
             // Extract text content from various child structures
-            if ('children' in viewportChild.props && viewportChild.props.children !== undefined) {
+            if ('children' in viewportChild.props) {
               const childrenProp = viewportChild.props.children;
               
               if (typeof childrenProp === 'string') {
                 childText = childrenProp;
               } else if (React.isValidElement(childrenProp)) {
-                const childElement = childrenProp;
-                
-                // Properly type check and access props
-                if (childElement.props && 
-                    'children' in childElement.props && 
-                    typeof childElement.props.children === 'string') {
-                  childText = childElement.props.children;
+                // Properly check the children prop of the child element
+                if ('props' in childrenProp && 
+                    childrenProp.props && 
+                    'children' in childrenProp.props && 
+                    typeof childrenProp.props.children === 'string') {
+                  childText = childrenProp.props.children;
                 }
               }
             }
