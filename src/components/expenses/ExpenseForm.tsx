@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -42,31 +42,22 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Expense, ExpenseCategory } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const EXPENSE_CATEGORIES = [
-  "STAFF TRAVELLING CHARGES",
-  "STATIONARY & PRINTING",
-  "DIESEL & FUEL CHARGES",
-  "LABOUR TRAVELLING EXP.",
-  "LOADGING & BOARDING FOR STAFF",
-  "FOOD CHARGES FOR LABOUR",
-  "SITE EXPENSES",
-  "ROOM RENT FOR LABOUR"
-];
+import SearchableDropdown from './SearchableDropdown';
+import { CONTRACTORS, EXPENSE_CATEGORIES, SUPERVISORS } from '@/lib/constants';
 
 // Define the validation schema for the expense form
 const formSchema = z.object({
   date: z.date({
     required_error: "Date is required",
   }),
-  recipientType: z.enum(["contractor", "worker"], {
-    required_error: "Please select contractor or worker",
+  recipientType: z.enum(["contractor", "worker", "supervisor"], {
+    required_error: "Please select recipient type",
   }),
   recipientName: z.string().min(2, {
     message: "Name must be at least 2 characters",
   }),
-  purpose: z.string().min(5, {
-    message: "Purpose description must be at least 5 characters",
+  purpose: z.string().min(3, {
+    message: "Purpose description must be at least 3 characters",
   }),
   category: z.string({
     required_error: "Category is required",
@@ -87,14 +78,20 @@ interface ExpenseFormProps {
   onSubmit: (expense: Partial<Expense>) => void;
 }
 
+// For tracking multiple expenses
+interface ExpenseItem extends FormValues {
+  id: string;
+}
+
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: new Date(),
-      recipientType: undefined, // Initialize as undefined to avoid controlled/uncontrolled warning
+      recipientType: undefined,
       recipientName: "",
       purpose: "",
       category: "",
@@ -102,9 +99,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     },
   });
 
-  // Function to analyze purpose text - modified to handle errors better
+  // Function to analyze purpose text with reduced character limit
   const analyzePurpose = async (purposeText: string) => {
-    if (!purposeText || purposeText.length < 5) return;
+    if (!purposeText || purposeText.length < 3) return;
     
     setIsAnalyzing(true);
     try {
@@ -187,7 +184,56 @@ Return ONLY the category name, with no additional text or explanation.
     }
   };
 
-  const handleSubmit = (values: FormValues) => {
+  const addExpenseToList = (values: FormValues) => {
+    const newExpense: ExpenseItem = {
+      ...values,
+      id: Date.now().toString(), // unique id
+    };
+    
+    setExpenses([...expenses, newExpense]);
+    form.reset({
+      date: new Date(),
+      recipientType: values.recipientType, // Keep the selected type for convenience
+      recipientName: "",
+      purpose: "",
+      category: "",
+      amount: undefined,
+    });
+    
+    toast.success("Expense added to the list");
+  };
+  
+  const removeExpense = (id: string) => {
+    setExpenses(expenses.filter(expense => expense.id !== id));
+    toast.info("Expense removed");
+  };
+
+  const submitAllExpenses = () => {
+    // Submit all expenses and close the form
+    expenses.forEach(expense => {
+      const newExpense: Partial<Expense> = {
+        date: expense.date,
+        description: expense.purpose,
+        category: expense.category as unknown as ExpenseCategory,
+        amount: expense.amount,
+        status: "pending" as any, // Default status
+        createdBy: "Current User", // This should be replaced with actual user
+        createdAt: new Date(),
+      };
+      
+      onSubmit(newExpense);
+    });
+    
+    setExpenses([]);
+    form.reset();
+    onClose();
+    
+    if (expenses.length > 0) {
+      toast.success(`${expenses.length} expenses submitted successfully`);
+    }
+  };
+
+  const handleSingleSubmit = (values: FormValues) => {
     // Create a new expense object
     const newExpense: Partial<Expense> = {
       date: values.date,
@@ -201,29 +247,41 @@ Return ONLY the category name, with no additional text or explanation.
 
     onSubmit(newExpense);
     form.reset();
+    setExpenses([]);
     onClose();
+    toast.success("Expense submitted successfully");
   };
 
   // Blur handler for purpose field to trigger analysis
   const handlePurposeBlur = () => {
     const purposeValue = form.getValues("purpose");
-    if (purposeValue && purposeValue.length >= 5) {
+    if (purposeValue && purposeValue.length >= 3) {
       analyzePurpose(purposeValue);
+    }
+  };
+
+  // Get appropriate options based on recipient type
+  const getRecipientOptions = () => {
+    const recipientType = form.getValues("recipientType");
+    if (recipientType === "supervisor") {
+      return SUPERVISORS;
+    } else {
+      return CONTRACTORS;
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New Expense</DialogTitle>
           <DialogDescription>
-            Enter the details for the new expense.
+            Enter the details for the new expense. Add multiple expenses before submitting.
           </DialogDescription>
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(addExpenseToList)} className="space-y-4">
             {/* Date Field */}
             <FormField
               control={form.control}
@@ -294,6 +352,14 @@ Return ONLY the category name, with no additional text or explanation.
                           Worker
                         </FormLabel>
                       </FormItem>
+                      <FormItem className="flex items-center space-x-2 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="supervisor" />
+                        </FormControl>
+                        <FormLabel className="font-normal cursor-pointer">
+                          Supervisor
+                        </FormLabel>
+                      </FormItem>
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />
@@ -301,7 +367,7 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Recipient Name Field */}
+            {/* Recipient Name Field - Searchable dropdown */}
             <FormField
               control={form.control}
               name="recipientName"
@@ -309,7 +375,21 @@ Return ONLY the category name, with no additional text or explanation.
                 <FormItem>
                   <FormLabel>Recipient Name</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter name" {...field} />
+                    {form.watch("recipientType") ? (
+                      <SearchableDropdown
+                        options={getRecipientOptions()}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder="Select recipient"
+                        emptyMessage="No recipient found"
+                      />
+                    ) : (
+                      <Input 
+                        placeholder="Enter recipient name" 
+                        {...field} 
+                        disabled={!form.watch("recipientType")} 
+                      />
+                    )}
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -394,14 +474,77 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+            <div className="flex justify-end pt-2">
+              <Button type="submit" variant="secondary">
+                <Plus className="h-4 w-4 mr-2" />
+                Add to List
               </Button>
-              <Button type="submit">Submit Expense</Button>
-            </DialogFooter>
+            </div>
           </form>
         </Form>
+
+        {/* Show expenses list if any are added */}
+        {expenses.length > 0 && (
+          <div className="mt-6 space-y-4">
+            <h3 className="text-sm font-medium">Expenses List ({expenses.length})</h3>
+            <div className="border rounded-md overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className="p-2 text-left">Date</th>
+                    <th className="p-2 text-left">Recipient</th>
+                    <th className="p-2 text-left">Purpose</th>
+                    <th className="p-2 text-right">Amount</th>
+                    <th className="p-2 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {expenses.map((expense) => (
+                    <tr key={expense.id} className="border-t">
+                      <td className="p-2">{format(expense.date, 'MMM dd')}</td>
+                      <td className="p-2">{expense.recipientName}</td>
+                      <td className="p-2">{expense.purpose}</td>
+                      <td className="p-2 text-right">₹{expense.amount}</td>
+                      <td className="p-2 text-center">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8" 
+                          onClick={() => removeExpense(expense.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="pt-4 flex flex-col gap-2 sm:flex-row">
+          <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
+            Cancel
+          </Button>
+          {expenses.length > 0 ? (
+            <Button 
+              type="button" 
+              onClick={submitAllExpenses} 
+              className="w-full sm:w-auto"
+            >
+              Submit All Expenses
+            </Button>
+          ) : (
+            <Button 
+              type="button" 
+              onClick={form.handleSubmit(handleSingleSubmit)} 
+              className="w-full sm:w-auto"
+            >
+              Submit Expense
+            </Button>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

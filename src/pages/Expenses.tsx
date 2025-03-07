@@ -8,6 +8,7 @@ import { Expense, ExpenseCategory, ApprovalStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import { toast } from 'sonner';
+import { EXPENSE_CATEGORIES } from '@/lib/constants';
 
 // Mock data for demonstration
 const initialExpenses: Expense[] = [
