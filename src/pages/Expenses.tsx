@@ -149,13 +149,13 @@ const Expenses: React.FC = () => {
   const handleAddExpense = (newExpense: Partial<Expense>) => {
     const expenseWithId: Expense = {
       ...newExpense as Expense,
-      id: (expenses.length + 1).toString(),
+      id: Date.now().toString(), // Use timestamp to ensure unique IDs
       status: ApprovalStatus.PENDING,
       createdAt: new Date(),
     };
     
-    setExpenses([expenseWithId, ...expenses]);
-    toast.success("Expense added successfully");
+    // Add the new expense to the beginning of the array to show it first
+    setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
   };
 
   const filteredExpenses = expenses.filter(expense => 
