@@ -99,7 +99,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     },
   });
 
-  // Reset recipients list based on selected recipient type
+  // Update recipient options when recipient type changes
   useEffect(() => {
     const recipientType = form.watch("recipientType");
     
@@ -115,9 +115,6 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     if (form.getValues("recipientName")) {
       form.setValue("recipientName", "");
     }
-    
-    console.log("Recipient type changed:", recipientType);
-    console.log("Available options:", recipientOptions);
   }, [form.watch("recipientType")]);
 
   // Function to analyze purpose text with reduced character limit
@@ -378,7 +375,7 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            {/* Recipient Name Field - Searchable dropdown */}
+            {/* Recipient Name Field */}
             <FormField
               control={form.control}
               name="recipientName"

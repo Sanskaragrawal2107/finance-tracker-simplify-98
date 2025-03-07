@@ -26,7 +26,7 @@ interface SearchableDropdownProps {
 }
 
 const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
-  options = [], // Provide default empty array to prevent undefined issues
+  options,
   value,
   onValueChange,
   placeholder,
@@ -35,33 +35,16 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredOptions, setFilteredOptions] = useState<string[]>([]);
-
-  // Ensure options is always an array
+  
+  // Ensure options is always a valid array
   const safeOptions = Array.isArray(options) ? options : [];
-
-  // Update filtered options when options prop or search query changes
-  useEffect(() => {
-    if (!safeOptions || safeOptions.length === 0) {
-      setFilteredOptions([]);
-      return;
-    }
-    
-    if (!searchQuery) {
-      setFilteredOptions(safeOptions);
-      return;
-    }
-    
-    const filtered = safeOptions.filter(option => 
-      option.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredOptions(filtered);
-  }, [safeOptions, searchQuery]);
-
-  // Debug logs to help understand the component state
-  console.log("SearchableDropdown - Options:", safeOptions);
-  console.log("SearchableDropdown - Filtered Options:", filteredOptions);
-  console.log("SearchableDropdown - Current Value:", value);
+  
+  // Filter options based on search query
+  const filteredOptions = searchQuery === '' 
+    ? safeOptions 
+    : safeOptions.filter(option => 
+        option.toLowerCase().includes(searchQuery.toLowerCase())
+      );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -77,10 +60,9 @@ const SearchableDropdown: React.FC<SearchableDropdownProps> = ({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command className="w-full">
+        <Command>
           <CommandInput 
             placeholder={`Search ${placeholder.toLowerCase()}...`} 
-            className="flex-1"
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
