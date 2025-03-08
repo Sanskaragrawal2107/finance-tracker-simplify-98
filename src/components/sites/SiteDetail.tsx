@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar, ArrowLeft, Plus, Check, X, FileText, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
@@ -15,7 +14,6 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-
 interface SiteDetailProps {
   site: Site;
   expenses: Expense[];
@@ -27,7 +25,6 @@ interface SiteDetailProps {
   onAddFunds?: (funds: Partial<FundsReceived>) => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
-
 const getCategoryColor = (category: ExpenseCategory | string) => {
   switch (category) {
     case ExpenseCategory.MATERIAL:
@@ -71,7 +68,6 @@ const getCategoryColor = (category: ExpenseCategory | string) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
-
 const getStatusColor = (status: ApprovalStatus) => {
   switch (status) {
     case ApprovalStatus.APPROVED:
@@ -84,13 +80,12 @@ const getStatusColor = (status: ApprovalStatus) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
-
-const SiteDetail: React.FC<SiteDetailProps> = ({ 
-  site, 
-  expenses, 
+const SiteDetail: React.FC<SiteDetailProps> = ({
+  site,
+  expenses,
   advances = [],
   fundsReceived = [],
-  onBack, 
+  onBack,
   onAddExpense,
   onAddAdvance,
   onAddFunds,
@@ -102,17 +97,15 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(site.completionDate);
   const [activeTab, setActiveTab] = useState('expenses');
-  
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
   const totalBalance = totalFundsReceived - totalExpenses - totalAdvances;
-  
+
   // Make sure dates are Date objects
   const ensureDate = (date: Date | string): Date => {
     return date instanceof Date ? date : new Date(date);
   };
-  
   const handleAddExpense = (newExpense: Partial<Expense>) => {
     // Add the site ID to the expense
     const expenseWithSiteId = {
@@ -120,11 +113,9 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       siteId: site.id,
       supervisorId: site.supervisorId
     };
-    
     onAddExpense(expenseWithSiteId);
     setIsExpenseFormOpen(false);
   };
-  
   const handleAddAdvance = (newAdvance: Partial<Advance>) => {
     if (onAddAdvance) {
       // Add site ID to the advance
@@ -136,7 +127,6 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
     }
     setIsAdvanceFormOpen(false);
   };
-
   const handleAddFunds = (newFunds: Partial<FundsReceived>) => {
     if (onAddFunds) {
       // Add site ID to the funds
@@ -148,7 +138,6 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
     }
     setIsFundsFormOpen(false);
   };
-  
   const handleCompleteSite = () => {
     if (completionDate) {
       onCompleteSite(site.id, completionDate);
@@ -158,31 +147,20 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       toast.error("Please select a completion date");
     }
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={onBack}>
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Sites
         </Button>
         
-        {!site.isCompleted ? (
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="ml-auto"
-            onClick={() => setIsCompletionDialogOpen(true)}
-          >
+        {!site.isCompleted ? <Button size="sm" variant="outline" className="ml-auto" onClick={() => setIsCompletionDialogOpen(true)}>
             <Check className="h-4 w-4 mr-2" />
             Mark as Completed
-          </Button>
-        ) : (
-          <div className="ml-auto px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center">
+          </Button> : <div className="ml-auto px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center">
             <Check className="h-4 w-4 mr-1" />
             Completed
-          </div>
-        )}
+          </div>}
       </div>
       
       <CustomCard className="p-6">
@@ -193,19 +171,17 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             
             <div className="mt-4 space-y-2">
               <div className="flex">
-                <span className="text-muted-foreground w-32">POS Number:</span>
+                <span className="text-muted-foreground w-32">P.O. Number:</span>
                 <span className="font-medium">{site.posNo}</span>
               </div>
               <div className="flex">
                 <span className="text-muted-foreground w-32">Start Date:</span>
                 <span className="font-medium">{format(ensureDate(site.startDate), 'PPP')}</span>
               </div>
-              {site.completionDate && (
-                <div className="flex">
+              {site.completionDate && <div className="flex">
                   <span className="text-muted-foreground w-32">Completion Date:</span>
                   <span className="font-medium">{format(ensureDate(site.completionDate), 'PPP')}</span>
-                </div>
-              )}
+                </div>}
               <div className="flex">
                 <span className="text-muted-foreground w-32">Status:</span>
                 <span className={`font-medium ${site.isCompleted ? 'text-green-600' : 'text-yellow-600'}`}>
@@ -283,8 +259,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       <CustomCard>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsContent value="expenses" className="mt-0">
-            {expenses.length > 0 ? (
-              <div className="overflow-x-auto">
+            {expenses.length > 0 ? <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b text-left">
@@ -297,8 +272,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {expenses.map((expense) => (
-                      <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                    {expenses.map(expense => <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="py-4 pl-4 text-sm">{format(ensureDate(expense.date), 'MMM dd, yyyy')}</td>
                         <td className="py-4 text-sm">{expense.description}</td>
                         <td className="py-4 text-sm">
@@ -317,29 +291,20 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             <FileText className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center">
+              </div> : <div className="p-8 text-center">
                 <p className="text-muted-foreground">No expenses have been recorded for this site yet.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => setIsExpenseFormOpen(true)}
-                >
+                <Button variant="outline" className="mt-4" onClick={() => setIsExpenseFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add First Expense
                 </Button>
-              </div>
-            )}
+              </div>}
           </TabsContent>
 
           <TabsContent value="advances" className="mt-0">
-            {advances.length > 0 ? (
-              <div className="overflow-x-auto">
+            {advances.length > 0 ? <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b text-left">
@@ -352,8 +317,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {advances.map((advance) => (
-                      <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                    {advances.map(advance => <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="py-4 pl-4 text-sm">{format(ensureDate(advance.date), 'MMM dd, yyyy')}</td>
                         <td className="py-4 text-sm">{advance.recipientType}: {advance.recipientName}</td>
                         <td className="py-4 text-sm">
@@ -361,9 +325,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
                               {advance.purpose}
                             </span>
-                            {advance.remarks && (
-                              <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>
-                            )}
+                            {advance.remarks && <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>}
                           </div>
                         </td>
                         <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
@@ -377,30 +339,21 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             <FileText className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center">
+              </div> : <div className="p-8 text-center">
                 <p className="text-muted-foreground">No advances have been recorded for this site yet.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => setIsAdvanceFormOpen(true)}
-                >
+                <Button variant="outline" className="mt-4" onClick={() => setIsAdvanceFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   <Wallet className="h-4 w-4 mr-2" />
                   Add First Advance
                 </Button>
-              </div>
-            )}
+              </div>}
           </TabsContent>
 
           <TabsContent value="funds" className="mt-0">
-            {fundsReceived.length > 0 ? (
-              <div className="overflow-x-auto">
+            {fundsReceived.length > 0 ? <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b text-left">
@@ -410,8 +363,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {fundsReceived.map((fund) => (
-                      <tr key={fund.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                    {fundsReceived.map(fund => <tr key={fund.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="py-4 pl-4 text-sm">{format(ensureDate(fund.date), 'MMM dd, yyyy')}</td>
                         <td className="py-4 text-sm font-medium text-green-600">₹{fund.amount.toLocaleString()}</td>
                         <td className="py-4 pr-4 text-right">
@@ -419,50 +371,28 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             <FileText className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center">
+              </div> : <div className="p-8 text-center">
                 <p className="text-muted-foreground">No funds have been recorded for this site yet.</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => setIsFundsFormOpen(true)}
-                >
+                <Button variant="outline" className="mt-4" onClick={() => setIsFundsFormOpen(true)}>
                   <DownloadCloud className="h-4 w-4 mr-2" />
                   Record First Funds
                 </Button>
-              </div>
-            )}
+              </div>}
           </TabsContent>
         </Tabs>
       </CustomCard>
       
       {/* Expense Form Dialog */}
-      <ExpenseForm
-        isOpen={isExpenseFormOpen}
-        onClose={() => setIsExpenseFormOpen(false)}
-        onSubmit={handleAddExpense}
-      />
+      <ExpenseForm isOpen={isExpenseFormOpen} onClose={() => setIsExpenseFormOpen(false)} onSubmit={handleAddExpense} />
       
       {/* Advance Form Dialog */}
-      <AdvanceForm
-        isOpen={isAdvanceFormOpen}
-        onClose={() => setIsAdvanceFormOpen(false)}
-        onSubmit={handleAddAdvance}
-        siteId={site.id}
-      />
+      <AdvanceForm isOpen={isAdvanceFormOpen} onClose={() => setIsAdvanceFormOpen(false)} onSubmit={handleAddAdvance} siteId={site.id} />
 
       {/* Funds Received Form Dialog */}
-      <FundsReceivedForm
-        isOpen={isFundsFormOpen}
-        onClose={() => setIsFundsFormOpen(false)}
-        onSubmit={handleAddFunds}
-        siteId={site.id}
-      />
+      <FundsReceivedForm isOpen={isFundsFormOpen} onClose={() => setIsFundsFormOpen(false)} onSubmit={handleAddFunds} siteId={site.id} />
       
       {/* Site Completion Dialog */}
       <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
@@ -476,28 +406,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             </p>
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !completionDate && "text-muted-foreground"
-                  )}
-                >
-                  {completionDate ? (
-                    format(completionDate, "PPP")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
+                <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !completionDate && "text-muted-foreground")}>
+                  {completionDate ? format(completionDate, "PPP") : <span>Pick a date</span>}
                   <Calendar className="ml-auto h-4 w-4 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={completionDate}
-                  onSelect={setCompletionDate}
-                  initialFocus
-                />
+                <CalendarComponent mode="single" selected={completionDate} onSelect={setCompletionDate} initialFocus />
               </PopoverContent>
             </Popover>
           </div>
@@ -506,19 +421,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               <X className="h-4 w-4 mr-2" />
               Cancel
             </Button>
-            <Button 
-              type="button" 
-              onClick={handleCompleteSite}
-              disabled={!completionDate}
-            >
+            <Button type="button" onClick={handleCompleteSite} disabled={!completionDate}>
               <Check className="h-4 w-4 mr-2" />
               Confirm Completion
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 };
-
 export default SiteDetail;
