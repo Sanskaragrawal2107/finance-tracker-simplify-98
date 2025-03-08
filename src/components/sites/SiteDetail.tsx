@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar, ArrowLeft, Plus, Check, X, Building, Wallet, DownloadCloud, Receipt, FileText, Image } from 'lucide-react';
@@ -181,6 +182,12 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       toast.error("Please select a completion date");
     }
   };
+
+  // Debug the invoices data
+  console.log("Invoices in SiteDetail:", invoices);
+  invoices.forEach(invoice => {
+    console.log(`Invoice ${invoice.id} image URL:`, invoice.invoiceImageUrl);
+  });
 
   return <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -487,7 +494,10 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              onClick={() => setSelectedInvoiceImage(invoice.invoiceImageUrl)}
+                              onClick={() => {
+                                console.log("Viewing image:", invoice.invoiceImageUrl);
+                                setSelectedInvoiceImage(invoice.invoiceImageUrl);
+                              }}
                               className="flex items-center gap-1"
                             >
                               <Image className="h-4 w-4" />
@@ -525,7 +535,12 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         siteId={site.id}
       />
       
-      <Dialog open={!!selectedInvoiceImage} onOpenChange={(open) => !open && setSelectedInvoiceImage(null)}>
+      <Dialog open={!!selectedInvoiceImage} onOpenChange={(open) => {
+        if (!open) {
+          console.log("Closing image dialog");
+          setSelectedInvoiceImage(null);
+        }
+      }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Invoice Image</DialogTitle>
@@ -535,7 +550,11 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               <img 
                 src={selectedInvoiceImage} 
                 alt="Invoice" 
-                className="max-h-[70vh] object-contain rounded-md"
+                className="max-h-[70vh] object-contain rounded-md" 
+                onError={(e) => {
+                  console.error("Error loading image:", e);
+                  toast.error("Failed to load invoice image");
+                }}
               />
             </div>
           )}

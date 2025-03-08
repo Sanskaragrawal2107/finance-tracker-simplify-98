@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
@@ -10,14 +9,12 @@ import SiteForm from '@/components/sites/SiteForm';
 import SitesList from '@/components/sites/SitesList';
 import SiteDetail from '@/components/sites/SiteDetail';
 
-// Empty initial state - no mock data
 const initialExpenses: Expense[] = [];
 const initialSites: Site[] = [];
 const initialAdvances: Advance[] = [];
 const initialFunds: FundsReceived[] = [];
 const initialInvoices: Invoice[] = [];
 
-// Temporary supervisor ID - in a real app, this would come from authentication
 const SUPERVISOR_ID = "sup123";
 
 const Expenses: React.FC = () => {
@@ -30,7 +27,6 @@ const Expenses: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
 
-  // This function ensures date objects are properly created
   const ensureDateObjects = (site: Site): Site => {
     return {
       ...site,
@@ -89,7 +85,6 @@ const Expenses: React.FC = () => {
     
     setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
     
-    // Update site with the new funds amount
     if (fundWithId.siteId) {
       setSites(prevSites =>
         prevSites.map(site =>
@@ -102,13 +97,18 @@ const Expenses: React.FC = () => {
     
     toast.success("Funds received recorded successfully");
   };
-  
+
   const handleAddInvoice = (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    console.log("Adding new invoice with data:", newInvoice);
+    
     const invoiceWithId: Invoice = {
       ...newInvoice,
       id: Date.now().toString(),
       createdAt: new Date(),
     };
+    
+    console.log("Created invoice with ID:", invoiceWithId.id);
+    console.log("Invoice image URL:", invoiceWithId.invoiceImageUrl);
     
     setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
     toast.success("Invoice added successfully");
@@ -132,7 +132,6 @@ const Expenses: React.FC = () => {
     site.posNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Ensure the selected site has proper Date objects
   const selectedSite = selectedSiteId 
     ? ensureDateObjects(sites.find(site => site.id === selectedSiteId) as Site)
     : null;
@@ -150,7 +149,6 @@ const Expenses: React.FC = () => {
       />
       
       {selectedSite ? (
-        // Show selected site details
         <SiteDetail 
           site={selectedSite}
           expenses={siteExpenses}
@@ -165,7 +163,6 @@ const Expenses: React.FC = () => {
           onCompleteSite={handleCompleteSite}
         />
       ) : (
-        // Show sites list
         <>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="relative max-w-md">
@@ -222,7 +219,6 @@ const Expenses: React.FC = () => {
         </>
       )}
 
-      {/* Site Form Dialog */}
       <SiteForm
         isOpen={isSiteFormOpen}
         onClose={() => setIsSiteFormOpen(false)}
