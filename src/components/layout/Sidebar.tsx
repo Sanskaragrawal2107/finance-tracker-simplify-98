@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, Home, BarChart3, FileText, Users, Settings, LogOut } from 'lucide-react';
+import { ChevronLeft, Home, BarChart3, Users, Settings, LogOut } from 'lucide-react';
 import { UserRole } from '@/lib/types';
 
 interface SidebarProps {
@@ -30,12 +30,6 @@ const sidebarItems: SidebarItem[] = [
     icon: BarChart3,
     label: 'Expenses',
     path: '/expenses',
-    allowedRoles: [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.VIEWER],
-  },
-  {
-    icon: FileText,
-    label: 'Invoices',
-    path: '/invoices',
     allowedRoles: [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.VIEWER],
   },
   {

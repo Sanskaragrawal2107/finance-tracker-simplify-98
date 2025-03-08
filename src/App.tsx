@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,7 +7,6 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
-import Invoices from "./pages/Invoices";
 import NotFound from "./pages/NotFound";
 import Sidebar from "./components/layout/Sidebar";
 import Navbar from "./components/layout/Navbar";
@@ -88,7 +86,6 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
-          <Route path="/invoices" element={<AppLayout><Invoices /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

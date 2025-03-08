@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,17 +13,24 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type InvoiceFormProps = {
+  isOpen?: boolean;
+  onClose?: () => void;
   onSubmit: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
   initialData?: Partial<Invoice>;
+  siteId?: string;
 };
 
 const gstRates = [5, 12, 18, 28];
 
 const InvoiceForm: React.FC<InvoiceFormProps> = ({
+  isOpen = true,
+  onClose,
   onSubmit,
-  initialData
+  initialData,
+  siteId
 }) => {
   const {
     toast
@@ -253,12 +261,15 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       billUrl: billFile ? URL.createObjectURL(billFile) : undefined,
       paymentStatus,
       createdBy: 'Current User',
-      approverType: approverType
+      approverType: approverType,
+      siteId: siteId  // Add the siteId
     };
     onSubmit(invoiceData);
+    if (onClose) onClose();
   };
 
-  return <form onSubmit={handleSubmit} className="space-y-6">
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Invoice Date</Label>
@@ -496,10 +507,24 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline">Cancel</Button>
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
         <Button type="submit">Save Invoice</Button>
       </div>
-    </form>;
+    </form>
+  );
+
+  return isOpen ? (
+    <Dialog open={isOpen} onOpenChange={onClose ? () => onClose() : undefined}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {siteId ? "Add Site Invoice" : "Add Invoice"}
+          </DialogTitle>
+        </DialogHeader>
+        {formContent}
+      </DialogContent>
+    </Dialog>
+  ) : formContent;
 };
 
 export default InvoiceForm;

@@ -1,3 +1,4 @@
+
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -166,6 +167,7 @@ export interface Invoice {
   createdBy: string;
   createdAt: Date;
   approverType?: "ho" | "supervisor";
+  siteId?: string; // Reference to the site
 }
 
 export interface ChartDataPoint {

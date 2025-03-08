@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -15,6 +15,7 @@ const initialExpenses: Expense[] = [];
 const initialSites: Site[] = [];
 const initialAdvances: Advance[] = [];
 const initialFunds: FundsReceived[] = [];
+const initialInvoices: Invoice[] = [];
 
 // Temporary supervisor ID - in a real app, this would come from authentication
 const SUPERVISOR_ID = "sup123";
@@ -24,6 +25,7 @@ const Expenses: React.FC = () => {
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
   const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
+  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -100,6 +102,17 @@ const Expenses: React.FC = () => {
     
     toast.success("Funds received recorded successfully");
   };
+  
+  const handleAddInvoice = (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    const invoiceWithId: Invoice = {
+      ...newInvoice,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    };
+    
+    setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
+    toast.success("Invoice added successfully");
+  };
 
   const handleCompleteSite = (siteId: string, completionDate: Date) => {
     setSites(prevSites => 
@@ -127,6 +140,7 @@ const Expenses: React.FC = () => {
   const siteExpenses = expenses.filter(expense => expense.siteId === selectedSiteId);
   const siteAdvances = advances.filter(advance => advance.siteId === selectedSiteId);
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
+  const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -142,10 +156,12 @@ const Expenses: React.FC = () => {
           expenses={siteExpenses}
           advances={siteAdvances}
           fundsReceived={siteFunds}
+          invoices={siteInvoices}
           onBack={() => setSelectedSiteId(null)}
           onAddExpense={handleAddExpense}
           onAddAdvance={handleAddAdvance}
           onAddFunds={handleAddFunds}
+          onAddInvoice={handleAddInvoice}
           onCompleteSite={handleCompleteSite}
         />
       ) : (

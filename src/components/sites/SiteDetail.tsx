@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, ArrowLeft, Plus, Check, X, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
-import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived, AdvancePurpose } from '@/lib/types';
+import { Calendar, ArrowLeft, Plus, Check, X, Building, Wallet, DownloadCloud, Receipt, FileText } from 'lucide-react';
+import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived, AdvancePurpose, Invoice } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import { Button } from '@/components/ui/button';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import AdvanceForm from '@/components/advances/AdvanceForm';
 import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
+import InvoiceForm from '@/components/invoices/InvoiceForm';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -20,10 +21,12 @@ interface SiteDetailProps {
   expenses: Expense[];
   advances?: Advance[];
   fundsReceived?: FundsReceived[];
+  invoices?: Invoice[];
   onBack: () => void;
   onAddExpense: (expense: Partial<Expense>) => void;
   onAddAdvance?: (advance: Partial<Advance>) => void;
   onAddFunds?: (funds: Partial<FundsReceived>) => void;
+  onAddInvoice?: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
 
@@ -89,15 +92,18 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   expenses,
   advances = [],
   fundsReceived = [],
+  invoices = [],
   onBack,
   onAddExpense,
   onAddAdvance,
   onAddFunds,
+  onAddInvoice,
   onCompleteSite
 }) => {
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
   const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
+  const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(site.completionDate);
   const [activeTab, setActiveTab] = useState('expenses');
@@ -114,7 +120,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const totalMoneyAdvances = moneyAdvances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalWorkerDebits = workerDebits.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
-  const totalBalance = totalFundsReceived - totalExpenses - totalMoneyAdvances;
+  
+  const supervisorInvoices = invoices.filter(invoice => invoice.approverType === "supervisor");
+  const totalSupervisorInvoices = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+  
+  const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+  
+  const totalBalance = totalFundsReceived - totalExpenses - totalMoneyAdvances - totalSupervisorInvoices;
 
   const ensureDate = (date: Date | string): Date => {
     return date instanceof Date ? date : new Date(date);
@@ -150,6 +162,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       onAddFunds(fundsWithSiteId);
     }
     setIsFundsFormOpen(false);
+  };
+
+  const handleAddInvoice = (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    if (onAddInvoice) {
+      onAddInvoice(newInvoice);
+    }
+    setIsInvoiceFormOpen(false);
   };
 
   const handleCompleteSite = () => {
@@ -226,6 +245,10 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 <span className="text-muted-foreground">Debits TO worker:</span>
                 <span className="font-medium text-purple-600">₹{totalWorkerDebits.toLocaleString()}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Invoices paid by supervisor:</span>
+                <span className="font-medium text-blue-600">₹{totalSupervisorInvoices.toLocaleString()}</span>
+              </div>
               <Separator className="my-1" />
               <div className="flex justify-between">
                 <span className="font-medium">Current Balance:</span>
@@ -258,6 +281,10 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 <Building className="h-4 w-4 mr-2" />
                 Funds from HO
               </TabsTrigger>
+              <TabsTrigger value="invoices">
+                <FileText className="h-4 w-4 mr-2" />
+                Invoices
+              </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
@@ -275,6 +302,11 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           <Button variant="outline" onClick={() => setIsFundsFormOpen(true)}>
             <DownloadCloud className="h-4 w-4 mr-2" />
             Funds Received
+          </Button>
+          <Button onClick={() => setIsInvoiceFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            <FileText className="h-4 w-4 mr-2" />
+            New Invoice
           </Button>
         </div>
       </div>
@@ -424,6 +456,42 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </Button>
               </div>}
           </TabsContent>
+          
+          <TabsContent value="invoices" className="mt-0">
+            {invoices && invoices.length > 0 ? <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Party Name</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Invoice No.</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Payment By</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoices.map(invoice => <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="py-4 pl-4 text-sm">{format(ensureDate(invoice.date), 'MMM dd, yyyy')}</td>
+                        <td className="py-4 text-sm">{invoice.partyName}</td>
+                        <td className="py-4 text-sm">{invoice.partyId}</td>
+                        <td className="py-4 text-sm">
+                          <span className={`px-2 py-1 ${invoice.approverType === "ho" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"} rounded-full text-xs font-medium`}>
+                            {invoice.approverType === "ho" ? "Head Office" : "Supervisor"}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4 text-sm font-medium">₹{invoice.netAmount.toLocaleString()}</td>
+                      </tr>)}
+                  </tbody>
+                </table>
+              </div> : <div className="p-8 text-center">
+                <p className="text-muted-foreground">No invoices have been recorded for this site yet.</p>
+                <Button variant="outline" className="mt-4" onClick={() => setIsInvoiceFormOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  <FileText className="h-4 w-4 mr-2" />
+                  Add First Invoice
+                </Button>
+              </div>}
+          </TabsContent>
         </Tabs>
       </CustomCard>
       
@@ -432,6 +500,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       <AdvanceForm isOpen={isAdvanceFormOpen} onClose={() => setIsAdvanceFormOpen(false)} onSubmit={handleAddAdvance} siteId={site.id} />
       
       <FundsReceivedForm isOpen={isFundsFormOpen} onClose={() => setIsFundsFormOpen(false)} onSubmit={handleAddFunds} siteId={site.id} />
+      
+      <InvoiceForm 
+        isOpen={isInvoiceFormOpen} 
+        onClose={() => setIsInvoiceFormOpen(false)} 
+        onSubmit={handleAddInvoice}
+        siteId={site.id}
+      />
       
       <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -470,3 +545,4 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 };
 
 export default SiteDetail;
+
