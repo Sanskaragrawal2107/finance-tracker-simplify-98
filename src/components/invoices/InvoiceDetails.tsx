@@ -1,11 +1,11 @@
-
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Invoice, PaymentStatus } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
-import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText, CreditCard } from 'lucide-react';
+import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText, CreditCard, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface InvoiceDetailsProps {
   invoice: Invoice;
@@ -31,6 +31,7 @@ const getStatusColor = (status: PaymentStatus) => {
 
 const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment }) => {
   const { toast } = useToast();
+  const [isImageOpen, setIsImageOpen] = useState(false);
   
   useEffect(() => {
     // Load Razorpay script
@@ -163,6 +164,18 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
     
     initializeRazorpayPayment();
   };
+
+  const handleViewBill = () => {
+    if (invoice.billUrl) {
+      setIsImageOpen(true);
+    } else {
+      toast({
+        title: "No bill available",
+        description: "There is no bill attachment available for this invoice.",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className="space-y-6">
@@ -278,11 +291,34 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, onMakePayment 
           <h4 className="font-medium mb-2">Attached Bill</h4>
           <div className="bg-muted/50 border rounded-md p-4 flex items-center justify-between">
             <span>Bill attachment</span>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownload}>
-              <Download className="h-4 w-4" />
-              Download
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleViewBill}>
+                <Eye className="h-4 w-4" />
+                View
+              </Button>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={handleDownload}>
+                <Download className="h-4 w-4" />
+                Download
+              </Button>
+            </div>
           </div>
+          
+          {isImageOpen && (
+            <Dialog open={isImageOpen} onOpenChange={setIsImageOpen}>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Invoice Bill</DialogTitle>
+                </DialogHeader>
+                <div className="flex justify-center">
+                  <img 
+                    src={invoice.billUrl} 
+                    alt="Invoice Bill" 
+                    className="max-h-[70vh] object-contain rounded-md border"
+                  />
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       )}
       

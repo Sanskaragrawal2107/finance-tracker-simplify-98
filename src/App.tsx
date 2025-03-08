@@ -44,8 +44,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return 'Dashboard';
       case '/expenses':
         return 'Expenses';
-      case '/invoices':
-        return 'Invoices';
       default:
         return '';
     }

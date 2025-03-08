@@ -1,8 +1,8 @@
-
 import React from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import BalanceCard from '@/components/dashboard/BalanceCard';
 import StatCard from '@/components/dashboard/StatCard';
+import HODebitsCard from '@/components/dashboard/HODebitsCard';
 import ExpenseChart from '@/components/dashboard/ExpenseChart';
 import RecentActivity from '@/components/dashboard/RecentActivity';
 import { BarChart3, IndianRupee, FileText, Wallet, Building2 } from 'lucide-react';
@@ -16,6 +16,9 @@ const balanceData: BalanceSummary = {
   totalAdvances: 395150,
   pendingInvoices: 250000,
 };
+
+// HO Debits mock data
+const hoDebitsTotal = 750000;
 
 const expenseChartData: ChartDataPoint[] = [
   { name: 'Jan', value: 45000 },
@@ -114,12 +117,9 @@ const Dashboard: React.FC = () => {
             valuePrefix="₹"
             trend={{ value: 3, isPositive: false, label: "from last month" }}
           />
-          <StatCard 
-            title="Funds from H.O." 
-            value={balanceData.fundsReceived} 
-            icon={Building2}
-            valuePrefix="₹"
-            trend={{ value: 20, isPositive: true, label: "from last month" }}
+          <HODebitsCard 
+            totalDebits={hoDebitsTotal}
+            trend={{ value: 8, isPositive: false, label: "from last month" }}
           />
         </div>
       </div>
