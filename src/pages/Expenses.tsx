@@ -29,6 +29,8 @@ const Expenses: React.FC = () => {
       ...newSite as Site,
       id: Date.now().toString(),
       supervisorId: SUPERVISOR_ID,
+      createdAt: new Date(),
+      isCompleted: false,
     };
     
     setSites(prevSites => [...prevSites, siteWithId]);

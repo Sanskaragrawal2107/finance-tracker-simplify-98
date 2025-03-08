@@ -61,9 +61,9 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSelectSite }) => {
               <SelectValue placeholder="Filter by..." />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">No filter</SelectItem>
               <SelectItem value="supervisor">Supervisor</SelectItem>
               <SelectItem value="contractor">Contractor</SelectItem>
+              <SelectItem value="">No filter</SelectItem>
             </SelectContent>
           </Select>
         </div>
