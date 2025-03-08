@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -130,9 +129,9 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
               name="posNo"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>POS Number</FormLabel>
+                  <FormLabel>P.O. Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter POS number" {...field} />
+                    <Input placeholder="Enter P.O. number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

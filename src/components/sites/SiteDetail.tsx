@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar, ArrowLeft, Plus, Check, X, FileText, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
-import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived } from '@/lib/types';
+import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived, AdvancePurpose } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import { Button } from '@/components/ui/button';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
@@ -14,6 +14,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+
 interface SiteDetailProps {
   site: Site;
   expenses: Expense[];
@@ -25,6 +26,7 @@ interface SiteDetailProps {
   onAddFunds?: (funds: Partial<FundsReceived>) => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
+
 const getCategoryColor = (category: ExpenseCategory | string) => {
   switch (category) {
     case ExpenseCategory.MATERIAL:
@@ -68,6 +70,7 @@ const getCategoryColor = (category: ExpenseCategory | string) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
+
 const getStatusColor = (status: ApprovalStatus) => {
   switch (status) {
     case ApprovalStatus.APPROVED:
@@ -80,6 +83,7 @@ const getStatusColor = (status: ApprovalStatus) => {
       return 'bg-gray-100 text-gray-800';
   }
 };
+
 const SiteDetail: React.FC<SiteDetailProps> = ({
   site,
   expenses,
@@ -97,17 +101,26 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(site.completionDate);
   const [activeTab, setActiveTab] = useState('expenses');
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
-  const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
-  const totalBalance = totalFundsReceived - totalExpenses - totalAdvances;
 
-  // Make sure dates are Date objects
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const moneyAdvances = advances.filter(advance => 
+    advance.purpose === AdvancePurpose.ADVANCE
+  );
+  const workerDebits = advances.filter(advance => 
+    advance.purpose === AdvancePurpose.SAFETY_SHOES || 
+    advance.purpose === AdvancePurpose.TOOLS || 
+    advance.purpose === AdvancePurpose.OTHER
+  );
+  const totalMoneyAdvances = moneyAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+  const totalWorkerDebits = workerDebits.reduce((sum, advance) => sum + advance.amount, 0);
+  const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
+  const totalBalance = totalFundsReceived - totalExpenses - totalMoneyAdvances;
+
   const ensureDate = (date: Date | string): Date => {
     return date instanceof Date ? date : new Date(date);
   };
+
   const handleAddExpense = (newExpense: Partial<Expense>) => {
-    // Add the site ID to the expense
     const expenseWithSiteId = {
       ...newExpense,
       siteId: site.id,
@@ -116,9 +129,9 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
     onAddExpense(expenseWithSiteId);
     setIsExpenseFormOpen(false);
   };
+
   const handleAddAdvance = (newAdvance: Partial<Advance>) => {
     if (onAddAdvance) {
-      // Add site ID to the advance
       const advanceWithSiteId = {
         ...newAdvance,
         siteId: site.id
@@ -127,9 +140,9 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
     }
     setIsAdvanceFormOpen(false);
   };
+
   const handleAddFunds = (newFunds: Partial<FundsReceived>) => {
     if (onAddFunds) {
-      // Add site ID to the funds
       const fundsWithSiteId = {
         ...newFunds,
         siteId: site.id
@@ -138,6 +151,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
     }
     setIsFundsFormOpen(false);
   };
+
   const handleCompleteSite = () => {
     if (completionDate) {
       onCompleteSite(site.id, completionDate);
@@ -147,6 +161,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       toast.error("Please select a completion date");
     }
   };
+
   return <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={onBack}>
@@ -205,7 +220,11 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Advances paid by supervisor:</span>
-                <span className="font-medium text-amber-600">₹{totalAdvances.toLocaleString()}</span>
+                <span className="font-medium text-amber-600">₹{totalMoneyAdvances.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Debits TO worker:</span>
+                <span className="font-medium text-purple-600">₹{totalWorkerDebits.toLocaleString()}</span>
               </div>
               <Separator className="my-1" />
               <div className="flex justify-between">
@@ -227,9 +246,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 <Receipt className="h-4 w-4 mr-2" />
                 Expenses
               </TabsTrigger>
-              <TabsTrigger value="advances">
+              <TabsTrigger value="moneyAdvances">
                 <Wallet className="h-4 w-4 mr-2" />
-                Advances
+                Advance History
+              </TabsTrigger>
+              <TabsTrigger value="workerDebits">
+                <Wallet className="h-4 w-4 mr-2" />
+                Debit by H.O.
               </TabsTrigger>
               <TabsTrigger value="funds">
                 <Building className="h-4 w-4 mr-2" />
@@ -303,8 +326,9 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               </div>}
           </TabsContent>
 
-          <TabsContent value="advances" className="mt-0">
-            {advances.length > 0 ? <div className="overflow-x-auto">
+          <TabsContent value="moneyAdvances" className="mt-0">
+            {moneyAdvances.length > 0 ? (
+              <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b text-left">
@@ -317,7 +341,8 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {advances.map(advance => <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                    {moneyAdvances.map(advance => (
+                      <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="py-4 pl-4 text-sm">{format(ensureDate(advance.date), 'MMM dd, yyyy')}</td>
                         <td className="py-4 text-sm">{advance.recipientType}: {advance.recipientName}</td>
                         <td className="py-4 text-sm">
@@ -339,17 +364,76 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             <FileText className="h-4 w-4 text-muted-foreground" />
                           </button>
                         </td>
-                      </tr>)}
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
-              </div> : <div className="p-8 text-center">
-                <p className="text-muted-foreground">No advances have been recorded for this site yet.</p>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">No money advances have been recorded for this site yet.</p>
                 <Button variant="outline" className="mt-4" onClick={() => setIsAdvanceFormOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   <Wallet className="h-4 w-4 mr-2" />
                   Add First Advance
                 </Button>
-              </div>}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="workerDebits" className="mt-0">
+            {workerDebits.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workerDebits.map(advance => (
+                      <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="py-4 pl-4 text-sm">{format(ensureDate(advance.date), 'MMM dd, yyyy')}</td>
+                        <td className="py-4 text-sm">{advance.recipientType}: {advance.recipientName}</td>
+                        <td className="py-4 text-sm">
+                          <div>
+                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                              {advance.purpose}
+                            </span>
+                            {advance.remarks && <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>}
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
+                        <td className="py-4 text-sm">
+                          <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
+                            {advance.status}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4 text-right">
+                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">No worker debits have been recorded for this site yet.</p>
+                <Button variant="outline" className="mt-4" onClick={() => setIsAdvanceFormOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Add First Debit
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="funds" className="mt-0">
@@ -385,16 +469,12 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         </Tabs>
       </CustomCard>
       
-      {/* Expense Form Dialog */}
       <ExpenseForm isOpen={isExpenseFormOpen} onClose={() => setIsExpenseFormOpen(false)} onSubmit={handleAddExpense} />
       
-      {/* Advance Form Dialog */}
       <AdvanceForm isOpen={isAdvanceFormOpen} onClose={() => setIsAdvanceFormOpen(false)} onSubmit={handleAddAdvance} siteId={site.id} />
-
-      {/* Funds Received Form Dialog */}
+      
       <FundsReceivedForm isOpen={isFundsFormOpen} onClose={() => setIsFundsFormOpen(false)} onSubmit={handleAddFunds} siteId={site.id} />
       
-      {/* Site Completion Dialog */}
       <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -430,4 +510,5 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       </Dialog>
     </div>;
 };
+
 export default SiteDetail;

@@ -8,9 +8,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
-import Advances from "./pages/Advances";
 import Invoices from "./pages/Invoices";
-import HeadOffice from "./pages/HeadOffice";
 import NotFound from "./pages/NotFound";
 import Sidebar from "./components/layout/Sidebar";
 import Navbar from "./components/layout/Navbar";
@@ -48,12 +46,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return 'Dashboard';
       case '/expenses':
         return 'Expenses';
-      case '/advances':
-        return 'Advances';
       case '/invoices':
         return 'Invoices';
-      case '/head-office':
-        return 'Head Office Funds';
       default:
         return '';
     }
@@ -94,9 +88,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
-          <Route path="/advances" element={<AppLayout><Advances /></AppLayout>} />
           <Route path="/invoices" element={<AppLayout><Invoices /></AppLayout>} />
-          <Route path="/head-office" element={<AppLayout><HeadOffice /></AppLayout>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

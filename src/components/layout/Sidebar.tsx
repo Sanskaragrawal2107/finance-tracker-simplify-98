@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronLeft, Home, BarChart3, Wallet, FileText, Building2, Users, Settings, LogOut } from 'lucide-react';
+import { ChevronLeft, Home, BarChart3, FileText, Users, Settings, LogOut } from 'lucide-react';
 import { UserRole } from '@/lib/types';
 
 interface SidebarProps {
@@ -34,21 +33,9 @@ const sidebarItems: SidebarItem[] = [
     allowedRoles: [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.VIEWER],
   },
   {
-    icon: Wallet,
-    label: 'Advances',
-    path: '/advances',
-    allowedRoles: [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.VIEWER],
-  },
-  {
     icon: FileText,
     label: 'Invoices',
     path: '/invoices',
-    allowedRoles: [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.VIEWER],
-  },
-  {
-    icon: Building2,
-    label: 'Head Office',
-    path: '/head-office',
     allowedRoles: [UserRole.ADMIN, UserRole.SUPERVISOR, UserRole.VIEWER],
   },
   {
