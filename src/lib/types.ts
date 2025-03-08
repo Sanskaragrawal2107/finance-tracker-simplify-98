@@ -1,4 +1,3 @@
-
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -12,6 +11,19 @@ export interface User {
   email: string;
   role: UserRole;
   createdAt: Date;
+}
+
+// Site related types
+export interface Site {
+  id: string;
+  name: string;
+  jobName: string;
+  posNo: string;
+  startDate: Date;
+  completionDate?: Date;
+  supervisorId: string;
+  createdAt: Date;
+  isCompleted: boolean;
 }
 
 // Financial data types
@@ -81,6 +93,8 @@ export interface Expense {
   status: ApprovalStatus;
   createdBy: string;
   createdAt: Date;
+  siteId?: string; // Reference to the site
+  supervisorId: string;
 }
 
 export interface Advance {
