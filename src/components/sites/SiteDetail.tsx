@@ -200,7 +200,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               </div>
               <Separator className="my-1" />
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Expenses:</span>
+                <span className="text-muted-foreground">Total Expenses paid by supervisor:</span>
                 <span className="font-medium text-red-600">₹{totalExpenses.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
