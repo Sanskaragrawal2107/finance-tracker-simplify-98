@@ -84,7 +84,7 @@ const recentActivities: Activity[] = [
 
 const Dashboard: React.FC = () => {
   return (
-    <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto pr-2">
+    <div className="space-y-6 animate-fade-in pb-8">
       <PageTitle 
         title="Dashboard" 
         subtitle="Overview of your financial data and recent activities"

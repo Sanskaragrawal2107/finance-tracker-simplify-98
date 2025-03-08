@@ -1,11 +1,14 @@
+
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Menu } from 'lucide-react';
+
 interface NavbarProps {
   onMenuClick: () => void;
   pageTitle?: string;
   className?: string;
 }
+
 const Navbar: React.FC<NavbarProps> = ({
   onMenuClick,
   pageTitle,
@@ -20,9 +23,19 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
         
         <div className="flex-1 flex justify-center items-center">
-          <div className="flex flex-col md:flex-row items-center gap-3">
-            <img alt="MAURICE ENGINEERING WORKS Logo" className="h-16 object-contain" src="/lovable-uploads/a96b9a12-be25-4e41-8901-083fea2cb2c0.png" />
-            <h1 className="text-xl font-bold hidden md:block">MAURICE ENGINEERING WORKS</h1>
+          <div className="flex items-center gap-3">
+            {/* Logo image */}
+            <img 
+              src="/lovable-uploads/74a5a478-2c11-4188-88b3-76b7897376a9.png" 
+              alt="MEW Logo" 
+              className="h-10 md:h-12 object-contain" 
+            />
+            {/* Company name image */}
+            <img 
+              src="/lovable-uploads/1d876bba-1f25-45bf-9f5b-8f81f72d4880.png" 
+              alt="MAURICE ENGINEERING WORKS" 
+              className="h-8 md:h-10 object-contain" 
+            />
           </div>
         </div>
         
@@ -32,4 +45,5 @@ const Navbar: React.FC<NavbarProps> = ({
       </div>
     </header>;
 };
+
 export default Navbar;
