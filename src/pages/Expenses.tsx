@@ -19,11 +19,8 @@ const initialExpenses: Expense[] = [
     category: ExpenseCategory.MATERIAL,
     amount: 25000,
     status: ApprovalStatus.APPROVED,
-    createdBy: 'Supervisor: Mithlesh Singh',
+    createdBy: 'Supervisor',
     createdAt: new Date('2023-07-05'),
-    supervisorId: 1,
-    siteName: 'Mayura Residency',
-    jobName: 'Foundation Work',
   },
   {
     id: '2',
@@ -42,11 +39,8 @@ const initialExpenses: Expense[] = [
     category: ExpenseCategory.TRAVEL,
     amount: 500,
     status: ApprovalStatus.APPROVED,
-    createdBy: 'Supervisor: Yogesh Sharma',
+    createdBy: 'Supervisor',
     createdAt: new Date('2023-07-03'),
-    supervisorId: 3,
-    siteName: 'Pride Towers',
-    jobName: 'Inspection',
   },
   {
     id: '4',
@@ -65,11 +59,8 @@ const initialExpenses: Expense[] = [
     category: ExpenseCategory.EQUIPMENT,
     amount: 15000,
     status: ApprovalStatus.PENDING,
-    createdBy: 'Supervisor: Shubham Urmaliya',
+    createdBy: 'Supervisor',
     createdAt: new Date('2023-07-01'),
-    supervisorId: 2,
-    siteName: 'Royal Heights',
-    jobName: 'Excavation',
   },
   {
     id: '6',
@@ -78,11 +69,8 @@ const initialExpenses: Expense[] = [
     category: ExpenseCategory.TRANSPORT,
     amount: 12000,
     status: ApprovalStatus.PENDING,
-    createdBy: 'Supervisor: Vivek Giri Goswami',
+    createdBy: 'Supervisor',
     createdAt: new Date('2023-06-30'),
-    supervisorId: 4,
-    siteName: 'Green Valley',
-    jobName: 'Material Transport',
   },
   {
     id: '7',
@@ -91,11 +79,8 @@ const initialExpenses: Expense[] = [
     category: ExpenseCategory.ACCOMMODATION,
     amount: 18000,
     status: ApprovalStatus.REJECTED,
-    createdBy: 'Supervisor: M.P. Naidu',
+    createdBy: 'Supervisor',
     createdAt: new Date('2023-06-29'),
-    supervisorId: 5,
-    siteName: 'Sunshine Apartments',
-    jobName: 'Labor Accommodation',
   },
 ];
 
@@ -176,9 +161,7 @@ const Expenses: React.FC = () => {
   const filteredExpenses = expenses.filter(expense => 
     expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     expense.category.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-    expense.createdBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (expense.siteName && expense.siteName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (expense.jobName && expense.jobName.toLowerCase().includes(searchTerm.toLowerCase()))
+    expense.createdBy.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -230,7 +213,6 @@ const Expenses: React.FC = () => {
             <thead>
               <tr className="border-b text-left">
                 <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                <th className="pb-3 font-medium text-muted-foreground">Site/Job</th>
                 <th className="pb-3 font-medium text-muted-foreground">Description</th>
                 <th className="pb-3 font-medium text-muted-foreground">Category</th>
                 <th className="pb-3 font-medium text-muted-foreground">Amount</th>
@@ -243,20 +225,6 @@ const Expenses: React.FC = () => {
               {filteredExpenses.map((expense) => (
                 <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                   <td className="py-4 pl-4 text-sm">{format(expense.date, 'MMM dd, yyyy')}</td>
-                  <td className="py-4 text-sm">
-                    {expense.siteName && expense.jobName ? (
-                      <div>
-                        <div className="font-medium">{expense.siteName}</div>
-                        <div className="text-xs text-muted-foreground">{expense.jobName}</div>
-                      </div>
-                    ) : expense.siteName ? (
-                      expense.siteName
-                    ) : expense.jobName ? (
-                      expense.jobName
-                    ) : (
-                      '-'
-                    )}
-                  </td>
                   <td className="py-4 text-sm">{expense.description}</td>
                   <td className="py-4 text-sm">
                     <span className={`${getCategoryColor(expense.category)} px-2 py-1 rounded-full text-xs font-medium`}>
@@ -269,12 +237,7 @@ const Expenses: React.FC = () => {
                       {expense.status}
                     </span>
                   </td>
-                  <td className="py-4 text-sm">
-                    {expense.createdBy}
-                    {expense.supervisorId && (
-                      <span className="ml-1 text-xs text-muted-foreground">(ID: {expense.supervisorId})</span>
-                    )}
-                  </td>
+                  <td className="py-4 text-sm">{expense.createdBy}</td>
                   <td className="py-4 pr-4 text-right">
                     <button className="p-1 rounded-md hover:bg-muted transition-colors">
                       <FileText className="h-4 w-4 text-muted-foreground" />

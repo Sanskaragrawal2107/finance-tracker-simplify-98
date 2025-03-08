@@ -81,9 +81,6 @@ export interface Expense {
   status: ApprovalStatus;
   createdBy: string;
   createdAt: Date;
-  supervisorId?: number;
-  siteName?: string;
-  jobName?: string;
 }
 
 export interface Advance {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -75,12 +74,6 @@ const formSchema = z.object({
   }).positive({
     message: "Amount must be a positive number",
   }),
-  siteName: z.string().min(2, {
-    message: "Site name must be at least 2 characters",
-  }).optional(),
-  jobName: z.string().min(2, {
-    message: "Job name must be at least 2 characters",
-  }).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -90,19 +83,15 @@ interface ExpenseItem {
   date: Date;
   recipientType: "contractor" | "worker" | "supervisor";
   recipientName: string;
-  recipientId?: number;
   purpose: string;
   category: string;
   amount: number;
-  siteName?: string;
-  jobName?: string;
 }
 
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
-  const [selectedRecipientId, setSelectedRecipientId] = useState<number | null>(null);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -113,8 +102,6 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
       purpose: "",
       category: "",
       amount: undefined,
-      siteName: "",
-      jobName: "",
     },
   });
 
@@ -133,20 +120,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
 
     if (form.getValues("recipientName")) {
       form.setValue("recipientName", "");
-      setSelectedRecipientId(null);
     }
   }, [form.watch("recipientType")]);
-
-  // Handle recipient selection to store the ID
-  const handleRecipientSelection = (name: string) => {
-    form.setValue("recipientName", name);
-    const selectedRecipient = recipientOptions.find(r => r.name === name);
-    if (selectedRecipient) {
-      setSelectedRecipientId(selectedRecipient.id);
-    } else {
-      setSelectedRecipientId(null);
-    }
-  };
 
   const analyzePurpose = async (purposeText: string) => {
     if (!purposeText || purposeText.length < 3) return;
@@ -234,12 +209,9 @@ Return ONLY the category name, with no additional text or explanation.
       date: values.date,
       recipientType: values.recipientType,
       recipientName: values.recipientName,
-      recipientId: selectedRecipientId || undefined,
       purpose: values.purpose,
       category: values.category,
       amount: values.amount,
-      siteName: values.siteName,
-      jobName: values.jobName,
     };
     
     console.log("Adding expense to list:", newExpense);
@@ -251,8 +223,6 @@ Return ONLY the category name, with no additional text or explanation.
       purpose: "",
       category: "",
       amount: undefined,
-      siteName: "",
-      jobName: "",
     });
     
     toast.success("Expense added to the list");
@@ -274,9 +244,6 @@ Return ONLY the category name, with no additional text or explanation.
         status: "pending" as any,
         createdBy: `${expense.recipientType}: ${expense.recipientName}`,
         createdAt: new Date(),
-        supervisorId: expense.recipientType === "supervisor" ? expense.recipientId : undefined,
-        siteName: expense.siteName,
-        jobName: expense.jobName,
       };
       
       onSubmit(newExpense);
@@ -300,9 +267,6 @@ Return ONLY the category name, with no additional text or explanation.
       status: "pending" as any,
       createdBy: `${values.recipientType}: ${values.recipientName}`,
       createdAt: new Date(),
-      supervisorId: values.recipientType === "supervisor" ? selectedRecipientId : undefined,
-      siteName: values.siteName,
-      jobName: values.jobName,
     };
 
     onSubmit(newExpense);
@@ -371,36 +335,6 @@ Return ONLY the category name, with no additional text or explanation.
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="siteName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Site Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter site name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="jobName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Job Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter job name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
               name="recipientType"
@@ -460,7 +394,7 @@ Return ONLY the category name, with no additional text or explanation.
                       <SearchableDropdown
                         options={recipientOptions}
                         selectedVal={field.value}
-                        handleChange={(val) => handleRecipientSelection(val)}
+                        handleChange={(val) => field.onChange(val)}
                         placeholder="Select contractor"
                         emptyMessage="No contractors found"
                         className="w-full"
@@ -469,7 +403,7 @@ Return ONLY the category name, with no additional text or explanation.
                       <SearchableDropdown
                         options={recipientOptions}
                         selectedVal={field.value}
-                        handleChange={(val) => handleRecipientSelection(val)}
+                        handleChange={(val) => field.onChange(val)}
                         placeholder="Select supervisor"
                         emptyMessage="No supervisors found"
                         className="w-full"
@@ -579,7 +513,6 @@ Return ONLY the category name, with no additional text or explanation.
                 <thead className="bg-muted">
                   <tr>
                     <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Site</th>
                     <th className="p-2 text-left">Recipient</th>
                     <th className="p-2 text-left">Purpose</th>
                     <th className="p-2 text-right">Amount</th>
@@ -590,11 +523,7 @@ Return ONLY the category name, with no additional text or explanation.
                   {expenses.map((expense) => (
                     <tr key={expense.id} className="border-t">
                       <td className="p-2">{format(expense.date, 'MMM dd')}</td>
-                      <td className="p-2">{expense.siteName || '-'}</td>
-                      <td className="p-2">
-                        {expense.recipientType}: {expense.recipientName}
-                        {expense.recipientId ? ` (ID: ${expense.recipientId})` : ''}
-                      </td>
+                      <td className="p-2">{expense.recipientType}: {expense.recipientName}</td>
                       <td className="p-2">{expense.purpose}</td>
                       <td className="p-2 text-right">₹{expense.amount}</td>
                       <td className="p-2 text-center">
