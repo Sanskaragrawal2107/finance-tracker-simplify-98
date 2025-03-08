@@ -1,3 +1,4 @@
+
 import React from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import BalanceCard from '@/components/dashboard/BalanceCard';
@@ -83,10 +84,11 @@ const recentActivities: Activity[] = [
 
 const Dashboard: React.FC = () => {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-y-auto pr-2">
       <PageTitle 
         title="Dashboard" 
         subtitle="Overview of your financial data and recent activities"
+        className="mb-4"
       />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
@@ -142,29 +143,32 @@ const Expenses: React.FC = () => {
   const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <PageTitle 
-        title="Sites & Expenses" 
-        subtitle="Manage construction sites and track expenses"
-      />
-      
+    <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
       {selectedSite ? (
-        <SiteDetail 
-          site={selectedSite}
-          expenses={siteExpenses}
-          advances={siteAdvances}
-          fundsReceived={siteFunds}
-          invoices={siteInvoices}
-          onBack={() => setSelectedSiteId(null)}
-          onAddExpense={handleAddExpense}
-          onAddAdvance={handleAddAdvance}
-          onAddFunds={handleAddFunds}
-          onAddInvoice={handleAddInvoice}
-          onCompleteSite={handleCompleteSite}
-        />
+        <div className="overflow-y-auto flex-1 pr-2">
+          <SiteDetail 
+            site={selectedSite}
+            expenses={siteExpenses}
+            advances={siteAdvances}
+            fundsReceived={siteFunds}
+            invoices={siteInvoices}
+            onBack={() => setSelectedSiteId(null)}
+            onAddExpense={handleAddExpense}
+            onAddAdvance={handleAddAdvance}
+            onAddFunds={handleAddFunds}
+            onAddInvoice={handleAddInvoice}
+            onCompleteSite={handleCompleteSite}
+          />
+        </div>
       ) : (
         <>
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <PageTitle 
+            title="Sites & Expenses" 
+            subtitle="Manage construction sites and track expenses"
+            className="mb-4"
+          />
+          
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <div className="relative max-w-md">
               <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
               <input 
@@ -193,29 +197,31 @@ const Expenses: React.FC = () => {
             </div>
           </div>
           
-          {sites.length > 0 ? (
-            <SitesList 
-              sites={filteredSites}
-              onSelectSite={(siteId) => setSelectedSiteId(siteId)}
-            />
-          ) : (
-            <CustomCard>
-              <div className="p-12 text-center">
-                <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Sites Added Yet</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Create your first construction site to start tracking expenses. Each site will have its own dedicated expense tracking.
-                </p>
-                <Button 
-                  onClick={() => setIsSiteFormOpen(true)}
-                  className="mx-auto"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Site
-                </Button>
-              </div>
-            </CustomCard>
-          )}
+          <div className="overflow-y-auto flex-1 pr-2">
+            {sites.length > 0 ? (
+              <SitesList 
+                sites={filteredSites}
+                onSelectSite={(siteId) => setSelectedSiteId(siteId)}
+              />
+            ) : (
+              <CustomCard>
+                <div className="p-12 text-center">
+                  <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Sites Added Yet</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    Create your first construction site to start tracking expenses. Each site will have its own dedicated expense tracking.
+                  </p>
+                  <Button 
+                    onClick={() => setIsSiteFormOpen(true)}
+                    className="mx-auto"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Site
+                  </Button>
+                </div>
+              </CustomCard>
+            )}
+          </div>
         </>
       )}
 

@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { cn } from '@/lib/utils';
-import { Bell, Search, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -29,28 +29,20 @@ const Navbar: React.FC<NavbarProps> = ({
           >
             <Menu className="h-5 w-5 text-muted-foreground" />
           </button>
-          
-          {pageTitle && (
-            <h1 className="font-semibold text-lg hidden md:block">{pageTitle}</h1>
-          )}
         </div>
         
-        <div className="flex items-center space-x-4">
-          <div className="relative hidden md:block">
-            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              className="py-2 pl-10 pr-4 border rounded-md bg-muted/20 w-64 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+        <div className="flex-1 flex justify-center items-center">
+          <div className="flex flex-col items-center">
+            <img 
+              src="/lovable-uploads/03b1441a-ce62-4bad-b62c-5e489f2a4977.png" 
+              alt="MAURICE ENGINEERING WORKS" 
+              className="h-14 object-contain"
             />
           </div>
-          
-          <div className="relative">
-            <button className="p-2 rounded-md hover:bg-muted transition-colors">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-primary rounded-full"></span>
-            </button>
-          </div>
+        </div>
+        
+        <div className="w-20">
+          {/* Empty div for layout balance */}
         </div>
       </div>
     </header>
