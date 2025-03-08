@@ -1,22 +1,30 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, ArrowLeft, Plus, Check, X, FileText } from 'lucide-react';
-import { Site, Expense, ExpenseCategory, ApprovalStatus } from '@/lib/types';
+import { Calendar, ArrowLeft, Plus, Check, X, FileText, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
+import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import { Button } from '@/components/ui/button';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
+import AdvanceForm from '@/components/advances/AdvanceForm';
+import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 interface SiteDetailProps {
   site: Site;
   expenses: Expense[];
+  advances?: Advance[];
+  fundsReceived?: FundsReceived[];
   onBack: () => void;
   onAddExpense: (expense: Partial<Expense>) => void;
+  onAddAdvance?: (advance: Partial<Advance>) => void;
+  onAddFunds?: (funds: Partial<FundsReceived>) => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
 
@@ -80,15 +88,25 @@ const getStatusColor = (status: ApprovalStatus) => {
 const SiteDetail: React.FC<SiteDetailProps> = ({ 
   site, 
   expenses, 
+  advances = [],
+  fundsReceived = [],
   onBack, 
   onAddExpense,
+  onAddAdvance,
+  onAddFunds,
   onCompleteSite
 }) => {
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
+  const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
+  const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(site.completionDate);
+  const [activeTab, setActiveTab] = useState('expenses');
   
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+  const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
+  const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
+  const totalBalance = totalFundsReceived - totalExpenses - totalAdvances;
   
   const handleAddExpense = (newExpense: Partial<Expense>) => {
     // Add the site ID to the expense
@@ -100,6 +118,20 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
     
     onAddExpense(expenseWithSiteId);
     setIsExpenseFormOpen(false);
+  };
+  
+  const handleAddAdvance = (newAdvance: Partial<Advance>) => {
+    if (onAddAdvance) {
+      onAddAdvance(newAdvance);
+    }
+    setIsAdvanceFormOpen(false);
+  };
+
+  const handleAddFunds = (newFunds: Partial<FundsReceived>) => {
+    if (onAddFunds) {
+      onAddFunds(newFunds);
+    }
+    setIsFundsFormOpen(false);
   };
   
   const handleCompleteSite = () => {
@@ -169,80 +201,227 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </div>
           
           <div className="bg-muted p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Expense Summary</h3>
-            <div className="flex justify-between mb-2">
-              <span className="text-muted-foreground">Total Expenses:</span>
-              <span className="font-medium">₹{totalExpenses.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span className="text-muted-foreground">Total Entries:</span>
-              <span className="font-medium">{expenses.length}</span>
+            <h3 className="font-semibold mb-3">Site Financial Summary</h3>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Funds from HO:</span>
+                <span className="font-medium text-green-600">₹{totalFundsReceived.toLocaleString()}</span>
+              </div>
+              <Separator className="my-1" />
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Expenses:</span>
+                <span className="font-medium text-red-600">₹{totalExpenses.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total Advances:</span>
+                <span className="font-medium text-amber-600">₹{totalAdvances.toLocaleString()}</span>
+              </div>
+              <Separator className="my-1" />
+              <div className="flex justify-between">
+                <span className="font-medium">Current Balance:</span>
+                <span className={`font-bold ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  ₹{totalBalance.toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </CustomCard>
       
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Site Expenses</h3>
-        <Button onClick={() => setIsExpenseFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          New Expense
-        </Button>
+      <div className="flex flex-wrap items-center gap-4 mt-6">
+        <div className="flex-grow">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList>
+              <TabsTrigger value="expenses">
+                <Receipt className="h-4 w-4 mr-2" />
+                Expenses
+              </TabsTrigger>
+              <TabsTrigger value="advances">
+                <Wallet className="h-4 w-4 mr-2" />
+                Advances
+              </TabsTrigger>
+              <TabsTrigger value="funds">
+                <Building className="h-4 w-4 mr-2" />
+                Funds from HO
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button onClick={() => setIsExpenseFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Expense
+          </Button>
+          <Button onClick={() => setIsAdvanceFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            <Wallet className="h-4 w-4 mr-2" />
+            New Advance
+          </Button>
+          <Button variant="outline" onClick={() => setIsFundsFormOpen(true)}>
+            <DownloadCloud className="h-4 w-4 mr-2" />
+            Funds Received
+          </Button>
+        </div>
       </div>
       
       <CustomCard>
-        {expenses.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b text-left">
-                  <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                  <th className="pb-3 font-medium text-muted-foreground">Description</th>
-                  <th className="pb-3 font-medium text-muted-foreground">Category</th>
-                  <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                  <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                  <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {expenses.map((expense) => (
-                  <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="py-4 pl-4 text-sm">{format(expense.date, 'MMM dd, yyyy')}</td>
-                    <td className="py-4 text-sm">{expense.description}</td>
-                    <td className="py-4 text-sm">
-                      <span className={`${getCategoryColor(expense.category)} px-2 py-1 rounded-full text-xs font-medium`}>
-                        {expense.category}
-                      </span>
-                    </td>
-                    <td className="py-4 text-sm font-medium">₹{expense.amount.toLocaleString()}</td>
-                    <td className="py-4 text-sm">
-                      <span className={`${getStatusColor(expense.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                        {expense.status}
-                      </span>
-                    </td>
-                    <td className="py-4 pr-4 text-right">
-                      <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                      </button>
-                    </td>
+        <TabsContent value="expenses" className="mt-0">
+          {expenses.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Description</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Category</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="p-8 text-center">
-            <p className="text-muted-foreground">No expenses have been recorded for this site yet.</p>
-            <Button 
-              variant="outline" 
-              className="mt-4"
-              onClick={() => setIsExpenseFormOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Expense
-            </Button>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {expenses.map((expense) => (
+                    <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="py-4 pl-4 text-sm">{format(expense.date, 'MMM dd, yyyy')}</td>
+                      <td className="py-4 text-sm">{expense.description}</td>
+                      <td className="py-4 text-sm">
+                        <span className={`${getCategoryColor(expense.category)} px-2 py-1 rounded-full text-xs font-medium`}>
+                          {expense.category}
+                        </span>
+                      </td>
+                      <td className="py-4 text-sm font-medium">₹{expense.amount.toLocaleString()}</td>
+                      <td className="py-4 text-sm">
+                        <span className={`${getStatusColor(expense.status)} px-2 py-1 rounded-full text-xs font-medium`}>
+                          {expense.status}
+                        </span>
+                      </td>
+                      <td className="py-4 pr-4 text-right">
+                        <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground">No expenses have been recorded for this site yet.</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setIsExpenseFormOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add First Expense
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="advances" className="mt-0">
+          {advances.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {advances.map((advance) => (
+                    <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="py-4 pl-4 text-sm">{format(advance.date, 'MMM dd, yyyy')}</td>
+                      <td className="py-4 text-sm">{advance.recipientType}: {advance.recipientName}</td>
+                      <td className="py-4 text-sm">
+                        <div>
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                            {advance.purpose}
+                          </span>
+                          {advance.remarks && (
+                            <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
+                      <td className="py-4 text-sm">
+                        <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
+                          {advance.status}
+                        </span>
+                      </td>
+                      <td className="py-4 pr-4 text-right">
+                        <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground">No advances have been recorded for this site yet.</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setIsAdvanceFormOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                <Wallet className="h-4 w-4 mr-2" />
+                Add First Advance
+              </Button>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="funds" className="mt-0">
+          {fundsReceived.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fundsReceived.map((fund) => (
+                    <tr key={fund.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="py-4 pl-4 text-sm">{format(fund.date, 'MMM dd, yyyy')}</td>
+                      <td className="py-4 text-sm font-medium text-green-600">₹{fund.amount.toLocaleString()}</td>
+                      <td className="py-4 pr-4 text-right">
+                        <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center">
+              <p className="text-muted-foreground">No funds have been recorded for this site yet.</p>
+              <Button 
+                variant="outline" 
+                className="mt-4"
+                onClick={() => setIsFundsFormOpen(true)}
+              >
+                <DownloadCloud className="h-4 w-4 mr-2" />
+                Record First Funds
+              </Button>
+            </div>
+          )}
+        </TabsContent>
       </CustomCard>
       
       {/* Expense Form Dialog */}
@@ -250,6 +429,22 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         isOpen={isExpenseFormOpen}
         onClose={() => setIsExpenseFormOpen(false)}
         onSubmit={handleAddExpense}
+      />
+      
+      {/* Advance Form Dialog */}
+      <AdvanceForm
+        isOpen={isAdvanceFormOpen}
+        onClose={() => setIsAdvanceFormOpen(false)}
+        onSubmit={handleAddAdvance}
+        siteId={site.id}
+      />
+
+      {/* Funds Received Form Dialog */}
+      <FundsReceivedForm
+        isOpen={isFundsFormOpen}
+        onClose={() => setIsFundsFormOpen(false)}
+        onSubmit={handleAddFunds}
+        siteId={site.id}
       />
       
       {/* Site Completion Dialog */}

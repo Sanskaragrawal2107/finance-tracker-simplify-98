@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -13,6 +13,8 @@ import SiteDetail from '@/components/sites/SiteDetail';
 // Empty initial state - no mock data
 const initialExpenses: Expense[] = [];
 const initialSites: Site[] = [];
+const initialAdvances: Advance[] = [];
+const initialFunds: FundsReceived[] = [];
 
 // Temporary supervisor ID - in a real app, this would come from authentication
 const SUPERVISOR_ID = "sup123";
@@ -20,6 +22,8 @@ const SUPERVISOR_ID = "sup123";
 const Expenses: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [sites, setSites] = useState<Site[]>(initialSites);
+  const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
+  const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -29,6 +33,9 @@ const Expenses: React.FC = () => {
       ...newSite as Site,
       id: Date.now().toString(),
       supervisorId: SUPERVISOR_ID,
+      createdAt: new Date(),
+      isCompleted: false,
+      funds: 0
     };
     
     setSites(prevSites => [...prevSites, siteWithId]);
@@ -46,6 +53,41 @@ const Expenses: React.FC = () => {
     
     setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
     toast.success("Expense added successfully");
+  };
+
+  const handleAddAdvance = (newAdvance: Partial<Advance>) => {
+    const advanceWithId: Advance = {
+      ...newAdvance as Advance,
+      id: Date.now().toString(),
+      status: ApprovalStatus.PENDING,
+      createdAt: new Date(),
+    };
+    
+    setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
+    toast.success("Advance added successfully");
+  };
+
+  const handleAddFunds = (newFund: Partial<FundsReceived>) => {
+    const fundWithId: FundsReceived = {
+      ...newFund as FundsReceived,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    };
+    
+    setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
+    
+    // Update site with the new funds amount
+    if (fundWithId.siteId) {
+      setSites(prevSites =>
+        prevSites.map(site =>
+          site.id === fundWithId.siteId
+            ? { ...site, funds: (site.funds || 0) + fundWithId.amount }
+            : site
+        )
+      );
+    }
+    
+    toast.success("Funds received recorded successfully");
   };
 
   const handleCompleteSite = (siteId: string, completionDate: Date) => {
@@ -66,6 +108,8 @@ const Expenses: React.FC = () => {
 
   const selectedSite = sites.find(site => site.id === selectedSiteId);
   const siteExpenses = expenses.filter(expense => expense.siteId === selectedSiteId);
+  const siteAdvances = advances.filter(advance => advance.siteId === selectedSiteId);
+  const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -79,8 +123,12 @@ const Expenses: React.FC = () => {
         <SiteDetail 
           site={selectedSite}
           expenses={siteExpenses}
+          advances={siteAdvances}
+          fundsReceived={siteFunds}
           onBack={() => setSelectedSiteId(null)}
           onAddExpense={handleAddExpense}
+          onAddAdvance={handleAddAdvance}
+          onAddFunds={handleAddFunds}
           onCompleteSite={handleCompleteSite}
         />
       ) : (

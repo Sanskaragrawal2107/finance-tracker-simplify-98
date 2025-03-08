@@ -24,6 +24,7 @@ export interface Site {
   supervisorId: string;
   createdAt: Date;
   isCompleted: boolean;
+  funds?: number;
 }
 
 // Financial data types
@@ -70,7 +71,11 @@ export enum AdvancePurpose {
   MATERIAL = "material",
   WAGES = "wages",
   TRANSPORT = "transport",
-  MISC = "misc"
+  MISC = "misc",
+  ADVANCE = "advance",
+  SAFETY_SHOES = "safety_shoes",
+  TOOLS = "tools",
+  OTHER = "other"
 }
 
 export enum ApprovalStatus {
@@ -82,6 +87,12 @@ export enum ApprovalStatus {
 export enum PaymentStatus {
   PENDING = "pending",
   PAID = "paid"
+}
+
+export enum RecipientType {
+  WORKER = "worker",
+  SUBCONTRACTOR = "subcontractor",
+  SUPERVISOR = "supervisor"
 }
 
 export interface Expense {
@@ -100,13 +111,23 @@ export interface Expense {
 export interface Advance {
   id: string;
   date: Date;
-  recipientId: string;
+  recipientId?: string;
   recipientName: string;
-  recipientType: "contractor" | "worker";
+  recipientType: RecipientType;
   purpose: AdvancePurpose;
   amount: number;
+  remarks?: string;
   status: ApprovalStatus;
   createdBy: string;
+  createdAt: Date;
+  siteId?: string;
+}
+
+export interface FundsReceived {
+  id: string;
+  date: Date;
+  amount: number;
+  siteId: string;
   createdAt: Date;
 }
 
