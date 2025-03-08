@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -40,11 +41,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Expense, ExpenseCategory } from "@/lib/types";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EXPENSE_CATEGORIES } from '@/lib/constants';
-import SearchableDropdown from './SearchableDropdown';
-import { contractors } from '@/data/contractors';
-import { supervisors } from '@/data/supervisors';
 
 interface ExpenseFormProps {
   isOpen: boolean;
@@ -55,12 +52,6 @@ interface ExpenseFormProps {
 const formSchema = z.object({
   date: z.date({
     required_error: "Date is required",
-  }),
-  recipientType: z.enum(["contractor", "worker", "supervisor"], {
-    required_error: "Please select recipient type",
-  }),
-  recipientName: z.string().min(2, {
-    message: "Name must be at least 2 characters",
   }),
   purpose: z.string().min(3, {
     message: "Purpose description must be at least 3 characters",
@@ -81,8 +72,6 @@ type FormValues = z.infer<typeof formSchema>;
 interface ExpenseItem {
   id: string;
   date: Date;
-  recipientType: "contractor" | "worker" | "supervisor";
-  recipientName: string;
   purpose: string;
   category: string;
   amount: number;
@@ -91,37 +80,16 @@ interface ExpenseItem {
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: new Date(),
-      recipientType: undefined,
-      recipientName: "",
       purpose: "",
       category: "",
       amount: undefined,
     },
   });
-
-  useEffect(() => {
-    const recipientType = form.watch("recipientType");
-    
-    if (recipientType === "supervisor") {
-      setRecipientOptions(supervisors);
-      console.log("Setting supervisor options:", supervisors);
-    } else if (recipientType === "contractor") {
-      setRecipientOptions(contractors);
-      console.log("Setting contractor options:", contractors);
-    } else {
-      setRecipientOptions([]);
-    }
-
-    if (form.getValues("recipientName")) {
-      form.setValue("recipientName", "");
-    }
-  }, [form.watch("recipientType")]);
 
   const analyzePurpose = async (purposeText: string) => {
     if (!purposeText || purposeText.length < 3) return;
@@ -129,7 +97,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
     setIsAnalyzing(true);
     try {
       const apiKey = "AIzaSyDwqj1YcFKVzpLc_4ZyC_s9YAMCONx57RI";
-      const url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
+      const url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent";
       
       const prompt = `
 Given this expense description: "${purposeText}"
@@ -207,8 +175,6 @@ Return ONLY the category name, with no additional text or explanation.
     const newExpense: ExpenseItem = {
       id: Date.now().toString(),
       date: values.date,
-      recipientType: values.recipientType,
-      recipientName: values.recipientName,
       purpose: values.purpose,
       category: values.category,
       amount: values.amount,
@@ -218,8 +184,6 @@ Return ONLY the category name, with no additional text or explanation.
     setExpenses([...expenses, newExpense]);
     form.reset({
       date: new Date(),
-      recipientType: values.recipientType,
-      recipientName: "",
       purpose: "",
       category: "",
       amount: undefined,
@@ -242,7 +206,6 @@ Return ONLY the category name, with no additional text or explanation.
         category: expense.category as unknown as ExpenseCategory,
         amount: expense.amount,
         status: "pending" as any,
-        createdBy: `${expense.recipientType}: ${expense.recipientName}`,
         createdAt: new Date(),
       };
       
@@ -265,7 +228,6 @@ Return ONLY the category name, with no additional text or explanation.
       category: values.category as unknown as ExpenseCategory,
       amount: values.amount,
       status: "pending" as any,
-      createdBy: `${values.recipientType}: ${values.recipientName}`,
       createdAt: new Date(),
     };
 
@@ -330,92 +292,6 @@ Return ONLY the category name, with no additional text or explanation.
                       />
                     </PopoverContent>
                   </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="recipientType"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Recipient Type</FormLabel>
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      className="flex space-x-4"
-                    >
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="contractor" />
-                        </FormControl>
-                        <FormLabel className="font-normal cursor-pointer">
-                          Contractor
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="worker" />
-                        </FormControl>
-                        <FormLabel className="font-normal cursor-pointer">
-                          Worker
-                        </FormLabel>
-                      </FormItem>
-                      <FormItem className="flex items-center space-x-2 space-y-0">
-                        <FormControl>
-                          <RadioGroupItem value="supervisor" />
-                        </FormControl>
-                        <FormLabel className="font-normal cursor-pointer">
-                          Supervisor
-                        </FormLabel>
-                      </FormItem>
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="recipientName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recipient Name</FormLabel>
-                  <FormControl>
-                    {form.watch("recipientType") === "worker" ? (
-                      <Input 
-                        placeholder="Enter recipient name" 
-                        {...field} 
-                      />
-                    ) : form.watch("recipientType") === "contractor" ? (
-                      <SearchableDropdown
-                        options={recipientOptions}
-                        selectedVal={field.value}
-                        handleChange={(val) => field.onChange(val)}
-                        placeholder="Select contractor"
-                        emptyMessage="No contractors found"
-                        className="w-full"
-                      />
-                    ) : form.watch("recipientType") === "supervisor" ? (
-                      <SearchableDropdown
-                        options={recipientOptions}
-                        selectedVal={field.value}
-                        handleChange={(val) => field.onChange(val)}
-                        placeholder="Select supervisor"
-                        emptyMessage="No supervisors found"
-                        className="w-full"
-                      />
-                    ) : (
-                      <Input 
-                        placeholder="First select a recipient type" 
-                        disabled={true} 
-                        {...field}
-                      />
-                    )}
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -513,7 +389,6 @@ Return ONLY the category name, with no additional text or explanation.
                 <thead className="bg-muted">
                   <tr>
                     <th className="p-2 text-left">Date</th>
-                    <th className="p-2 text-left">Recipient</th>
                     <th className="p-2 text-left">Purpose</th>
                     <th className="p-2 text-right">Amount</th>
                     <th className="p-2 text-center">Action</th>
@@ -523,7 +398,6 @@ Return ONLY the category name, with no additional text or explanation.
                   {expenses.map((expense) => (
                     <tr key={expense.id} className="border-t">
                       <td className="p-2">{format(expense.date, 'MMM dd')}</td>
-                      <td className="p-2">{expense.recipientType}: {expense.recipientName}</td>
                       <td className="p-2">{expense.purpose}</td>
                       <td className="p-2 text-right">₹{expense.amount}</td>
                       <td className="p-2 text-center">

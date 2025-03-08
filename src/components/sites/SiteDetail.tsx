@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, ArrowLeft, Plus, Check, X, FileText, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
+import { Calendar, ArrowLeft, Plus, Check, X, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
 import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived, AdvancePurpose } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import { Button } from '@/components/ui/button';
@@ -289,9 +289,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                       <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
                       <th className="pb-3 font-medium text-muted-foreground">Description</th>
                       <th className="pb-3 font-medium text-muted-foreground">Category</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -303,17 +301,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             {expense.category}
                           </span>
                         </td>
-                        <td className="py-4 text-sm font-medium">₹{expense.amount.toLocaleString()}</td>
-                        <td className="py-4 text-sm">
-                          <span className={`${getStatusColor(expense.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                            {expense.status}
-                          </span>
-                        </td>
-                        <td className="py-4 pr-4 text-right">
-                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </td>
+                        <td className="py-4 pr-4 text-sm font-medium">₹{expense.amount.toLocaleString()}</td>
                       </tr>)}
                   </tbody>
                 </table>
@@ -335,9 +323,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                       <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
                       <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
                       <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -353,17 +339,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             {advance.remarks && <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>}
                           </div>
                         </td>
-                        <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
-                        <td className="py-4 text-sm">
-                          <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                            {advance.status}
-                          </span>
-                        </td>
-                        <td className="py-4 pr-4 text-right">
-                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </td>
+                        <td className="py-4 pr-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -390,9 +366,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                       <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
                       <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
                       <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -408,17 +382,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             {advance.remarks && <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>}
                           </div>
                         </td>
-                        <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
-                        <td className="py-4 text-sm">
-                          <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                            {advance.status}
-                          </span>
-                        </td>
-                        <td className="py-4 pr-4 text-right">
-                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </td>
+                        <td className="py-4 pr-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -442,19 +406,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                   <thead>
                     <tr className="border-b text-left">
                       <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {fundsReceived.map(fund => <tr key={fund.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
                         <td className="py-4 pl-4 text-sm">{format(ensureDate(fund.date), 'MMM dd, yyyy')}</td>
-                        <td className="py-4 text-sm font-medium text-green-600">₹{fund.amount.toLocaleString()}</td>
-                        <td className="py-4 pr-4 text-right">
-                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                          </button>
-                        </td>
+                        <td className="py-4 pr-4 text-sm font-medium text-green-600">₹{fund.amount.toLocaleString()}</td>
                       </tr>)}
                   </tbody>
                 </table>
