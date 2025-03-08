@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { Calendar, ArrowLeft, Plus, Check, X, Building, Wallet, DownloadCloud, Receipt, FileText } from 'lucide-react';
+import { Calendar, ArrowLeft, Plus, Check, X, Building, Wallet, DownloadCloud, Receipt, FileText, Image } from 'lucide-react';
 import { Site, Expense, ExpenseCategory, ApprovalStatus, Advance, FundsReceived, AdvancePurpose, Invoice } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import { Button } from '@/components/ui/button';
@@ -107,6 +107,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
   const [completionDate, setCompletionDate] = useState<Date | undefined>(site.completionDate);
   const [activeTab, setActiveTab] = useState('expenses');
+  const [selectedInvoiceImage, setSelectedInvoiceImage] = useState<string | null>(null);
 
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const moneyAdvances = advances.filter(advance => 
@@ -466,7 +467,8 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                       <th className="pb-3 font-medium text-muted-foreground">Party Name</th>
                       <th className="pb-3 font-medium text-muted-foreground">Invoice No.</th>
                       <th className="pb-3 font-medium text-muted-foreground">Payment By</th>
-                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Amount</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground">Image</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -479,7 +481,22 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                             {invoice.approverType === "ho" ? "Head Office" : "Supervisor"}
                           </span>
                         </td>
-                        <td className="py-4 pr-4 text-sm font-medium">₹{invoice.netAmount.toLocaleString()}</td>
+                        <td className="py-4 text-sm font-medium">₹{invoice.netAmount.toLocaleString()}</td>
+                        <td className="py-4 pr-4 text-sm">
+                          {invoice.invoiceImageUrl ? (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setSelectedInvoiceImage(invoice.invoiceImageUrl)}
+                              className="flex items-center gap-1"
+                            >
+                              <Image className="h-4 w-4" />
+                              View
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">No image</span>
+                          )}
+                        </td>
                       </tr>)}
                   </tbody>
                 </table>
@@ -507,6 +524,26 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         onSubmit={handleAddInvoice}
         siteId={site.id}
       />
+      
+      <Dialog open={!!selectedInvoiceImage} onOpenChange={(open) => !open && setSelectedInvoiceImage(null)}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Invoice Image</DialogTitle>
+          </DialogHeader>
+          {selectedInvoiceImage && (
+            <div className="flex justify-center">
+              <img 
+                src={selectedInvoiceImage} 
+                alt="Invoice" 
+                className="max-h-[70vh] object-contain rounded-md"
+              />
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setSelectedInvoiceImage(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <Dialog open={isCompletionDialogOpen} onOpenChange={setIsCompletionDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -545,4 +582,3 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 };
 
 export default SiteDetail;
-
