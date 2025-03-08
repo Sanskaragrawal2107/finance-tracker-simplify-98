@@ -28,13 +28,13 @@ const Navbar: React.FC<NavbarProps> = ({
             <img 
               src="/lovable-uploads/74a5a478-2c11-4188-88b3-76b7897376a9.png" 
               alt="MEW Logo" 
-              className="h-10 md:h-12 object-contain" 
+              className="h-12 md:h-14 object-contain" 
             />
             {/* Company name image */}
             <img 
               src="/lovable-uploads/1d876bba-1f25-45bf-9f5b-8f81f72d4880.png" 
               alt="MAURICE ENGINEERING WORKS" 
-              className="h-8 md:h-10 object-contain" 
+              className="h-10 md:h-12 object-contain" 
             />
           </div>
         </div>
