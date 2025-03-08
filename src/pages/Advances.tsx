@@ -1,10 +1,9 @@
-
 import React from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, FileText, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
-import { Advance, AdvancePurpose, ApprovalStatus } from '@/lib/types';
+import { Advance, AdvancePurpose, ApprovalStatus, RecipientType } from '@/lib/types';
 
 // Mock data for demonstration
 const advances: Advance[] = [
@@ -13,7 +12,7 @@ const advances: Advance[] = [
     date: new Date('2023-07-05'),
     recipientId: '101',
     recipientName: 'Raj Construction',
-    recipientType: 'contractor',
+    recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.MATERIAL,
     amount: 150000,
     status: ApprovalStatus.APPROVED,
@@ -25,7 +24,7 @@ const advances: Advance[] = [
     date: new Date('2023-07-04'),
     recipientId: '102',
     recipientName: 'Suresh Electrical',
-    recipientType: 'contractor',
+    recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.MATERIAL,
     amount: 75000,
     status: ApprovalStatus.APPROVED,
@@ -37,7 +36,7 @@ const advances: Advance[] = [
     date: new Date('2023-07-03'),
     recipientId: '201',
     recipientName: 'Labor Group A',
-    recipientType: 'worker',
+    recipientType: RecipientType.WORKER,
     purpose: AdvancePurpose.WAGES,
     amount: 45000,
     status: ApprovalStatus.APPROVED,
@@ -49,7 +48,7 @@ const advances: Advance[] = [
     date: new Date('2023-07-02'),
     recipientId: '103',
     recipientName: 'Premium Transport',
-    recipientType: 'contractor',
+    recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.TRANSPORT,
     amount: 35000,
     status: ApprovalStatus.PENDING,
@@ -61,7 +60,7 @@ const advances: Advance[] = [
     date: new Date('2023-07-01'),
     recipientId: '202',
     recipientName: 'Labor Group B',
-    recipientType: 'worker',
+    recipientType: RecipientType.WORKER,
     purpose: AdvancePurpose.WAGES,
     amount: 30000,
     status: ApprovalStatus.PENDING,
@@ -98,12 +97,14 @@ const getStatusColor = (status: ApprovalStatus) => {
   }
 };
 
-const getRecipientTypeColor = (type: 'contractor' | 'worker') => {
+const getRecipientTypeColor = (type: RecipientType) => {
   switch (type) {
-    case 'contractor':
+    case RecipientType.SUBCONTRACTOR:
       return 'bg-purple-100 text-purple-800';
-    case 'worker':
+    case RecipientType.WORKER:
       return 'bg-indigo-100 text-indigo-800';
+    case RecipientType.SUPERVISOR:
+      return 'bg-blue-100 text-blue-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }

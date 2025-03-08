@@ -7,13 +7,15 @@ interface CustomCardProps {
   className?: string;
   hoverEffect?: boolean;
   glass?: boolean;
+  onClick?: () => void; // Add the onClick prop
 }
 
 const CustomCard: React.FC<CustomCardProps> = ({ 
   children, 
   className,
   hoverEffect = false,
-  glass = false
+  glass = false,
+  onClick // Add the onClick prop
 }) => {
   return (
     <div 
@@ -23,6 +25,7 @@ const CustomCard: React.FC<CustomCardProps> = ({
         hoverEffect && "hover-card",
         className
       )}
+      onClick={onClick} // Use the onClick prop
     >
       {children}
     </div>
