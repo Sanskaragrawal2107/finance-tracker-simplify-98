@@ -1,4 +1,3 @@
-
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -23,7 +22,6 @@ export interface Site {
   startDate: Date;
   completionDate?: Date;
   supervisorId: string;
-  contractorId?: string;
   createdAt: Date;
   isCompleted: boolean;
 }
