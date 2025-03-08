@@ -195,7 +195,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             <h3 className="font-semibold mb-3">Site Financial Summary</h3>
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Funds from HO:</span>
+                <span className="text-muted-foreground">Funds Received from HO:</span>
                 <span className="font-medium text-green-600">₹{totalFundsReceived.toLocaleString()}</span>
               </div>
               <Separator className="my-1" />
