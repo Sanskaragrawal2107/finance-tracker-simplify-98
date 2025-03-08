@@ -28,6 +28,17 @@ const Expenses: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
 
+  // This function ensures date objects are properly created
+  const ensureDateObjects = (site: Site): Site => {
+    return {
+      ...site,
+      startDate: site.startDate instanceof Date ? site.startDate : new Date(site.startDate),
+      completionDate: site.completionDate ? 
+        (site.completionDate instanceof Date ? site.completionDate : new Date(site.completionDate)) 
+        : undefined
+    };
+  };
+
   const handleAddSite = (newSite: Partial<Site>) => {
     const siteWithId: Site = {
       ...newSite as Site,
@@ -98,6 +109,8 @@ const Expenses: React.FC = () => {
           : site
       )
     );
+    
+    toast.success("Site marked as completed");
   };
 
   const filteredSites = sites.filter(site => 
@@ -106,7 +119,11 @@ const Expenses: React.FC = () => {
     site.posNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const selectedSite = sites.find(site => site.id === selectedSiteId);
+  // Ensure the selected site has proper Date objects
+  const selectedSite = selectedSiteId 
+    ? ensureDateObjects(sites.find(site => site.id === selectedSiteId) as Site)
+    : null;
+    
   const siteExpenses = expenses.filter(expense => expense.siteId === selectedSiteId);
   const siteAdvances = advances.filter(advance => advance.siteId === selectedSiteId);
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);

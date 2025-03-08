@@ -37,12 +37,12 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSelectSite }) => {
                 <div className="p-4">
                   <div className="flex items-center text-sm mb-2">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>Started: {format(site.startDate, 'MMM dd, yyyy')}</span>
+                    <span>Started: {format(new Date(site.startDate), 'MMM dd, yyyy')}</span>
                   </div>
                   {site.completionDate && (
                     <div className="flex items-center text-sm mb-2">
                       <CalendarCheck className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>Expected Completion: {format(site.completionDate, 'MMM dd, yyyy')}</span>
+                      <span>Expected Completion: {format(new Date(site.completionDate), 'MMM dd, yyyy')}</span>
                     </div>
                   )}
                   <Button 
@@ -88,12 +88,12 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSelectSite }) => {
                 <div className="p-4">
                   <div className="flex items-center text-sm mb-2">
                     <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>Started: {format(site.startDate, 'MMM dd, yyyy')}</span>
+                    <span>Started: {format(new Date(site.startDate), 'MMM dd, yyyy')}</span>
                   </div>
                   {site.completionDate && (
                     <div className="flex items-center text-sm mb-2">
                       <CalendarCheck className="h-4 w-4 mr-2 text-green-600" />
-                      <span className="text-green-600">Completed: {format(site.completionDate, 'MMM dd, yyyy')}</span>
+                      <span className="text-green-600">Completed: {format(new Date(site.completionDate), 'MMM dd, yyyy')}</span>
                     </div>
                   )}
                   <Button 

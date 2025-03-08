@@ -108,6 +108,11 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
   const totalBalance = totalFundsReceived - totalExpenses - totalAdvances;
   
+  // Make sure dates are Date objects
+  const ensureDate = (date: Date | string): Date => {
+    return date instanceof Date ? date : new Date(date);
+  };
+  
   const handleAddExpense = (newExpense: Partial<Expense>) => {
     // Add the site ID to the expense
     const expenseWithSiteId = {
@@ -122,14 +127,24 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   
   const handleAddAdvance = (newAdvance: Partial<Advance>) => {
     if (onAddAdvance) {
-      onAddAdvance(newAdvance);
+      // Add site ID to the advance
+      const advanceWithSiteId = {
+        ...newAdvance,
+        siteId: site.id
+      };
+      onAddAdvance(advanceWithSiteId);
     }
     setIsAdvanceFormOpen(false);
   };
 
   const handleAddFunds = (newFunds: Partial<FundsReceived>) => {
     if (onAddFunds) {
-      onAddFunds(newFunds);
+      // Add site ID to the funds
+      const fundsWithSiteId = {
+        ...newFunds,
+        siteId: site.id
+      };
+      onAddFunds(fundsWithSiteId);
     }
     setIsFundsFormOpen(false);
   };
@@ -183,12 +198,12 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               </div>
               <div className="flex">
                 <span className="text-muted-foreground w-32">Start Date:</span>
-                <span className="font-medium">{format(site.startDate, 'PPP')}</span>
+                <span className="font-medium">{format(ensureDate(site.startDate), 'PPP')}</span>
               </div>
               {site.completionDate && (
                 <div className="flex">
                   <span className="text-muted-foreground w-32">Completion Date:</span>
-                  <span className="font-medium">{format(site.completionDate, 'PPP')}</span>
+                  <span className="font-medium">{format(ensureDate(site.completionDate), 'PPP')}</span>
                 </div>
               )}
               <div className="flex">
@@ -230,7 +245,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       
       <div className="flex flex-wrap items-center gap-4 mt-6">
         <div className="flex-grow">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs defaultValue="expenses" value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList>
               <TabsTrigger value="expenses">
                 <Receipt className="h-4 w-4 mr-2" />
@@ -266,162 +281,164 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       </div>
       
       <CustomCard>
-        <TabsContent value="expenses" className="mt-0">
-          {expenses.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Description</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Category</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.map((expense) => (
-                    <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="py-4 pl-4 text-sm">{format(expense.date, 'MMM dd, yyyy')}</td>
-                      <td className="py-4 text-sm">{expense.description}</td>
-                      <td className="py-4 text-sm">
-                        <span className={`${getCategoryColor(expense.category)} px-2 py-1 rounded-full text-xs font-medium`}>
-                          {expense.category}
-                        </span>
-                      </td>
-                      <td className="py-4 text-sm font-medium">₹{expense.amount.toLocaleString()}</td>
-                      <td className="py-4 text-sm">
-                        <span className={`${getStatusColor(expense.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                          {expense.status}
-                        </span>
-                      </td>
-                      <td className="py-4 pr-4 text-right">
-                        <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </td>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsContent value="expenses" className="mt-0">
+            {expenses.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Description</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Category</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground">No expenses have been recorded for this site yet.</p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => setIsExpenseFormOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Expense
-              </Button>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="advances" className="mt-0">
-          {advances.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {advances.map((advance) => (
-                    <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="py-4 pl-4 text-sm">{format(advance.date, 'MMM dd, yyyy')}</td>
-                      <td className="py-4 text-sm">{advance.recipientType}: {advance.recipientName}</td>
-                      <td className="py-4 text-sm">
-                        <div>
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                            {advance.purpose}
+                  </thead>
+                  <tbody>
+                    {expenses.map((expense) => (
+                      <tr key={expense.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="py-4 pl-4 text-sm">{format(ensureDate(expense.date), 'MMM dd, yyyy')}</td>
+                        <td className="py-4 text-sm">{expense.description}</td>
+                        <td className="py-4 text-sm">
+                          <span className={`${getCategoryColor(expense.category)} px-2 py-1 rounded-full text-xs font-medium`}>
+                            {expense.category}
                           </span>
-                          {advance.remarks && (
-                            <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
-                      <td className="py-4 text-sm">
-                        <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                          {advance.status}
-                        </span>
-                      </td>
-                      <td className="py-4 pr-4 text-right">
-                        <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground">No advances have been recorded for this site yet.</p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => setIsAdvanceFormOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                <Wallet className="h-4 w-4 mr-2" />
-                Add First Advance
-              </Button>
-            </div>
-          )}
-        </TabsContent>
+                        </td>
+                        <td className="py-4 text-sm font-medium">₹{expense.amount.toLocaleString()}</td>
+                        <td className="py-4 text-sm">
+                          <span className={`${getStatusColor(expense.status)} px-2 py-1 rounded-full text-xs font-medium`}>
+                            {expense.status}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4 text-right">
+                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">No expenses have been recorded for this site yet.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setIsExpenseFormOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Expense
+                </Button>
+              </div>
+            )}
+          </TabsContent>
 
-        <TabsContent value="funds" className="mt-0">
-          {fundsReceived.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fundsReceived.map((fund) => (
-                    <tr key={fund.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="py-4 pl-4 text-sm">{format(fund.date, 'MMM dd, yyyy')}</td>
-                      <td className="py-4 text-sm font-medium text-green-600">₹{fund.amount.toLocaleString()}</td>
-                      <td className="py-4 pr-4 text-right">
-                        <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                        </button>
-                      </td>
+          <TabsContent value="advances" className="mt-0">
+            {advances.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="p-8 text-center">
-              <p className="text-muted-foreground">No funds have been recorded for this site yet.</p>
-              <Button 
-                variant="outline" 
-                className="mt-4"
-                onClick={() => setIsFundsFormOpen(true)}
-              >
-                <DownloadCloud className="h-4 w-4 mr-2" />
-                Record First Funds
-              </Button>
-            </div>
-          )}
-        </TabsContent>
+                  </thead>
+                  <tbody>
+                    {advances.map((advance) => (
+                      <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="py-4 pl-4 text-sm">{format(ensureDate(advance.date), 'MMM dd, yyyy')}</td>
+                        <td className="py-4 text-sm">{advance.recipientType}: {advance.recipientName}</td>
+                        <td className="py-4 text-sm">
+                          <div>
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                              {advance.purpose}
+                            </span>
+                            {advance.remarks && (
+                              <p className="text-xs text-muted-foreground mt-1">{advance.remarks}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
+                        <td className="py-4 text-sm">
+                          <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
+                            {advance.status}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4 text-right">
+                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">No advances have been recorded for this site yet.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setIsAdvanceFormOpen(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Add First Advance
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="funds" className="mt-0">
+            {fundsReceived.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Amount</th>
+                      <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fundsReceived.map((fund) => (
+                      <tr key={fund.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="py-4 pl-4 text-sm">{format(ensureDate(fund.date), 'MMM dd, yyyy')}</td>
+                        <td className="py-4 text-sm font-medium text-green-600">₹{fund.amount.toLocaleString()}</td>
+                        <td className="py-4 pr-4 text-right">
+                          <button className="p-1 rounded-md hover:bg-muted transition-colors">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <p className="text-muted-foreground">No funds have been recorded for this site yet.</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setIsFundsFormOpen(true)}
+                >
+                  <DownloadCloud className="h-4 w-4 mr-2" />
+                  Record First Funds
+                </Button>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </CustomCard>
       
       {/* Expense Form Dialog */}
