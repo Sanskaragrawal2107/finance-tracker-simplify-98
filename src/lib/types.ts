@@ -163,6 +163,7 @@ export interface Invoice {
   materialItems?: MaterialItem[];
   bankDetails: BankDetails;
   billUrl?: string;
+  invoiceImageUrl?: string;
   paymentStatus: PaymentStatus;
   createdBy: string;
   createdAt: Date;
