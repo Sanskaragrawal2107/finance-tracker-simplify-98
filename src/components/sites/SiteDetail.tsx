@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar, ArrowLeft, Plus, Check, X, FileText, Building, Wallet, DownloadCloud, Receipt } from 'lucide-react';
@@ -114,6 +115,8 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const totalMoneyAdvances = moneyAdvances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalWorkerDebits = workerDebits.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
+  
+  // Update balance calculation to deduct both expenses and advances paid by supervisor
   const totalBalance = totalFundsReceived - totalExpenses - totalMoneyAdvances;
 
   const ensureDate = (date: Date | string): Date => {
@@ -512,3 +515,4 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 };
 
 export default SiteDetail;
+
