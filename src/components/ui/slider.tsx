@@ -9,14 +9,19 @@ import { cn } from "@/lib/utils"
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <div 
-    className={cn("w-full", className)}
-    {...props}
-  >
-    <div className="text-xs text-muted-foreground">Slider component is disabled</div>
-  </div>
-))
+>(({ className, ...props }, ref) => {
+  // Extract the props that are causing type errors
+  const { defaultValue, value, onValueChange, onValueCommit, ...divProps } = props;
+  
+  return (
+    <div 
+      className={cn("w-full", className)}
+      {...divProps}
+    >
+      <div className="text-xs text-muted-foreground">Slider component is disabled</div>
+    </div>
+  );
+})
 Slider.displayName = "DisabledSlider"
 
 export { Slider }
