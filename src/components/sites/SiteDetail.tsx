@@ -55,7 +55,10 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h1 className="text-2xl font-bold">{site.name}</h1>
+          <div>
+            <span className="text-sm font-medium text-muted-foreground">Site Name</span>
+            <h1 className="text-2xl font-bold">{site.name}</h1>
+          </div>
           {site.isCompleted ? <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge> : <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Active</Badge>}
         </div>
         
