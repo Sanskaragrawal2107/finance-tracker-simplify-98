@@ -45,24 +45,24 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
 
   return <div className="grid grid-cols-1 gap-6">
-      <CustomCard variant="primary">
+      <CustomCard className="bg-white">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <Clock className="mr-2 h-5 w-5" />
           Transaction History
         </h2>
         
         <Tabs defaultValue="expenses" className="w-full">
-          <TabsList className="w-full mb-4">
-            <TabsTrigger value="expenses" className="flex-1">EXPENSES PAID</TabsTrigger>
-            <TabsTrigger value="advances" className="flex-1">ADVANCES PAID</TabsTrigger>
-            <TabsTrigger value="invoices" className="flex-1">PURCHASED INVOICE</TabsTrigger>
-            <TabsTrigger value="funds" className="flex-1">FUNDS REC. FROM H.O.</TabsTrigger>
+          <TabsList className="w-full mb-4 bg-gray-100 border border-gray-200">
+            <TabsTrigger value="expenses" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">EXPENSES PAID</TabsTrigger>
+            <TabsTrigger value="advances" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">ADVANCES PAID</TabsTrigger>
+            <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">PURCHASED INVOICE</TabsTrigger>
+            <TabsTrigger value="funds" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">FUNDS REC. FROM H.O.</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="expenses" className="space-y-4">
-            {paidExpenses.length > 0 ? <div className="rounded-md overflow-hidden bg-primary-foreground/10">
-                <table className="min-w-full divide-y divide-primary-foreground/20">
-                  <thead className="bg-primary-foreground/20">
+          <TabsContent value="expenses" className="space-y-4 bg-white">
+            {paidExpenses.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
                     <tr>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
@@ -71,7 +71,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-primary-foreground/10">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {paidExpenses.map(expense => <tr key={expense.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
@@ -85,15 +85,15 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>)}
                   </tbody>
                 </table>
-              </div> : <div className="text-center p-6 bg-primary-foreground/10 rounded-lg">
+              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No expenses paid yet.</p>
               </div>}
           </TabsContent>
           
-          <TabsContent value="advances" className="space-y-4">
-            {paidAdvances.length > 0 ? <div className="rounded-md overflow-hidden bg-primary-foreground/10">
-                <table className="min-w-full divide-y divide-primary-foreground/20">
-                  <thead className="bg-primary-foreground/20">
+          <TabsContent value="advances" className="space-y-4 bg-white">
+            {paidAdvances.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
                     <tr>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Recipient</th>
@@ -103,7 +103,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-primary-foreground/10">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {paidAdvances.map(advance => <tr key={advance.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
@@ -118,36 +118,36 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>)}
                   </tbody>
                 </table>
-              </div> : <div className="text-center p-6 bg-primary-foreground/10 rounded-lg">
+              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No advances paid yet.</p>
               </div>}
           </TabsContent>
           
-          <TabsContent value="funds" className="space-y-4">
-            {fundsReceived.length > 0 ? <div className="rounded-md overflow-hidden bg-primary-foreground/10">
-                <table className="min-w-full divide-y divide-primary-foreground/20">
-                  <thead className="bg-primary-foreground/20">
+          <TabsContent value="funds" className="space-y-4 bg-white">
+            {fundsReceived.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
                     <tr>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
                       <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-primary-foreground/10">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {fundsReceived.map(fund => <tr key={fund.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
                       </tr>)}
                   </tbody>
                 </table>
-              </div> : <div className="text-center p-6 bg-primary-foreground/10 rounded-lg">
+              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No funds received yet.</p>
               </div>}
           </TabsContent>
           
-          <TabsContent value="invoices" className="space-y-4">
-            {invoices.length > 0 ? <div className="rounded-md overflow-hidden bg-primary-foreground/10">
-                <table className="min-w-full divide-y divide-primary-foreground/20">
-                  <thead className="bg-primary-foreground/20">
+          <TabsContent value="invoices" className="space-y-4 bg-white">
+            {invoices.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-100">
                     <tr>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Vendor</th>
@@ -157,7 +157,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-primary-foreground/10">
+                  <tbody className="divide-y divide-gray-200 bg-white">
                     {invoices.map(invoice => <tr key={invoice.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm uppercase">{invoice.partyName}</td>
@@ -169,14 +169,14 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(invoice)}>
+                          <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
                             VIEW
                           </Button>
                         </td>
                       </tr>)}
                   </tbody>
                 </table>
-              </div> : <div className="text-center p-6 bg-primary-foreground/10 rounded-lg">
+              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No invoices recorded yet.</p>
               </div>}
           </TabsContent>

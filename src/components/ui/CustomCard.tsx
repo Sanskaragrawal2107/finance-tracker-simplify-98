@@ -22,7 +22,7 @@ const CustomCard: React.FC<CustomCardProps> = ({
   return (
     <div 
       className={cn(
-        "rounded-lg p-6 shadow-subtle border animate-scale-in",
+        "rounded-lg p-6 shadow-subtle border bg-white animate-scale-in",
         glass && "glass-panel",
         hoverEffect && "hover-card",
         variant === 'primary' && "bg-primary text-primary-foreground",
