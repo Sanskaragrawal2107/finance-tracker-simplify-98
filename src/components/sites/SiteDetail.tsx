@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink } from 'lucide-react';
@@ -81,7 +82,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <CustomCard className="md:col-span-2">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Job Name</h3>
               <p className="text-lg font-semibold mt-1">{site.jobName}</p>
