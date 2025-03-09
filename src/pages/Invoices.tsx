@@ -404,7 +404,14 @@ const Invoices: React.FC = () => {
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>Invoice Details</DialogTitle>
-          {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} onMakePayment={handleMakePayment} />}
+          {selectedInvoice && (
+            <InvoiceDetails
+              invoice={selectedInvoice}
+              isOpen={!!selectedInvoice}
+              onClose={() => setSelectedInvoice(null)}
+              onMakePayment={handleMakePayment}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
