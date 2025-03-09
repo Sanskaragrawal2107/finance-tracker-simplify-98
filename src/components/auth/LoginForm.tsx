@@ -32,7 +32,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         // Store user info in localStorage or a state management solution
         localStorage.setItem('userRole', UserRole.ADMIN);
         localStorage.setItem('userName', 'Admin User');
-        navigate('/expenses'); // Redirect admin to expenses page directly
+        navigate('/admin'); // Redirect admin to admin dashboard page
       } else if (email === 'supervisor@example.com' && password === 'password') {
         localStorage.setItem('userRole', UserRole.SUPERVISOR);
         localStorage.setItem('userName', 'Supervisor User');

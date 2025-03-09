@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -7,6 +8,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
 import { UserRole } from "./lib/types";
@@ -18,7 +20,11 @@ const queryClient = new QueryClient();
 const RoleBasedRedirect = () => {
   const userRole = localStorage.getItem('userRole') as UserRole;
   
-  if (userRole === UserRole.SUPERVISOR || userRole === UserRole.ADMIN) {
+  if (userRole === UserRole.ADMIN) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  if (userRole === UserRole.SUPERVISOR) {
     return <Navigate to="/expenses" replace />;
   }
   
@@ -55,6 +61,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return 'Dashboard';
       case '/expenses':
         return 'Expenses';
+      case '/admin':
+        return 'Admin Dashboard';
       default:
         return '';
     }
@@ -62,7 +70,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   // Check if user is supervisor and redirect from dashboard to expenses
   useEffect(() => {
-    if ((userRole === UserRole.SUPERVISOR || userRole === UserRole.ADMIN) && location.pathname === "/dashboard") {
+    if ((userRole === UserRole.SUPERVISOR) && location.pathname === "/dashboard") {
       window.location.href = "/expenses";
     }
   }, [userRole, location.pathname]);
@@ -101,6 +109,7 @@ const App = () => (
             } 
           />
           <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
+          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
           <Route path="/authenticated" element={<RoleBasedRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

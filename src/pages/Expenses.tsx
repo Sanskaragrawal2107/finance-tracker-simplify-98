@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
@@ -24,7 +24,6 @@ const initialInvoices: Invoice[] = [];
 
 const SUPERVISOR_ID = "sup123";
 
-// These advance purposes should be treated as "Debits to worker" and not subtracted from funds
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
   AdvancePurpose.TOOLS,
@@ -32,6 +31,7 @@ const DEBIT_ADVANCE_PURPOSES = [
 ];
 
 const Expenses: React.FC = () => {
+  const location = useLocation();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [sites, setSites] = useState<Site[]>(initialSites);
   const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
@@ -53,7 +53,16 @@ const Expenses: React.FC = () => {
         setSelectedSupervisorId(SUPERVISOR_ID);
       }
     }
-  }, []);
+    
+    const locationState = location.state as { supervisorId?: string, newSite?: boolean } | null;
+    if (locationState?.supervisorId && storedUserRole === UserRole.ADMIN) {
+      setSelectedSupervisorId(locationState.supervisorId);
+    }
+    
+    if (locationState?.newSite && storedUserRole === UserRole.ADMIN) {
+      setIsSiteFormOpen(true);
+    }
+  }, [location]);
 
   const ensureDateObjects = (site: Site): Site => {
     return {
@@ -87,7 +96,7 @@ const Expenses: React.FC = () => {
     const expenseWithId: Expense = {
       ...newExpense as Expense,
       id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED, // Set status to APPROVED (paid) by default
+      status: ApprovalStatus.APPROVED,
       createdAt: new Date(),
       supervisorId: SUPERVISOR_ID,
     };
@@ -100,7 +109,7 @@ const Expenses: React.FC = () => {
     const advanceWithId: Advance = {
       ...newAdvance as Advance,
       id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED, // Set status to APPROVED (paid) by default
+      status: ApprovalStatus.APPROVED,
       createdAt: new Date(),
     };
     
@@ -159,18 +168,15 @@ const Expenses: React.FC = () => {
   };
 
   const filteredSites = sites.filter(site => {
-    // Filter by search term
     const matchesSearch = 
       site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.jobName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.posNo.toLowerCase().includes(searchTerm.toLowerCase());
       
-    // Filter by supervisor
     const matchesSupervisor = selectedSupervisorId 
       ? site.supervisorId === selectedSupervisorId 
       : true;
     
-    // Filter by status
     const matchesStatus = 
       filterStatus === 'all' ? true :
       filterStatus === 'active' ? !site.isCompleted :
@@ -188,44 +194,35 @@ const Expenses: React.FC = () => {
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
   const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
   
-  // Get all invoices, including those paid by H.O.
   const allSiteInvoices = siteInvoices;
   
-  // Filter invoices to get only supervisor-approved invoices
   const supervisorInvoices = siteInvoices.filter(invoice => 
     invoice.approverType === "supervisor" || !invoice.approverType
   );
 
-  // Calculate financial summaries with correct handling of debit to worker advances
   const calculateSiteFinancials = (siteId: string) => {
     const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
     
-    // Get all expenses with APPROVED status for this site
     const siteExpenses = expenses.filter(expense => 
       expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
     );
     
-    // Get all advances for this site
     const siteAdvances = advances.filter(advance => 
       advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
     );
     
-    // Get all invoices with paid status for this site
     const siteInvoices = invoices.filter(invoice => 
       invoice.siteId === siteId && invoice.paymentStatus === 'paid'
     );
 
-    // Regular advances (not debit to worker)
     const regularAdvances = siteAdvances.filter(advance => 
       !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
     );
 
-    // Debit to worker advances (safety shoes, tools, other)
     const debitAdvances = siteAdvances.filter(advance => 
       DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
     );
 
-    // Supervisor invoices only
     const supervisorInvoices = siteInvoices.filter(invoice => 
       invoice.approverType === "supervisor" || !invoice.approverType
     );
@@ -239,7 +236,6 @@ const Expenses: React.FC = () => {
       .filter(invoice => invoice.paymentStatus === 'pending')
       .reduce((sum, invoice) => sum + invoice.netAmount, 0);
 
-    // Calculate total balance - debit to worker advances are NOT subtracted
     const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
 
     return {
