@@ -15,6 +15,8 @@ const balanceData: BalanceSummary = {
   fundsReceived: 2500000,
   totalExpenditure: 850000,
   totalAdvances: 395150,
+  debitsToWorker: 0,
+  invoicesPaid: 0,
   pendingInvoices: 250000,
 };
 
@@ -107,14 +109,14 @@ const Dashboard: React.FC = () => {
           />
           <StatCard 
             title="Total Advances" 
-            value={balanceData.totalAdvances} 
+            value={balanceData.totalAdvances || 0} 
             icon={Wallet}
             valuePrefix="₹"
             trend={{ value: 5, isPositive: true, label: "from last month" }}
           />
           <StatCard 
             title="Pending Invoices" 
-            value={balanceData.pendingInvoices} 
+            value={balanceData.pendingInvoices || 0} 
             icon={FileText}
             valuePrefix="₹"
             trend={{ value: 3, isPositive: false, label: "from last month" }}

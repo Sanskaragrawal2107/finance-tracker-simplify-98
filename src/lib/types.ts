@@ -1,3 +1,4 @@
+
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -34,7 +35,16 @@ export interface BalanceSummary {
   totalAdvances?: number;
   debitsToWorker?: number;
   invoicesPaid?: number;
+  pendingInvoices?: number;
   totalBalance: number;
+}
+
+export enum PaymentMethod {
+  NEFT = "NEFT",
+  RTGS = "RTGS",
+  IMPS = "IMPS",
+  UPI = "UPI",
+  CASH = "Cash"
 }
 
 export interface HeadOfficeTransaction {
@@ -130,6 +140,8 @@ export interface FundsReceived {
   amount: number;
   siteId: string;
   createdAt: Date;
+  reference?: string;
+  method?: PaymentMethod;
 }
 
 export interface BankDetails {
@@ -169,6 +181,9 @@ export interface Invoice {
   createdAt: Date;
   approverType?: "ho" | "supervisor";
   siteId?: string; // Reference to the site
+  vendorName?: string;  // Added for compatibility
+  invoiceNumber?: string; // Added for compatibility
+  amount?: number;       // Added for compatibility
 }
 
 export interface ChartDataPoint {

@@ -19,8 +19,8 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
     fundsReceived: balanceData.fundsReceived || 0,
     totalExpenditure: balanceData.totalExpenditure || 0,
     totalAdvances: balanceData.totalAdvances || 0,
-    debitsToWorker: 0, // Default value for missing property
-    invoicesPaid: 0,   // Default value for missing property
+    debitsToWorker: balanceData.debitsToWorker || 0,
+    invoicesPaid: balanceData.invoicesPaid || 0,
     totalBalance: balanceData.totalBalance || 0
   };
 

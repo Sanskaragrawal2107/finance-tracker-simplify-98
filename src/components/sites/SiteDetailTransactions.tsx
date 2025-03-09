@@ -160,7 +160,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       <tr key={fund.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm">{fund.reference || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm">{fund.method}</td>
+                        <td className="px-4 py-3 text-sm">{fund.method || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
                       </tr>
                     ))}
@@ -192,9 +192,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     {invoices.map((invoice) => (
                       <tr key={invoice.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm">{invoice.vendorName}</td>
-                        <td className="px-4 py-3 text-sm">{invoice.invoiceNumber}</td>
-                        <td className="px-4 py-3 text-sm text-right">₹{invoice.amount.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm">{invoice.partyName}</td>
+                        <td className="px-4 py-3 text-sm">{invoice.partyId}</td>
+                        <td className="px-4 py-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
@@ -288,7 +288,10 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       <AdvanceForm
         isOpen={isAdvanceFormOpen}
         onClose={() => setIsAdvanceFormOpen(false)}
-        onSubmit={onAddAdvance}
+        onSubmit={(advance) => onAddAdvance({
+          ...advance,
+          siteId
+        })}
         siteId={siteId}
       />
       
@@ -312,9 +315,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       
       {selectedInvoice && (
         <InvoiceDetails
+          invoice={selectedInvoice}
           isOpen={!!selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
-          invoice={selectedInvoice}
         />
       )}
     </div>

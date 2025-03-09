@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -54,7 +55,7 @@ const formSchema = z.object({
   method: z.nativeEnum(PaymentMethod, {
     required_error: "Payment method is required",
   }),
-  amount: z.number({
+  amount: z.coerce.number({
     required_error: "Amount is required",
     invalid_type_error: "Amount must be a number",
   }).positive({
