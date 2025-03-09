@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ interface SiteDetailTransactionsProps {
   advances: Advance[];
   fundsReceived: FundsReceived[];
   invoices: Invoice[];
+  supervisorInvoices?: Invoice[];
   onAddExpense: (expense: Partial<Expense>) => void;
   onAddAdvance: (advance: Partial<Advance>) => void;
   onAddFunds: (funds: Partial<FundsReceived>) => void;
@@ -31,6 +31,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   advances,
   fundsReceived,
   invoices,
+  supervisorInvoices = [],
   onAddExpense,
   onAddAdvance,
   onAddFunds,
@@ -46,6 +47,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   const paidExpenses = expenses.filter(expense => expense.status === ApprovalStatus.APPROVED);
   const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
+
+  const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
     return (
@@ -188,7 +191,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           <TabsContent value="expenses" className="space-y-4 bg-white">
             {paidExpenses.length > 0 ? (
               <>
-                {/* Desktop Table */}
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
@@ -216,7 +218,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                   </table>
                 </div>
                 
-                {/* Mobile Cards */}
                 <div className="sm:hidden">
                   {renderMobileTable(
                     ['Date', 'Purpose', 'Category', 'Amount', 'Status'],
@@ -235,7 +236,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           <TabsContent value="advances" className="space-y-4 bg-white">
             {paidAdvances.length > 0 ? (
               <>
-                {/* Desktop Table */}
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
@@ -265,7 +265,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                   </table>
                 </div>
                 
-                {/* Mobile Cards */}
                 <div className="sm:hidden">
                   {renderMobileTable(
                     ['Date', 'Recipient', 'Purpose', 'Amount', 'Status'],
@@ -284,7 +283,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           <TabsContent value="funds" className="space-y-4 bg-white">
             {fundsReceived.length > 0 ? (
               <>
-                {/* Desktop Table */}
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
@@ -302,7 +300,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                   </table>
                 </div>
                 
-                {/* Mobile Cards */}
                 <div className="sm:hidden">
                   {renderMobileTable(
                     ['Date', 'Amount'],
@@ -319,9 +316,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           </TabsContent>
           
           <TabsContent value="invoices" className="space-y-4 bg-white">
-            {invoices.length > 0 ? (
+            {displayInvoices.length > 0 ? (
               <>
-                {/* Desktop Table */}
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-100">
@@ -329,16 +325,18 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Vendor</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Invoice No.</th>
+                        <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Approved By</th>
                         <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
                         <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
                         <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {invoices.map(invoice => <tr key={invoice.id}>
+                      {displayInvoices.map(invoice => <tr key={invoice.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{invoice.partyName}</td>
                           <td className="px-4 py-3 text-sm uppercase">{invoice.partyId}</td>
+                          <td className="px-4 py-3 text-sm text-center uppercase">{invoice.approverType || "supervisor"}</td>
                           <td className="px-4 py-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
@@ -355,12 +353,45 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                   </table>
                 </div>
                 
-                {/* Mobile Cards */}
                 <div className="sm:hidden">
                   {renderMobileTable(
                     ['Date', 'Vendor', 'Invoice No.', 'Amount', 'Status', 'Actions'],
-                    invoices,
-                    renderInvoiceMobileRow
+                    displayInvoices,
+                    (invoice) => (
+                      <div className="p-3 space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-sm">Date:</span>
+                          <span className="text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-sm">Vendor:</span>
+                          <span className="text-sm uppercase">{invoice.partyName}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-sm">Invoice No:</span>
+                          <span className="text-sm uppercase">{invoice.partyId}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-sm">Approved By:</span>
+                          <span className="text-sm uppercase">{invoice.approverType || "supervisor"}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium text-sm">Amount:</span>
+                          <span className="font-medium text-sm">₹{invoice.netAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="font-medium text-sm mr-2">Status:</span>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
+                          </span>
+                        </div>
+                        <div className="flex justify-center mt-2">
+                          <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
+                            VIEW DETAILS
+                          </Button>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
               </>

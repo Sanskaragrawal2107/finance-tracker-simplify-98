@@ -141,6 +141,9 @@ const Expenses: React.FC = () => {
   const siteAdvances = advances.filter(advance => advance.siteId === selectedSiteId);
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
   const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
+  
+  // Filter invoices to separate HO and supervisor invoices
+  const supervisorInvoices = siteInvoices.filter(invoice => invoice.approverType === "supervisor");
 
   return (
     <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
@@ -152,6 +155,7 @@ const Expenses: React.FC = () => {
             advances={siteAdvances}
             fundsReceived={siteFunds}
             invoices={siteInvoices}
+            supervisorInvoices={supervisorInvoices} // Pass filtered supervisor invoices
             onBack={() => setSelectedSiteId(null)}
             onAddExpense={handleAddExpense}
             onAddAdvance={handleAddAdvance}

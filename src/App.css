@@ -67,6 +67,12 @@
     padding: 0.75rem !important;
   }
 
+  /* Auto-close calendar on mobile */
+  .rdp-dropdown_month {
+    max-height: 300px !important;
+    overflow-y: auto !important;
+  }
+
   /* Make form items more compact on mobile */
   .space-y-6 {
     row-gap: 1rem !important;
@@ -87,6 +93,11 @@
   .form-item {
     width: 100% !important;
   }
+  
+  /* Fix popover content on mobile */
+  [data-radix-popper-content-wrapper] {
+    max-width: 95vw !important;
+  }
 }
 
 /* Fix for calendars in popups */
@@ -102,4 +113,14 @@
 /* Ensure select dropdowns are properly visible on mobile devices */
 [role="listbox"] {
   max-height: 50vh !important;
+}
+
+/* Fix for datepickers */
+.pointer-events-auto {
+  pointer-events: auto !important;
+}
+
+/* Popover fixes for mobile */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
 }
