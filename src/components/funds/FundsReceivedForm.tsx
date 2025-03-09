@@ -24,13 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -39,7 +32,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { FundsReceived, PaymentMethod } from "@/lib/types";
+import { FundsReceived } from "@/lib/types";
 
 interface FundsReceivedFormProps {
   isOpen: boolean;
@@ -50,10 +43,6 @@ interface FundsReceivedFormProps {
 const formSchema = z.object({
   date: z.date({
     required_error: "Date is required",
-  }),
-  reference: z.string().optional(),
-  method: z.nativeEnum(PaymentMethod, {
-    required_error: "Payment method is required",
   }),
   amount: z.coerce.number({
     required_error: "Amount is required",
@@ -70,8 +59,6 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: new Date(),
-      reference: "",
-      method: undefined,
       amount: undefined,
     },
   });
@@ -79,8 +66,6 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
   const handleSubmit = (values: FormValues) => {
     const newFunds: Partial<FundsReceived> = {
       date: values.date,
-      reference: values.reference,
-      method: values.method,
       amount: values.amount,
     };
 
@@ -94,7 +79,7 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Record Funds Received</DialogTitle>
+          <DialogTitle>RECORD FUNDS FROM H.O.</DialogTitle>
           <DialogDescription>
             Enter the details of the funds received from the Head Office.
           </DialogDescription>
@@ -107,21 +92,21 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>DATE RECEIVED</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
                           variant={"outline"}
                           className={cn(
-                            "w-full pl-3 text-left font-normal",
+                            "w-full pl-3 text-left font-normal uppercase",
                             !field.value && "text-muted-foreground"
                           )}
                         >
                           {field.value ? (
-                            format(field.value, "PPP")
+                            format(field.value, "PPP").toUpperCase()
                           ) : (
-                            <span>Select a date</span>
+                            <span>SELECT A DATE</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -144,53 +129,10 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
 
             <FormField
               control={form.control}
-              name="reference"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Reference</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter reference number" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="method"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Payment Method</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue=""
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a method" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value={PaymentMethod.NEFT}>NEFT</SelectItem>
-                      <SelectItem value={PaymentMethod.RTGS}>RTGS</SelectItem>
-                      <SelectItem value={PaymentMethod.IMPS}>IMPS</SelectItem>
-                      <SelectItem value={PaymentMethod.UPI}>UPI</SelectItem>
-                      <SelectItem value={PaymentMethod.CASH}>Cash</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount (₹)</FormLabel>
+                  <FormLabel>AMOUNT (₹)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -209,11 +151,11 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
 
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
+                CANCEL
               </Button>
               <Button type="submit">
                 <Plus className="h-4 w-4 mr-2" />
-                Submit
+                SUBMIT
               </Button>
             </DialogFooter>
           </form>

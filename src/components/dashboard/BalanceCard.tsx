@@ -30,7 +30,7 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
       hoverEffect
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-semibold">Site Financial Summary</h3>
+        <h3 className="text-xl font-semibold uppercase">Site Financial Summary</h3>
         <div className="p-2 bg-white/20 rounded-full">
           <IndianRupee className="h-5 w-5" />
         </div>
@@ -38,33 +38,33 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
       
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <p className="text-sm opacity-80">Funds Received from HO:</p>
+          <p className="text-sm opacity-80 uppercase">Funds Received from HO:</p>
           <p className="text-lg font-semibold">₹{safeBalanceData.fundsReceived.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
-          <p className="text-sm opacity-80">Total Expenses paid by supervisor:</p>
+          <p className="text-sm opacity-80 uppercase">Total Expenses paid by supervisor:</p>
           <p className="text-lg font-semibold">₹{safeBalanceData.totalExpenditure.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
-          <p className="text-sm opacity-80">Total Advances paid by supervisor:</p>
+          <p className="text-sm opacity-80 uppercase">Total Advances paid by supervisor:</p>
           <p className="text-lg font-semibold">₹{safeBalanceData.totalAdvances.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
-          <p className="text-sm opacity-80">Debits TO worker:</p>
+          <p className="text-sm opacity-80 uppercase">Debits TO worker:</p>
           <p className="text-lg font-semibold">₹{safeBalanceData.debitsToWorker.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
-          <p className="text-sm opacity-80">Invoices paid by supervisor:</p>
+          <p className="text-sm opacity-80 uppercase">Invoices paid by supervisor:</p>
           <p className="text-lg font-semibold">₹{safeBalanceData.invoicesPaid.toLocaleString()}</p>
         </div>
         
         <div className="pt-3 border-t border-white/20">
           <div className="flex justify-between items-center">
-            <p className="text-sm opacity-80">Current Balance:</p>
+            <p className="text-sm opacity-80 uppercase">Current Balance:</p>
             <p className="text-xl font-bold">₹{safeBalanceData.totalBalance.toLocaleString()}</p>
           </div>
         </div>

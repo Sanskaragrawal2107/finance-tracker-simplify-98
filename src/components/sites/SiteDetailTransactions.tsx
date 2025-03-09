@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -40,11 +39,13 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [activeTab, setActiveTab] = useState("history");
+  const [activeTab, setActiveTab] = useState("expenses");
+
+  const paidExpenses = expenses.filter(expense => expense.status === ApprovalStatus.APPROVED);
+  const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
 
   return (
     <div className="grid grid-cols-1 gap-6">
-      {/* History Card */}
       <CustomCard>
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <Clock className="mr-2 h-5 w-5 text-muted-foreground" />
@@ -53,14 +54,14 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         
         <Tabs defaultValue="expenses" className="w-full">
           <TabsList className="w-full mb-4">
-            <TabsTrigger value="expenses" className="flex-1">Expenses</TabsTrigger>
-            <TabsTrigger value="advances" className="flex-1">Advances</TabsTrigger>
-            <TabsTrigger value="funds" className="flex-1">Funds</TabsTrigger>
-            <TabsTrigger value="invoices" className="flex-1">Invoices</TabsTrigger>
+            <TabsTrigger value="expenses" className="flex-1">EXPENSES PAID</TabsTrigger>
+            <TabsTrigger value="advances" className="flex-1">ADVANCES PAID</TabsTrigger>
+            <TabsTrigger value="invoices" className="flex-1">INVOICES</TabsTrigger>
+            <TabsTrigger value="funds" className="flex-1">FUNDS FROM H.O.</TabsTrigger>
           </TabsList>
           
           <TabsContent value="expenses" className="space-y-4">
-            {expenses.length > 0 ? (
+            {paidExpenses.length > 0 ? (
               <div className="rounded-md border overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-muted">
@@ -73,19 +74,15 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-gray-200">
-                    {expenses.map((expense) => (
+                    {paidExpenses.map((expense) => (
                       <tr key={expense.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm">{expense.description}</td>
-                        <td className="px-4 py-3 text-sm">{expense.category}</td>
+                        <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
+                        <td className="px-4 py-3 text-sm uppercase">{expense.category}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{expense.amount.toLocaleString()}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            expense.status === ApprovalStatus.APPROVED ? 'bg-green-100 text-green-800' : 
-                            expense.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-800' : 
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {expense.status}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            PAID
                           </span>
                         </td>
                       </tr>
@@ -95,13 +92,13 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
               </div>
             ) : (
               <div className="text-center p-6 bg-muted/20 rounded-lg">
-                <p className="text-muted-foreground">No expenses recorded yet.</p>
+                <p className="text-muted-foreground">No expenses paid yet.</p>
               </div>
             )}
           </TabsContent>
           
           <TabsContent value="advances" className="space-y-4">
-            {advances.length > 0 ? (
+            {paidAdvances.length > 0 ? (
               <div className="rounded-md border overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-muted">
@@ -115,20 +112,16 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-gray-200">
-                    {advances.map((advance) => (
+                    {paidAdvances.map((advance) => (
                       <tr key={advance.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm">{advance.recipientName}</td>
-                        <td className="px-4 py-3 text-sm">{advance.recipientType}</td>
-                        <td className="px-4 py-3 text-sm">{advance.purpose}</td>
+                        <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
+                        <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
+                        <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            advance.status === ApprovalStatus.APPROVED ? 'bg-green-100 text-green-800' : 
-                            advance.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-800' : 
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {advance.status}
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            PAID
                           </span>
                         </td>
                       </tr>
@@ -138,7 +131,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
               </div>
             ) : (
               <div className="text-center p-6 bg-muted/20 rounded-lg">
-                <p className="text-muted-foreground">No advances recorded yet.</p>
+                <p className="text-muted-foreground">No advances paid yet.</p>
               </div>
             )}
           </TabsContent>
@@ -150,8 +143,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                   <thead className="bg-muted">
                     <tr>
                       <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Reference</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Method</th>
                       <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
                     </tr>
                   </thead>
@@ -159,8 +150,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     {fundsReceived.map((fund) => (
                       <tr key={fund.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm">{fund.reference || 'N/A'}</td>
-                        <td className="px-4 py-3 text-sm">{fund.method || 'N/A'}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
                       </tr>
                     ))}
@@ -225,7 +214,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         </Tabs>
       </CustomCard>
 
-      {/* Add Transactions Card */}
       <CustomCard>
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <Plus className="mr-2 h-5 w-5 text-muted-foreground" />
@@ -239,7 +227,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             variant="outline"
           >
             <Plus className="mr-2 h-4 w-4" />
-            New Expense
+            NEW EXPENSE
           </Button>
           
           <Button 
@@ -248,7 +236,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             variant="outline"
           >
             <ArrowUpDown className="mr-2 h-4 w-4" />
-            New Advance
+            NEW ADVANCE
           </Button>
           
           <Button 
@@ -257,7 +245,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             variant="outline"
           >
             <FileText className="mr-2 h-4 w-4" />
-            New Invoice
+            NEW INVOICE
           </Button>
           
           <Button 
@@ -267,12 +255,11 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             style={{ backgroundColor: "#ffd700", color: "#000" }}
           >
             <Truck className="mr-2 h-4 w-4" />
-            Funds Received from H.O
+            FUNDS FROM H.O
           </Button>
         </div>
       </CustomCard>
 
-      {/* Forms */}
       <ExpenseForm
         isOpen={isExpenseFormOpen}
         onClose={() => setIsExpenseFormOpen(false)}
