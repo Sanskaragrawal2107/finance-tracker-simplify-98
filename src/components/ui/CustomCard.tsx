@@ -22,10 +22,10 @@ const CustomCard: React.FC<CustomCardProps> = ({
   return (
     <div 
       className={cn(
-        "rounded-lg p-6 shadow-subtle border animate-scale-in bg-white",
+        "rounded-lg p-6 shadow-subtle border animate-scale-in",
         glass && "glass-panel",
         hoverEffect && "hover-card",
-        variant === 'primary' && "bg-white text-primary-foreground",
+        variant === 'primary' && "bg-primary text-primary-foreground",
         variant === 'secondary' && "bg-secondary text-secondary-foreground",
         className
       )}
