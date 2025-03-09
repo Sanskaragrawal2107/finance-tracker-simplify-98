@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -71,8 +72,16 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
   });
 
   const handleSubmit = (values: FormValues) => {
-    const newSite: Partial<Site> = {
+    // Transform values to uppercase
+    const uppercaseValues = {
       ...values,
+      name: values.name.toUpperCase(),
+      jobName: values.jobName.toUpperCase(),
+      posNo: values.posNo.toUpperCase(),
+    };
+    
+    const newSite: Partial<Site> = {
+      ...uppercaseValues,
       supervisorId,
       isCompleted: false,
       createdAt: new Date(),

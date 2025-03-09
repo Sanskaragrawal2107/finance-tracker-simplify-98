@@ -7,7 +7,8 @@ interface CustomCardProps {
   className?: string;
   hoverEffect?: boolean;
   glass?: boolean;
-  onClick?: () => void; // Add the onClick prop
+  variant?: 'default' | 'primary' | 'secondary';
+  onClick?: () => void;
 }
 
 const CustomCard: React.FC<CustomCardProps> = ({ 
@@ -15,7 +16,8 @@ const CustomCard: React.FC<CustomCardProps> = ({
   className,
   hoverEffect = false,
   glass = false,
-  onClick // Add the onClick prop
+  variant = 'default',
+  onClick
 }) => {
   return (
     <div 
@@ -23,9 +25,11 @@ const CustomCard: React.FC<CustomCardProps> = ({
         "rounded-lg p-6 shadow-subtle border animate-scale-in",
         glass && "glass-panel",
         hoverEffect && "hover-card",
+        variant === 'primary' && "bg-primary text-primary-foreground",
+        variant === 'secondary' && "bg-secondary text-secondary-foreground",
         className
       )}
-      onClick={onClick} // Use the onClick prop
+      onClick={onClick}
     >
       {children}
     </div>

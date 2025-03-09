@@ -14,6 +14,16 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
         )}
         ref={ref}
         {...props}
+        onChange={(e) => {
+          // Convert input value to uppercase
+          if (props.onChange) {
+            const originalEvent = e;
+            if (e.target.value) {
+              e.target.value = e.target.value.toUpperCase();
+            }
+            props.onChange(originalEvent);
+          }
+        }}
       />
     )
   }
