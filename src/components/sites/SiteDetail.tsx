@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink } from 'lucide-react';
-import { Expense, Site, Advance, FundsReceived, Invoice } from '@/lib/types';
+import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +10,7 @@ import CustomCard from '@/components/ui/CustomCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SiteDetailTransactions from './SiteDetailTransactions';
 import { useIsMobile } from '@/hooks/use-mobile';
+import BalanceCard from '../dashboard/BalanceCard';
 
 interface SiteDetailProps {
   site: Site;
@@ -17,6 +19,7 @@ interface SiteDetailProps {
   fundsReceived: FundsReceived[];
   invoices: Invoice[];
   supervisorInvoices?: Invoice[];
+  balanceSummary: BalanceSummary; // Added this property to fix the TypeScript error
   onBack: () => void;
   onAddExpense: (expense: Partial<Expense>) => void;
   onAddAdvance: (advance: Partial<Advance>) => void;
@@ -32,6 +35,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   fundsReceived,
   invoices,
   supervisorInvoices = [],
+  balanceSummary, // Added this to the destructuring
   onBack,
   onAddExpense,
   onAddAdvance,
@@ -46,12 +50,11 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   // Filter invoices by approverType to calculate financials correctly
   const supervisorOnlyInvoices = invoices.filter(invoice => invoice.approverType === 'supervisor' || !invoice.approverType);
   
-  // Calculate site financial summary
+  // Calculate site financial summary - we'll use the balanceSummary prop now instead
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
   const totalInvoices = supervisorOnlyInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
-  const siteBalance = totalFundsReceived - totalExpenses - totalAdvances - totalInvoices;
   
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
@@ -136,44 +139,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </div>
         </CustomCard>
 
-        <CustomCard className="bg-primary text-primary-foreground">
-          <h3 className="text-lg font-semibold mb-4">Site Financial Summary</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80">Funds Received from HO:</p>
-              <p className="text-lg font-semibold">₹{totalFundsReceived.toLocaleString()}</p>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80">Total Expenses paid by supervisor:</p>
-              <p className="text-lg font-semibold">₹{totalExpenses.toLocaleString()}</p>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80">Total Advances paid by supervisor:</p>
-              <p className="text-lg font-semibold">₹{totalAdvances.toLocaleString()}</p>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80">Debits to worker:</p>
-              <p className="text-lg font-semibold">₹0</p>
-            </div>
-            
-            <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80">Invoices paid by supervisor:</p>
-              <p className="text-lg font-semibold">₹{totalInvoices.toLocaleString()}</p>
-            </div>
-            
-            <div className="pt-3 border-t border-white/20">
-              <div className="flex justify-between items-center">
-                <p className="text-sm opacity-80">Current Balance:</p>
-                <p className={`text-xl font-bold ${siteBalance >= 0 ? '' : 'text-red-300'}`}>
-                  ₹{siteBalance.toLocaleString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </CustomCard>
+        <BalanceCard balanceData={balanceSummary} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -206,8 +172,8 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 <div className="pt-2 border-t">
                   <div className="flex justify-between items-center font-medium">
                     <span>Current Balance</span>
-                    <span className={siteBalance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      ₹{siteBalance.toLocaleString()}
+                    <span className={balanceSummary.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      ₹{balanceSummary.totalBalance.toLocaleString()}
                     </span>
                   </div>
                 </div>
