@@ -15,7 +15,7 @@ const Index: React.FC = () => {
       setIsAuthenticated(true);
       
       // Redirect based on user role
-      if (userRole === UserRole.SUPERVISOR) {
+      if (userRole === UserRole.SUPERVISOR || userRole === UserRole.ADMIN) {
         navigate('/expenses');
       } else {
         navigate('/dashboard');

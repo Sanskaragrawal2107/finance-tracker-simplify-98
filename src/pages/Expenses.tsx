@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Building, User, Users } from 'lucide-react';
+import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
 import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -10,6 +10,9 @@ import SiteForm from '@/components/sites/SiteForm';
 import SitesList from '@/components/sites/SitesList';
 import SiteDetail from '@/components/sites/SiteDetail';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 import { supervisors } from '@/data/supervisors';
 
@@ -39,6 +42,7 @@ const Expenses: React.FC = () => {
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
 
   useEffect(() => {
     const storedUserRole = localStorage.getItem('userRole') as UserRole;
@@ -155,16 +159,24 @@ const Expenses: React.FC = () => {
   };
 
   const filteredSites = sites.filter(site => {
+    // Filter by search term
     const matchesSearch = 
       site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.jobName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.posNo.toLowerCase().includes(searchTerm.toLowerCase());
       
+    // Filter by supervisor
     const matchesSupervisor = selectedSupervisorId 
       ? site.supervisorId === selectedSupervisorId 
       : true;
+    
+    // Filter by status
+    const matchesStatus = 
+      filterStatus === 'all' ? true :
+      filterStatus === 'active' ? !site.isCompleted :
+      filterStatus === 'completed' ? site.isCompleted : true;
       
-    return matchesSearch && matchesSupervisor;
+    return matchesSearch && matchesSupervisor && matchesStatus;
   });
 
   const selectedSite = selectedSiteId 
@@ -175,6 +187,9 @@ const Expenses: React.FC = () => {
   const siteAdvances = advances.filter(advance => advance.siteId === selectedSiteId);
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
   const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
+  
+  // Get all invoices, including those paid by H.O.
+  const allSiteInvoices = siteInvoices;
   
   // Filter invoices to get only supervisor-approved invoices
   const supervisorInvoices = siteInvoices.filter(invoice => 
@@ -244,6 +259,9 @@ const Expenses: React.FC = () => {
     return supervisor ? supervisor.name : "Unknown Supervisor";
   };
 
+  const siteSupervisor = selectedSite && selectedSite.supervisorId ? 
+    supervisors.find(s => s.id === selectedSite.supervisorId) : null;
+
   return (
     <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
       {selectedSite ? (
@@ -253,7 +271,7 @@ const Expenses: React.FC = () => {
             expenses={siteExpenses}
             advances={siteAdvances}
             fundsReceived={siteFunds}
-            invoices={siteInvoices}
+            invoices={allSiteInvoices}
             supervisorInvoices={supervisorInvoices}
             onBack={() => setSelectedSiteId(null)}
             onAddExpense={handleAddExpense}
@@ -262,6 +280,7 @@ const Expenses: React.FC = () => {
             onAddInvoice={handleAddInvoice}
             onCompleteSite={handleCompleteSite}
             balanceSummary={calculateSiteFinancials(selectedSite.id)}
+            siteSupervisor={siteSupervisor}
           />
         </div>
       ) : (
@@ -308,13 +327,70 @@ const Expenses: React.FC = () => {
                   </Select>
                 </div>
               )}
+              
+              {userRole === UserRole.ADMIN && (
+                <div className="w-full md:w-64">
+                  <Select 
+                    value={filterStatus} 
+                    onValueChange={(value: 'all' | 'active' | 'completed') => setFilterStatus(value)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <CheckSquare className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="All Sites" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sites</SelectItem>
+                      <SelectItem value="active">Active Sites</SelectItem>
+                      <SelectItem value="completed">Completed Sites</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="h-10">
-                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-                Filter
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-10">
+                    <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Filter
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80">
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Filter Sites</h4>
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-medium">Status</h5>
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="filter-all" 
+                            checked={filterStatus === 'all'}
+                            onCheckedChange={() => setFilterStatus('all')}
+                          />
+                          <Label htmlFor="filter-all">All Sites</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="filter-active" 
+                            checked={filterStatus === 'active'}
+                            onCheckedChange={() => setFilterStatus('active')}
+                          />
+                          <Label htmlFor="filter-active">Active Sites</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="filter-completed" 
+                            checked={filterStatus === 'completed'}
+                            onCheckedChange={() => setFilterStatus('completed')}
+                          />
+                          <Label htmlFor="filter-completed">Completed Sites</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
               <Button 
                 size="sm" 
                 className="h-10"

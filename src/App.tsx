@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -19,7 +18,7 @@ const queryClient = new QueryClient();
 const RoleBasedRedirect = () => {
   const userRole = localStorage.getItem('userRole') as UserRole;
   
-  if (userRole === UserRole.SUPERVISOR) {
+  if (userRole === UserRole.SUPERVISOR || userRole === UserRole.ADMIN) {
     return <Navigate to="/expenses" replace />;
   }
   
@@ -63,7 +62,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   // Check if user is supervisor and redirect from dashboard to expenses
   useEffect(() => {
-    if (userRole === UserRole.SUPERVISOR && location.pathname === "/dashboard") {
+    if ((userRole === UserRole.SUPERVISOR || userRole === UserRole.ADMIN) && location.pathname === "/dashboard") {
       window.location.href = "/expenses";
     }
   }, [userRole, location.pathname]);

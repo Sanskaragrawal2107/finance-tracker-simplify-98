@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
 import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +19,8 @@ interface SiteDetailProps {
   fundsReceived: FundsReceived[];
   invoices: Invoice[];
   supervisorInvoices?: Invoice[];
-  balanceSummary: BalanceSummary; // Added this property to fix the TypeScript error
+  balanceSummary: BalanceSummary;
+  siteSupervisor?: { id: string; name: string } | null;
   onBack: () => void;
   onAddExpense: (expense: Partial<Expense>) => void;
   onAddAdvance: (advance: Partial<Advance>) => void;
@@ -35,7 +36,8 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   fundsReceived,
   invoices,
   supervisorInvoices = [],
-  balanceSummary, // Added this to the destructuring
+  balanceSummary,
+  siteSupervisor,
   onBack,
   onAddExpense,
   onAddAdvance,
@@ -47,14 +49,12 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const isMobile = useIsMobile();
 
-  // Filter invoices by approverType to calculate financials correctly
-  const supervisorOnlyInvoices = invoices.filter(invoice => invoice.approverType === 'supervisor' || !invoice.approverType);
-  
   // Calculate site financial summary - we'll use the balanceSummary prop now instead
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
-  const totalInvoices = supervisorOnlyInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+  // Include all invoices to show in transaction history
+  const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
   
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
@@ -136,6 +136,15 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 {site.completionDate ? format(site.completionDate, 'dd/MM/yyyy') : 'Not specified'}
               </p>
             </div>
+            {siteSupervisor && (
+              <div>
+                <h3 className="text-sm font-medium text-muted-foreground">Supervisor</h3>
+                <p className="text-lg font-semibold mt-1 flex items-center">
+                  <User className="h-4 w-4 mr-1 text-muted-foreground" />
+                  {siteSupervisor.name}
+                </p>
+              </div>
+            )}
           </div>
         </CustomCard>
 
@@ -159,11 +168,15 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Advances</span>
-                  <span className="font-medium">₹{totalAdvances.toLocaleString()}</span>
+                  <span className="font-medium">₹{balanceSummary.totalAdvances.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Invoices</span>
                   <span className="font-medium">₹{totalInvoices.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Debits to Worker</span>
+                  <span className="font-medium">₹{balanceSummary.debitsToWorker.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Funds Received</span>
@@ -219,7 +232,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             advances={advances} 
             fundsReceived={fundsReceived} 
             invoices={invoices} 
-            supervisorInvoices={supervisorOnlyInvoices}
+            supervisorInvoices={supervisorInvoices}
             onAddExpense={onAddExpense} 
             onAddAdvance={onAddAdvance} 
             onAddFunds={onAddFunds} 
