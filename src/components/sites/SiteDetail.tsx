@@ -45,8 +45,8 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
   const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
-  const siteBalance = totalFundsReceived - totalExpenses - totalAdvances;
-
+  const siteBalance = totalFundsReceived - totalExpenses - totalAdvances - totalInvoices;
+  
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
     setIsMarkingComplete(false);
@@ -125,18 +125,42 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </div>
         </CustomCard>
 
-        <CustomCard>
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Site Balance</h3>
-          <p className={`text-2xl font-bold ${siteBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            ₹{siteBalance.toLocaleString()}
-          </p>
-          <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
-            <div>Funds Received:</div>
-            <div className="text-right font-medium">₹{totalFundsReceived.toLocaleString()}</div>
-            <div>Expenses:</div>
-            <div className="text-right font-medium">₹{totalExpenses.toLocaleString()}</div>
-            <div>Advances:</div>
-            <div className="text-right font-medium">₹{totalAdvances.toLocaleString()}</div>
+        <CustomCard className="bg-primary text-primary-foreground">
+          <h3 className="text-lg font-semibold mb-4">Site Financial Summary</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <p className="text-sm opacity-80">Funds Received from HO:</p>
+              <p className="text-lg font-semibold">₹{totalFundsReceived.toLocaleString()}</p>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <p className="text-sm opacity-80">Total Expenses paid by supervisor:</p>
+              <p className="text-lg font-semibold">₹{totalExpenses.toLocaleString()}</p>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <p className="text-sm opacity-80">Total Advances paid by supervisor:</p>
+              <p className="text-lg font-semibold">₹{totalAdvances.toLocaleString()}</p>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <p className="text-sm opacity-80">Debits TO worker:</p>
+              <p className="text-lg font-semibold">₹0</p>
+            </div>
+            
+            <div className="flex justify-between items-center">
+              <p className="text-sm opacity-80">Invoices paid by supervisor:</p>
+              <p className="text-lg font-semibold">₹{totalInvoices.toLocaleString()}</p>
+            </div>
+            
+            <div className="pt-3 border-t border-white/20">
+              <div className="flex justify-between items-center">
+                <p className="text-sm opacity-80">Current Balance:</p>
+                <p className={`text-xl font-bold ${siteBalance >= 0 ? '' : 'text-red-300'}`}>
+                  ₹{siteBalance.toLocaleString()}
+                </p>
+              </div>
+            </div>
           </div>
         </CustomCard>
       </div>
