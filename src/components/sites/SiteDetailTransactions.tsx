@@ -1,15 +1,16 @@
+
 import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { Plus, ArrowDownToLine, FileText, Wallet, Tag, IndianRupee } from 'lucide-react';
-import { Expense, Advance, FundsReceived, Invoice, PaymentStatus } from '@/lib/types';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Plus, Clock, FileText, ArrowUpDown, Truck } from 'lucide-react';
+import { format } from 'date-fns';
+import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import AdvanceForm from '@/components/advances/AdvanceForm';
 import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
-import Tabs from '@/components/ui/Tabs';
+import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 
 interface SiteDetailTransactionsProps {
   siteId: string;
@@ -19,7 +20,7 @@ interface SiteDetailTransactionsProps {
   invoices: Invoice[];
   onAddExpense: (expense: Partial<Expense>) => void;
   onAddAdvance: (advance: Partial<Advance>) => void;
-  onAddFunds: (fund: Partial<FundsReceived>) => void;
+  onAddFunds: (funds: Partial<FundsReceived>) => void;
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
 }
 
@@ -32,243 +33,255 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   onAddExpense,
   onAddAdvance,
   onAddFunds,
-  onAddInvoice,
+  onAddInvoice
 }) => {
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
   const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [activeTab, setActiveTab] = useState("history");
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <CustomCard>
-          <h3 className="text-lg font-medium mb-4">History</h3>
-          <Tabs defaultValue="expenses" className="w-full">
-            {/* Expenses History */}
-            {expenses.length > 0 && (
-              <TabsContent value="expenses">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Expense History</h3>
-                  <div className="border rounded-md overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Date</th>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Description</th>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Category</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Amount</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {expenses.map((expense) => (
-                          <tr key={expense.id} className="hover:bg-muted/50">
-                            <td className="py-2 px-3 text-sm whitespace-nowrap">
-                              {expense.date instanceof Date 
-                                ? format(expense.date, 'dd/MM/yyyy')
-                                : format(new Date(expense.date), 'dd/MM/yyyy')}
-                            </td>
-                            <td className="py-2 px-3 text-sm">{expense.description}</td>
-                            <td className="py-2 px-3 text-sm">{expense.category.toString()}</td>
-                            <td className="py-2 px-3 text-sm text-right">₹{expense.amount.toLocaleString()}</td>
-                            <td className="py-2 px-3 text-sm text-right">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                expense.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                                expense.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {expense.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </TabsContent>
-            )}
-
-            {/* Advances History */}
-            {advances.length > 0 && (
-              <TabsContent value="advances">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Advance History</h3>
-                  <div className="border rounded-md overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Date</th>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Recipient</th>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Purpose</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Amount</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {advances.map((advance) => (
-                          <tr key={advance.id} className="hover:bg-muted/50">
-                            <td className="py-2 px-3 text-sm whitespace-nowrap">
-                              {advance.date instanceof Date 
-                                ? format(advance.date, 'dd/MM/yyyy')
-                                : format(new Date(advance.date), 'dd/MM/yyyy')}
-                            </td>
-                            <td className="py-2 px-3 text-sm">{advance.recipientName}</td>
-                            <td className="py-2 px-3 text-sm">{advance.purpose}</td>
-                            <td className="py-2 px-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
-                            <td className="py-2 px-3 text-sm text-right">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                advance.status === 'approved' ? 'bg-green-100 text-green-800' : 
-                                advance.status === 'rejected' ? 'bg-red-100 text-red-800' : 
-                                'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {advance.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </TabsContent>
-            )}
-
-            {/* Funds Received History */}
-            {fundsReceived.length > 0 && (
-              <TabsContent value="fundsReceived">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Funds Received History</h3>
-                  <div className="border rounded-md overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Date</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {fundsReceived.map((fund) => (
-                          <tr key={fund.id} className="hover:bg-muted/50">
-                            <td className="py-2 px-3 text-sm whitespace-nowrap">
-                              {fund.date instanceof Date 
-                                ? format(fund.date, 'dd/MM/yyyy')
-                                : format(new Date(fund.date), 'dd/MM/yyyy')}
-                            </td>
-                            <td className="py-2 px-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </TabsContent>
-            )}
-
-            {/* Invoices History */}
-            {invoices.length > 0 && (
-              <TabsContent value="invoices">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Invoice History</h3>
-                  <div className="border rounded-md overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Date</th>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Party</th>
-                          <th className="py-2 px-3 text-left text-xs font-medium">Material</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Amount</th>
-                          <th className="py-2 px-3 text-right text-xs font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {invoices.map((invoice) => (
-                          <tr key={invoice.id} className="hover:bg-muted/50">
-                            <td className="py-2 px-3 text-sm whitespace-nowrap">
-                              {invoice.date instanceof Date 
-                                ? format(invoice.date, 'dd/MM/yyyy')
-                                : format(new Date(invoice.date), 'dd/MM/yyyy')}
-                            </td>
-                            <td className="py-2 px-3 text-sm">{invoice.partyName}</td>
-                            <td className="py-2 px-3 text-sm">{invoice.material}</td>
-                            <td className="py-2 px-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
-                            <td className="py-2 px-3 text-sm text-right">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
-                                invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                                {invoice.paymentStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </TabsContent>
-            )}
-
-            {expenses.length === 0 && advances.length === 0 && fundsReceived.length === 0 && invoices.length === 0 && (
-              <TabsContent value="noTransactions">
-                <div className="text-center py-6 text-muted-foreground">
-                  No transaction history available for this site.
-                </div>
-              </TabsContent>
-            )}
-          </Tabs>
-        </CustomCard>
+    <div className="grid grid-cols-1 gap-6">
+      {/* History Card */}
+      <CustomCard>
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <Clock className="mr-2 h-5 w-5 text-muted-foreground" />
+          Transaction History
+        </h2>
         
-        <CustomCard>
-          <h3 className="text-lg font-medium mb-4">Add Transaction</h3>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setIsExpenseFormOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Expense
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setIsAdvanceFormOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Advance
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={() => setIsInvoiceFormOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Invoice
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 bg-yellow-50 text-yellow-600 border-yellow-200 hover:bg-yellow-100 hover:text-yellow-700"
-              onClick={() => setIsFundsFormOpen(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Funds Received from H.O
-            </Button>
-          </div>
-        </CustomCard>
-      </div>
+        <Tabs defaultValue="expenses" className="w-full">
+          <TabsList className="w-full mb-4">
+            <TabsTrigger value="expenses" className="flex-1">Expenses</TabsTrigger>
+            <TabsTrigger value="advances" className="flex-1">Advances</TabsTrigger>
+            <TabsTrigger value="funds" className="flex-1">Funds</TabsTrigger>
+            <TabsTrigger value="invoices" className="flex-1">Invoices</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="expenses" className="space-y-4">
+            {expenses.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Purpose</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Category</th>
+                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-gray-200">
+                    {expenses.map((expense) => (
+                      <tr key={expense.id}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
+                        <td className="px-4 py-3 text-sm">{expense.description}</td>
+                        <td className="px-4 py-3 text-sm">{expense.category}</td>
+                        <td className="px-4 py-3 text-sm text-right">₹{expense.amount.toLocaleString()}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            expense.status === ApprovalStatus.APPROVED ? 'bg-green-100 text-green-800' : 
+                            expense.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-800' : 
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {expense.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center p-6 bg-muted/20 rounded-lg">
+                <p className="text-muted-foreground">No expenses recorded yet.</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="advances" className="space-y-4">
+            {advances.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Recipient</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Type</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Purpose</th>
+                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-gray-200">
+                    {advances.map((advance) => (
+                      <tr key={advance.id}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
+                        <td className="px-4 py-3 text-sm">{advance.recipientName}</td>
+                        <td className="px-4 py-3 text-sm">{advance.recipientType}</td>
+                        <td className="px-4 py-3 text-sm">{advance.purpose}</td>
+                        <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            advance.status === ApprovalStatus.APPROVED ? 'bg-green-100 text-green-800' : 
+                            advance.status === ApprovalStatus.REJECTED ? 'bg-red-100 text-red-800' : 
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {advance.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center p-6 bg-muted/20 rounded-lg">
+                <p className="text-muted-foreground">No advances recorded yet.</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="funds" className="space-y-4">
+            {fundsReceived.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Reference</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Method</th>
+                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-gray-200">
+                    {fundsReceived.map((fund) => (
+                      <tr key={fund.id}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
+                        <td className="px-4 py-3 text-sm">{fund.reference || 'N/A'}</td>
+                        <td className="px-4 py-3 text-sm">{fund.method}</td>
+                        <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center p-6 bg-muted/20 rounded-lg">
+                <p className="text-muted-foreground">No funds received yet.</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="invoices" className="space-y-4">
+            {invoices.length > 0 ? (
+              <div className="rounded-md border overflow-hidden">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Vendor</th>
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Invoice No.</th>
+                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">Amount</th>
+                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
+                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-card divide-y divide-gray-200">
+                    {invoices.map((invoice) => (
+                      <tr key={invoice.id}>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
+                        <td className="px-4 py-3 text-sm">{invoice.vendorName}</td>
+                        <td className="px-4 py-3 text-sm">{invoice.invoiceNumber}</td>
+                        <td className="px-4 py-3 text-sm text-right">₹{invoice.amount.toLocaleString()}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {invoice.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => setSelectedInvoice(invoice)}
+                          >
+                            View
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center p-6 bg-muted/20 rounded-lg">
+                <p className="text-muted-foreground">No invoices recorded yet.</p>
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+      </CustomCard>
 
+      {/* Add Transactions Card */}
+      <CustomCard>
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <Plus className="mr-2 h-5 w-5 text-muted-foreground" />
+          Add Transaction
+        </h2>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <Button 
+            onClick={() => setIsExpenseFormOpen(true)} 
+            className="flex items-center justify-center"
+            variant="outline"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Expense
+          </Button>
+          
+          <Button 
+            onClick={() => setIsAdvanceFormOpen(true)} 
+            className="flex items-center justify-center"
+            variant="outline"
+          >
+            <ArrowUpDown className="mr-2 h-4 w-4" />
+            New Advance
+          </Button>
+          
+          <Button 
+            onClick={() => setIsInvoiceFormOpen(true)} 
+            className="flex items-center justify-center"
+            variant="outline"
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            New Invoice
+          </Button>
+          
+          <Button 
+            onClick={() => setIsFundsFormOpen(true)} 
+            className="flex items-center justify-center"
+            variant="outline"
+            style={{ backgroundColor: "#ffd700", color: "#000" }}
+          >
+            <Truck className="mr-2 h-4 w-4" />
+            Funds Received from H.O
+          </Button>
+        </div>
+      </CustomCard>
+
+      {/* Forms */}
       <ExpenseForm
         isOpen={isExpenseFormOpen}
         onClose={() => setIsExpenseFormOpen(false)}
-        onSubmit={onAddExpense}
+        onSubmit={(expense) => {
+          onAddExpense({
+            ...expense,
+            siteId
+          });
+        }}
         siteId={siteId}
       />
       
@@ -282,16 +295,28 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       <FundsReceivedForm
         isOpen={isFundsFormOpen}
         onClose={() => setIsFundsFormOpen(false)}
-        onSubmit={onAddFunds}
-        siteId={siteId}
+        onSubmit={(funds) => onAddFunds({
+          ...funds,
+          siteId
+        })}
       />
       
       <InvoiceForm
         isOpen={isInvoiceFormOpen}
         onClose={() => setIsInvoiceFormOpen(false)}
-        onSubmit={onAddInvoice}
-        siteId={siteId}
+        onSubmit={(invoice) => onAddInvoice({
+          ...invoice,
+          siteId
+        })}
       />
+      
+      {selectedInvoice && (
+        <InvoiceDetails
+          isOpen={!!selectedInvoice}
+          onClose={() => setSelectedInvoice(null)}
+          invoice={selectedInvoice}
+        />
+      )}
     </div>
   );
 };

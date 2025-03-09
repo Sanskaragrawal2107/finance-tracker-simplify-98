@@ -46,6 +46,7 @@ interface ExpenseFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (expense: Partial<Expense>) => void;
+  siteId?: string;
 }
 
 const formSchema = z.object({
@@ -76,7 +77,7 @@ interface ExpenseItem {
   amount: number;
 }
 
-const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
+const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit, siteId }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());

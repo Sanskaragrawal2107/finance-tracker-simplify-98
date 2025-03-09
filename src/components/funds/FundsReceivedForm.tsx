@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, DownloadCloud } from "lucide-react";
+import { CalendarIcon, Plus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -32,18 +38,21 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { FundsReceived } from "@/lib/types";
+import { FundsReceived, PaymentMethod } from "@/lib/types";
 
 interface FundsReceivedFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (funds: Partial<FundsReceived>) => void;
-  siteId: string;
 }
 
 const formSchema = z.object({
   date: z.date({
     required_error: "Date is required",
+  }),
+  reference: z.string().optional(),
+  method: z.nativeEnum(PaymentMethod, {
+    required_error: "Payment method is required",
   }),
   amount: z.number({
     required_error: "Amount is required",
@@ -55,36 +64,38 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, onSubmit, siteId }) => {
+const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       date: new Date(),
+      reference: "",
+      method: undefined,
       amount: undefined,
     },
   });
 
   const handleSubmit = (values: FormValues) => {
-    const newFund: Partial<FundsReceived> = {
+    const newFunds: Partial<FundsReceived> = {
       date: values.date,
+      reference: values.reference,
+      method: values.method,
       amount: values.amount,
-      siteId: siteId,
-      createdAt: new Date(),
     };
 
-    onSubmit(newFund);
+    onSubmit(newFunds);
     form.reset();
     onClose();
-    toast.success("Funds received entry added successfully");
+    toast.success("Funds received recorded successfully");
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Funds Received from Head Office</DialogTitle>
+          <DialogTitle>Record Funds Received</DialogTitle>
           <DialogDescription>
-            Record funds received from Head Office for this site.
+            Enter the details of the funds received from the Head Office.
           </DialogDescription>
         </DialogHeader>
         
@@ -132,10 +143,53 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
 
             <FormField
               control={form.control}
+              name="reference"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reference</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter reference number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="method"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Method</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue=""
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a method" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value={PaymentMethod.NEFT}>NEFT</SelectItem>
+                      <SelectItem value={PaymentMethod.RTGS}>RTGS</SelectItem>
+                      <SelectItem value={PaymentMethod.IMPS}>IMPS</SelectItem>
+                      <SelectItem value={PaymentMethod.UPI}>UPI</SelectItem>
+                      <SelectItem value={PaymentMethod.CASH}>Cash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount Received (₹)</FormLabel>
+                  <FormLabel>Amount (₹)</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -157,7 +211,7 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
                 Cancel
               </Button>
               <Button type="submit">
-                <DownloadCloud className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" />
                 Submit
               </Button>
             </DialogFooter>

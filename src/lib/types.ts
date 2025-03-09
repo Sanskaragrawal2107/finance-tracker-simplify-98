@@ -1,4 +1,3 @@
-
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -30,11 +29,12 @@ export interface Site {
 
 // Financial data types
 export interface BalanceSummary {
-  totalBalance: number;
   fundsReceived: number;
   totalExpenditure: number;
-  totalAdvances: number;
-  pendingInvoices: number;
+  totalAdvances?: number;
+  debitsToWorker?: number;
+  invoicesPaid?: number;
+  totalBalance: number;
 }
 
 export interface HeadOfficeTransaction {
