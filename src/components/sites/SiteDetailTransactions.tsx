@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,12 @@ interface SiteDetailTransactionsProps {
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
 }
 
+const DEBIT_ADVANCE_PURPOSES = [
+  AdvancePurpose.SAFETY_SHOES,
+  AdvancePurpose.TOOLS,
+  AdvancePurpose.OTHER
+];
+
 const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   siteId,
   expenses,
@@ -46,12 +51,14 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [activeTab, setActiveTab] = useState("expenses");
 
-  // Get the approved expenses and advances for display in history
-  const paidExpenses = expenses.filter(expense => expense.status === ApprovalStatus.APPROVED);
-  const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
+  const displayExpenses = expenses;
+  const displayAdvances = advances;
 
-  // Use supervisor invoices if provided, otherwise use regular invoices
   const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
+
+  const isDebitToWorker = (advance: Advance) => {
+    return DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose);
+  };
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
     return (
@@ -84,8 +91,14 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         <span className="font-medium text-sm">₹{expense.amount.toLocaleString()}</span>
       </div>
       <div className="flex justify-center mt-1.5">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          PAID
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          expense.status === ApprovalStatus.APPROVED 
+            ? 'bg-green-100 text-green-800' 
+            : expense.status === ApprovalStatus.REJECTED
+            ? 'bg-red-100 text-red-800'
+            : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {expense.status.toUpperCase()}
         </span>
       </div>
     </div>
@@ -106,12 +119,24 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         <span className="text-sm text-right uppercase">{advance.purpose}</span>
       </div>
       <div className="flex justify-between items-center">
+        <span className="font-medium text-sm">Type:</span>
+        <span className="text-sm text-right uppercase">
+          {isDebitToWorker(advance) ? "Debit To Worker" : "Regular Advance"}
+        </span>
+      </div>
+      <div className="flex justify-between items-center">
         <span className="font-medium text-sm">Amount:</span>
         <span className="font-medium text-sm">₹{advance.amount.toLocaleString()}</span>
       </div>
       <div className="flex justify-center mt-1.5">
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-          PAID
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          advance.status === ApprovalStatus.APPROVED 
+            ? 'bg-green-100 text-green-800' 
+            : advance.status === ApprovalStatus.REJECTED
+            ? 'bg-red-100 text-red-800'
+            : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {advance.status.toUpperCase()}
         </span>
       </div>
     </div>
@@ -192,7 +217,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           </div>
           
           <TabsContent value="expenses" className="space-y-4 bg-white">
-            {paidExpenses.length > 0 ? (
+            {displayExpenses.length > 0 ? (
               <>
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -206,14 +231,20 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {paidExpenses.map(expense => <tr key={expense.id}>
+                      {displayExpenses.map(expense => <tr key={expense.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
                           <td className="px-4 py-3 text-sm uppercase">{expense.category}</td>
                           <td className="px-4 py-3 text-sm text-right">₹{expense.amount.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              PAID
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              expense.status === ApprovalStatus.APPROVED 
+                                ? 'bg-green-100 text-green-800' 
+                                : expense.status === ApprovalStatus.REJECTED
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {expense.status.toUpperCase()}
                             </span>
                           </td>
                         </tr>)}
@@ -224,7 +255,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                 <div className="sm:hidden">
                   {renderMobileTable(
                     ['Date', 'Purpose', 'Category', 'Amount', 'Status'],
-                    paidExpenses,
+                    displayExpenses,
                     renderExpenseMobileRow
                   )}
                 </div>
@@ -237,7 +268,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           </TabsContent>
           
           <TabsContent value="advances" className="space-y-4 bg-white">
-            {paidAdvances.length > 0 ? (
+            {displayAdvances.length > 0 ? (
               <>
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -247,20 +278,30 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Recipient</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Type</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Advance Type</th>
                         <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
                         <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {paidAdvances.map(advance => <tr key={advance.id}>
+                      {displayAdvances.map(advance => <tr key={advance.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
+                          <td className="px-4 py-3 text-sm uppercase">
+                            {isDebitToWorker(advance) ? "Debit To Worker" : "Regular Advance"}
+                          </td>
                           <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              PAID
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              advance.status === ApprovalStatus.APPROVED 
+                                ? 'bg-green-100 text-green-800' 
+                                : advance.status === ApprovalStatus.REJECTED
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {advance.status.toUpperCase()}
                             </span>
                           </td>
                         </tr>)}
@@ -271,7 +312,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                 <div className="sm:hidden">
                   {renderMobileTable(
                     ['Date', 'Recipient', 'Purpose', 'Amount', 'Status'],
-                    paidAdvances,
+                    displayAdvances,
                     renderAdvanceMobileRow
                   )}
                 </div>
@@ -432,3 +473,4 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 };
 
 export default SiteDetailTransactions;
+

@@ -218,7 +218,7 @@ const Expenses: React.FC = () => {
       .filter(invoice => invoice.paymentStatus === 'pending')
       .reduce((sum, invoice) => sum + invoice.netAmount, 0);
 
-    // Calculate total balance
+    // Calculate total balance - debit to worker advances are NOT subtracted
     const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
 
     return {
