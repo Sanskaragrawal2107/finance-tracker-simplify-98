@@ -52,7 +52,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             <TabsTrigger value="expenses" className="flex-1">EXPENSES PAID</TabsTrigger>
             <TabsTrigger value="advances" className="flex-1">ADVANCES PAID</TabsTrigger>
             <TabsTrigger value="invoices" className="flex-1">PURCHASED INVOICE </TabsTrigger>
-            <TabsTrigger value="funds" className="flex-1">FUNDS FROM H.O.</TabsTrigger>
+            <TabsTrigger value="funds" className="flex-1">FUNDS REC. FROM H.O.</TabsTrigger>
           </TabsList>
           
           <TabsContent value="expenses" className="space-y-4">
