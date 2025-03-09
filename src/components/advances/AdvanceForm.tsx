@@ -80,6 +80,7 @@ type FormValues = z.infer<typeof formSchema>;
 const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, siteId }) => {
   const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
   const [showRemarks, setShowRemarks] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -114,6 +115,13 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
     setShowRemarks(purpose === AdvancePurpose.OTHER);
   }, [form.watch("purpose")]);
 
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (date) {
+      form.setValue("date", date);
+      setIsCalendarOpen(false);
+    }
+  };
+
   const handleSubmit = (values: FormValues) => {
     const newAdvance: Partial<Advance> = {
       date: values.date,
@@ -136,7 +144,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>New Advance</DialogTitle>
           <DialogDescription>
@@ -152,7 +160,10 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Date</FormLabel>
-                  <Popover>
+                  <Popover 
+                    open={isCalendarOpen}
+                    onOpenChange={setIsCalendarOpen}
+                  >
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -175,7 +186,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={handleCalendarSelect}
                         initialFocus
                         className="pointer-events-auto"
                       />
@@ -196,7 +207,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
                     <RadioGroup
                       onValueChange={field.onChange}
                       value={field.value}
-                      className="flex space-x-4"
+                      className="flex flex-wrap space-x-0 sm:space-x-4 gap-y-2"
                     >
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>

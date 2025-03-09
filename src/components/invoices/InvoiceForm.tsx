@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 type InvoiceFormProps = {
   isOpen?: boolean;
@@ -31,13 +33,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   initialData,
   siteId
 }) => {
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [date, setDate] = useState<Date>(initialData?.date || new Date());
   const [partyId, setPartyId] = useState<string>(initialData?.partyId || '');
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const [materialInput, setMaterialInput] = useState<string>('');
   const [quantityInput, setQuantityInput] = useState<number>(0);
@@ -207,6 +209,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setPartyName('');
   };
 
+  const handleCalendarSelect = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      setIsCalendarOpen(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -261,7 +270,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       paymentStatus,
       createdBy: 'Current User',
       approverType: approverType,
-      siteId: siteId  // Add the siteId
+      siteId: siteId
     };
     onSubmit(invoiceData);
     if (onClose) onClose();
@@ -272,15 +281,21 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Invoice Date</Label>
-          <Popover>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 {date ? format(date, "PPP") : <span>Pick a date</span>}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar mode="single" selected={date} onSelect={newDate => newDate && setDate(newDate)} initialFocus className={cn("p-3 pointer-events-auto")} />
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar 
+                mode="single" 
+                selected={date} 
+                onSelect={handleCalendarSelect} 
+                initialFocus 
+                className={cn("p-3 pointer-events-auto")} 
+              />
             </PopoverContent>
           </Popover>
         </div>
@@ -314,10 +329,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           <h3 className="text-lg font-medium">Materials</h3>
         </div>
         
-        <div className="p-4 border rounded-md mb-4 bg-muted/30">
+        <div className="p-3 sm:p-4 border rounded-md mb-4 bg-muted/30">
           <h4 className="font-medium mb-3">Add New Material</h4>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
             <div className="space-y-2">
               <Label htmlFor="material-input">Material Name</Label>
               <Input id="material-input" value={materialInput} onChange={e => setMaterialInput(e.target.value)} placeholder="e.g., TMT Steel Bars" />
@@ -360,24 +375,24 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
               <table className="w-full">
                 <thead className="bg-muted text-left">
                   <tr>
-                    <th className="py-2 px-4 font-medium">#</th>
-                    <th className="py-2 px-4 font-medium">Material</th>
-                    <th className="py-2 px-4 font-medium text-right">Quantity</th>
-                    <th className="py-2 px-4 font-medium text-right">Rate (₹)</th>
-                    <th className="py-2 px-4 font-medium text-right">GST %</th>
-                    <th className="py-2 px-4 font-medium text-right">Amount (₹)</th>
-                    <th className="py-2 px-4 font-medium text-center">Action</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium">#</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium">Material</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">Qty</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">Rate (₹)</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">GST %</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">Amount (₹)</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {materialItems.map((item, index) => <tr key={item.id} className="border-t">
-                      <td className="py-3 px-4">{index + 1}</td>
-                      <td className="py-3 px-4">{item.material}</td>
-                      <td className="py-3 px-4 text-right">{item.quantity}</td>
-                      <td className="py-3 px-4 text-right">{item.rate?.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-right">{item.gstPercentage}%</td>
-                      <td className="py-3 px-4 text-right">{item.amount?.toLocaleString()}</td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-3 px-2 sm:px-4">{index + 1}</td>
+                      <td className="py-3 px-2 sm:px-4 max-w-[120px] sm:max-w-none truncate">{item.material}</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.quantity}</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.rate?.toLocaleString()}</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.gstPercentage}%</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.amount?.toLocaleString()}</td>
+                      <td className="py-3 px-2 sm:px-4 text-center">
                         <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialItem(index)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -388,7 +403,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             </div>
           </div>}
         
-        <div className="bg-muted p-4 rounded-md mt-4">
+        <div className="bg-muted p-3 sm:p-4 rounded-md mt-4">
           <div className="flex flex-col md:flex-row md:justify-end md:items-center gap-4">
             <div className="space-y-2 md:w-1/4">
               <Label htmlFor="grandGross">Net Taxable Amount (₹)</Label>
@@ -407,7 +422,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       <div>
         <h3 className="text-lg font-medium mb-4">Payment made by</h3>
-        <div className="bg-muted/30 p-4 rounded-md">
+        <div className="bg-muted/30 p-3 sm:p-4 rounded-md">
           <RadioGroup value={approverType} onValueChange={value => setApproverType(value as "ho" | "supervisor")} className="flex flex-col md:flex-row gap-4">
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="ho" id="ho" />
@@ -514,7 +529,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
   return isOpen ? (
     <Dialog open={isOpen} onOpenChange={onClose ? () => onClose() : undefined}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
         <DialogHeader>
           <DialogTitle>
             {siteId ? "Add Site Invoice" : "Add Invoice"}

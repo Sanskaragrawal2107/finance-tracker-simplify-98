@@ -21,9 +21,9 @@ const Navbar: React.FC<NavbarProps> = ({
   const isMobile = useIsMobile();
   
   return (
-    <header className={cn("h-16 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10", className)}>
-      <div className="h-full container mx-auto px-2 md:px-4 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+    <header className={cn("h-14 sm:h-16 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10", className)}>
+      <div className="h-full container mx-auto px-1 sm:px-4 flex items-center justify-between">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -44,18 +44,18 @@ const Navbar: React.FC<NavbarProps> = ({
             <img 
               src="/lovable-uploads/74a5a478-2c11-4188-88b3-76b7897376a9.png" 
               alt="MEW Logo" 
-              className="h-7 md:h-12 object-contain" 
+              className="h-6 sm:h-7 md:h-12 object-contain" 
             />
             {/* Company name image - hide on very small screens */}
             <img 
               src="/lovable-uploads/1d876bba-1f25-45bf-9f5b-8f81f72d4880.png" 
               alt="MAURICE ENGINEERING WORKS" 
-              className="h-5 md:h-10 object-contain hidden xs:block" 
+              className="h-4 sm:h-5 md:h-10 object-contain hidden xs:block" 
             />
           </div>
         </div>
         
-        <div className="w-10 md:w-20 flex justify-end">
+        <div className="w-10 md:w-16 flex justify-end">
           <Button 
             variant="ghost" 
             size="icon" 

@@ -11,6 +11,7 @@ import AdvanceForm from '@/components/advances/AdvanceForm';
 import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SiteDetailTransactionsProps {
   siteId: string;
@@ -35,6 +36,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   onAddFunds,
   onAddInvoice
 }) => {
+  const isMobile = useIsMobile();
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
   const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
@@ -47,7 +49,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
     return (
-      <div className="space-y-4">
+      <div className="space-y-3">
         {data.map((item, index) => (
           <div key={item.id || index} className="border rounded-md overflow-hidden bg-white">
             {renderRow(item)}
@@ -58,24 +60,24 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   };
 
   const renderExpenseMobileRow = (expense: Expense) => (
-    <div className="p-3 space-y-2">
+    <div className="p-3 space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="font-medium">Date:</span>
-        <span>{format(new Date(expense.date), 'MMM dd, yyyy')}</span>
+        <span className="font-medium text-sm">Date:</span>
+        <span className="text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Purpose:</span>
-        <span className="text-right uppercase">{expense.description}</span>
+        <span className="font-medium text-sm">Purpose:</span>
+        <span className="text-sm text-right uppercase">{expense.description}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Category:</span>
-        <span className="uppercase">{expense.category}</span>
+        <span className="font-medium text-sm">Category:</span>
+        <span className="text-sm uppercase">{expense.category}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Amount:</span>
-        <span className="font-medium">₹{expense.amount.toLocaleString()}</span>
+        <span className="font-medium text-sm">Amount:</span>
+        <span className="font-medium text-sm">₹{expense.amount.toLocaleString()}</span>
       </div>
-      <div className="flex justify-center">
+      <div className="flex justify-center mt-1.5">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           PAID
         </span>
@@ -84,24 +86,24 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   );
 
   const renderAdvanceMobileRow = (advance: Advance) => (
-    <div className="p-3 space-y-2">
+    <div className="p-3 space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="font-medium">Date:</span>
-        <span>{format(new Date(advance.date), 'MMM dd, yyyy')}</span>
+        <span className="font-medium text-sm">Date:</span>
+        <span className="text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Recipient:</span>
-        <span className="uppercase">{advance.recipientName}</span>
+        <span className="font-medium text-sm">Recipient:</span>
+        <span className="text-sm uppercase">{advance.recipientName}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Purpose:</span>
-        <span className="text-right uppercase">{advance.purpose}</span>
+        <span className="font-medium text-sm">Purpose:</span>
+        <span className="text-sm text-right uppercase">{advance.purpose}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Amount:</span>
-        <span className="font-medium">₹{advance.amount.toLocaleString()}</span>
+        <span className="font-medium text-sm">Amount:</span>
+        <span className="font-medium text-sm">₹{advance.amount.toLocaleString()}</span>
       </div>
-      <div className="flex justify-center">
+      <div className="flex justify-center mt-1.5">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
           PAID
         </span>
@@ -110,38 +112,38 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   );
 
   const renderFundMobileRow = (fund: FundsReceived) => (
-    <div className="p-3 space-y-2">
+    <div className="p-3 space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="font-medium">Date:</span>
-        <span>{format(new Date(fund.date), 'MMM dd, yyyy')}</span>
+        <span className="font-medium text-sm">Date:</span>
+        <span className="text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Amount:</span>
-        <span className="font-medium">₹{fund.amount.toLocaleString()}</span>
+        <span className="font-medium text-sm">Amount:</span>
+        <span className="font-medium text-sm">₹{fund.amount.toLocaleString()}</span>
       </div>
     </div>
   );
 
   const renderInvoiceMobileRow = (invoice: Invoice) => (
-    <div className="p-3 space-y-2">
+    <div className="p-3 space-y-1.5">
       <div className="flex justify-between items-center">
-        <span className="font-medium">Date:</span>
-        <span>{format(new Date(invoice.date), 'MMM dd, yyyy')}</span>
+        <span className="font-medium text-sm">Date:</span>
+        <span className="text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Vendor:</span>
-        <span className="uppercase">{invoice.partyName}</span>
+        <span className="font-medium text-sm">Vendor:</span>
+        <span className="text-sm uppercase">{invoice.partyName}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Invoice No:</span>
-        <span className="uppercase">{invoice.partyId}</span>
+        <span className="font-medium text-sm">Invoice No:</span>
+        <span className="text-sm uppercase">{invoice.partyId}</span>
       </div>
       <div className="flex justify-between items-center">
-        <span className="font-medium">Amount:</span>
-        <span className="font-medium">₹{invoice.netAmount.toLocaleString()}</span>
+        <span className="font-medium text-sm">Amount:</span>
+        <span className="font-medium text-sm">₹{invoice.netAmount.toLocaleString()}</span>
       </div>
-      <div className="flex justify-between items-center">
-        <span className="font-medium">Status:</span>
+      <div className="flex items-center justify-between mt-1.5">
+        <span className="font-medium text-sm mr-2">Status:</span>
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
           {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
         </span>
@@ -164,19 +166,19 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         <Tabs defaultValue="expenses" className="w-full">
           <div className="overflow-x-auto pb-2">
             <TabsList className="w-full mb-4 bg-gray-100 border border-gray-200 flex-nowrap whitespace-nowrap">
-              <TabsTrigger value="expenses" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger value="expenses" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
                 <span className="hidden sm:inline">EXPENSES PAID</span>
                 <span className="sm:hidden">EXP</span>
               </TabsTrigger>
-              <TabsTrigger value="advances" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger value="advances" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
                 <span className="hidden sm:inline">ADVANCES PAID</span>
                 <span className="sm:hidden">ADV</span>
               </TabsTrigger>
-              <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
                 <span className="hidden sm:inline">PURCHASED INVOICE</span>
                 <span className="sm:hidden">INV</span>
               </TabsTrigger>
-              <TabsTrigger value="funds" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+              <TabsTrigger value="funds" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
                 <span className="hidden sm:inline">FUNDS REC. FROM H.O.</span>
                 <span className="sm:hidden">FUNDS</span>
               </TabsTrigger>
