@@ -3,11 +3,11 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Home } from 'lucide-react';
+import { Home, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface NavbarProps {
-  onMenuClick: () => void;
+  onMenuClick?: () => void;
   pageTitle?: string;
   className?: string;
 }
@@ -54,8 +54,16 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
         
-        <div className="w-10 md:w-20">
-          {/* Empty div for layout balance */}
+        <div className="w-10 md:w-20 flex justify-end">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/expenses')}
+            className="p-2"
+            title="Go to Sites & Expenses"
+          >
+            <Building className="h-5 w-5 text-muted-foreground" />
+          </Button>
         </div>
       </div>
     </header>

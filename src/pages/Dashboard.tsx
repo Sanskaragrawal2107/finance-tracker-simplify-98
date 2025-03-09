@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import BalanceCard from '@/components/dashboard/BalanceCard';
@@ -6,11 +5,12 @@ import StatCard from '@/components/dashboard/StatCard';
 import HODebitsCard from '@/components/dashboard/HODebitsCard';
 import ExpenseChart from '@/components/dashboard/ExpenseChart';
 import RecentActivity from '@/components/dashboard/RecentActivity';
-import { BarChart3, IndianRupee, FileText, Wallet, Building2 } from 'lucide-react';
+import { BarChart3, IndianRupee, FileText, Wallet, Building2, ArrowRight } from 'lucide-react';
 import { Activity, ActivityType, BalanceSummary, ChartDataPoint } from '@/lib/types';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
-// Mock data for demonstration
 const balanceData: BalanceSummary = {
   totalBalance: 1254850,
   fundsReceived: 2500000,
@@ -21,7 +21,6 @@ const balanceData: BalanceSummary = {
   pendingInvoices: 250000,
 };
 
-// HO Debits mock data
 const hoDebitsTotal = 750000;
 
 const expenseChartData: ChartDataPoint[] = [
@@ -87,14 +86,25 @@ const recentActivities: Activity[] = [
 
 const Dashboard: React.FC = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   return (
     <div className="space-y-6 animate-fade-in pb-8">
-      <PageTitle 
-        title="Dashboard" 
-        subtitle="Overview of your financial data and recent activities"
-        className="mb-4"
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+        <PageTitle 
+          title="Dashboard" 
+          subtitle="Overview of your financial data and recent activities"
+          className="mb-0"
+        />
+        
+        <Button 
+          onClick={() => navigate('/expenses')}
+          className="self-start sm:self-center"
+        >
+          Go to Sites & Expenses
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <BalanceCard 
