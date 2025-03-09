@@ -3,36 +3,49 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Home, Building } from 'lucide-react';
+import { Home, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UserRole } from '@/lib/types';
 
 interface NavbarProps {
   onMenuClick?: () => void;
   pageTitle?: string;
+  userRole?: UserRole;
   className?: string;
 }
 
 const Navbar: React.FC<NavbarProps> = ({
   onMenuClick,
   pageTitle,
+  userRole,
   className
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
+  const handleLogout = () => {
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    navigate('/');
+  };
+  
   return (
     <header className={cn("h-14 sm:h-16 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10", className)}>
       <div className="h-full container mx-auto px-1 sm:px-4 flex items-center justify-between">
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/dashboard')}
-            className="p-1 md:p-2"
-            aria-label="Go to Dashboard"
-          >
-            <Home className="h-5 w-5 text-muted-foreground" />
-          </Button>
+          {/* Only show Dashboard button for Admin and Viewer roles */}
+          {userRole !== UserRole.SUPERVISOR && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => navigate('/dashboard')}
+              className="p-1 md:p-2"
+              aria-label="Go to Dashboard"
+            >
+              <Home className="h-5 w-5 text-muted-foreground" />
+            </Button>
+          )}
+          
           {pageTitle && !isMobile && (
             <h1 className="text-lg font-medium">{pageTitle}</h1>
           )}
@@ -55,7 +68,7 @@ const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
         
-        <div className="w-10 md:w-16 flex justify-end">
+        <div className="flex items-center gap-2">
           <Button 
             variant="ghost" 
             size="icon" 
@@ -65,6 +78,17 @@ const Navbar: React.FC<NavbarProps> = ({
             aria-label="Go to Sites & Expenses"
           >
             <Building className="h-5 w-5 text-muted-foreground" />
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleLogout}
+            className="p-1 md:p-2"
+            title="Logout"
+            aria-label="Logout"
+          >
+            <LogOut className="h-5 w-5 text-muted-foreground" />
           </Button>
         </div>
       </div>

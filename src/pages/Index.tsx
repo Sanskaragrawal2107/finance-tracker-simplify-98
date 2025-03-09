@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
+import { UserRole } from '@/lib/types';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -9,10 +10,16 @@ const Index: React.FC = () => {
   
   useEffect(() => {
     // Check if user is already authenticated
-    const userRole = localStorage.getItem('userRole');
+    const userRole = localStorage.getItem('userRole') as UserRole;
     if (userRole) {
       setIsAuthenticated(true);
-      navigate('/dashboard');
+      
+      // Redirect based on user role
+      if (userRole === UserRole.SUPERVISOR) {
+        navigate('/expenses');
+      } else {
+        navigate('/dashboard');
+      }
     }
   }, [navigate]);
   

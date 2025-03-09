@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Building } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice } from '@/lib/types';
+import { Search, Filter, Plus, Building, User, Users } from 'lucide-react';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
 import SitesList from '@/components/sites/SitesList';
 import SiteDetail from '@/components/sites/SiteDetail';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+import { supervisors } from '@/data/supervisors';
 
 const initialExpenses: Expense[] = [];
 const initialSites: Site[] = [];
@@ -26,6 +29,19 @@ const Expenses: React.FC = () => {
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+
+  useEffect(() => {
+    const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    if (storedUserRole) {
+      setUserRole(storedUserRole);
+      
+      if (storedUserRole === UserRole.SUPERVISOR) {
+        setSelectedSupervisorId(SUPERVISOR_ID);
+      }
+    }
+  }, []);
 
   const ensureDateObjects = (site: Site): Site => {
     return {
@@ -38,10 +54,14 @@ const Expenses: React.FC = () => {
   };
 
   const handleAddSite = (newSite: Partial<Site>) => {
+    const currentSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
+      ? selectedSupervisorId 
+      : SUPERVISOR_ID;
+      
     const siteWithId: Site = {
       ...newSite as Site,
       id: Date.now().toString(),
-      supervisorId: SUPERVISOR_ID,
+      supervisorId: currentSupervisorId,
       createdAt: new Date(),
       isCompleted: false,
       funds: 0
@@ -126,11 +146,18 @@ const Expenses: React.FC = () => {
     toast.success("Site marked as completed");
   };
 
-  const filteredSites = sites.filter(site => 
-    site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    site.jobName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    site.posNo.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSites = sites.filter(site => {
+    const matchesSearch = 
+      site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      site.jobName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      site.posNo.toLowerCase().includes(searchTerm.toLowerCase());
+      
+    const matchesSupervisor = selectedSupervisorId 
+      ? site.supervisorId === selectedSupervisorId 
+      : true;
+      
+    return matchesSearch && matchesSupervisor;
+  });
 
   const selectedSite = selectedSiteId 
     ? ensureDateObjects(sites.find(site => site.id === selectedSiteId) as Site)
@@ -142,6 +169,12 @@ const Expenses: React.FC = () => {
   const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
   
   const supervisorInvoices = siteInvoices.filter(invoice => invoice.approverType === "supervisor" || !invoice.approverType);
+
+  const getSelectedSupervisorName = () => {
+    if (!selectedSupervisorId) return null;
+    const supervisor = supervisors.find(s => s.id === selectedSupervisorId);
+    return supervisor ? supervisor.name : "Unknown Supervisor";
+  };
 
   return (
     <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
@@ -166,20 +199,46 @@ const Expenses: React.FC = () => {
         <>
           <PageTitle 
             title="Sites & Expenses" 
-            subtitle="Manage construction sites and track expenses"
+            subtitle={userRole === UserRole.ADMIN 
+              ? "Manage construction sites and track expenses across supervisors"
+              : "Manage construction sites and track expenses"}
             className="mb-4"
           />
           
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <div className="relative max-w-md">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="Search sites..." 
-                className="py-2 pl-10 pr-4 border rounded-md w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto">
+              <div className="relative max-w-md w-full">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <input 
+                  type="text" 
+                  placeholder="Search sites..." 
+                  className="py-2 pl-10 pr-4 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              
+              {userRole === UserRole.ADMIN && (
+                <div className="w-full md:w-64">
+                  <Select 
+                    value={selectedSupervisorId || ''} 
+                    onValueChange={(value) => setSelectedSupervisorId(value || null)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <SelectValue placeholder="All Supervisors" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All Supervisors</SelectItem>
+                      {supervisors.map((supervisor) => (
+                        <SelectItem key={supervisor.id} value={supervisor.id}>
+                          {supervisor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             
             <div className="flex flex-wrap gap-2">
@@ -198,6 +257,15 @@ const Expenses: React.FC = () => {
               </Button>
             </div>
           </div>
+          
+          {userRole === UserRole.ADMIN && selectedSupervisorId && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center">
+              <Users className="h-5 w-5 mr-2 text-blue-500" />
+              <span className="font-medium">
+                Viewing sites for: {getSelectedSupervisorName()}
+              </span>
+            </div>
+          )}
           
           <div className="overflow-y-auto flex-1 pr-2">
             {sites.length > 0 ? (
@@ -231,7 +299,9 @@ const Expenses: React.FC = () => {
         isOpen={isSiteFormOpen}
         onClose={() => setIsSiteFormOpen(false)}
         onSubmit={handleAddSite}
-        supervisorId={SUPERVISOR_ID}
+        supervisorId={userRole === UserRole.ADMIN && selectedSupervisorId 
+          ? selectedSupervisorId 
+          : SUPERVISOR_ID}
       />
     </div>
   );

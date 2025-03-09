@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
@@ -14,6 +14,17 @@ import { UserRole } from "./lib/types";
 import { useIsMobile } from "./hooks/use-mobile";
 
 const queryClient = new QueryClient();
+
+// Redirect component based on user role
+const RoleBasedRedirect = () => {
+  const userRole = localStorage.getItem('userRole') as UserRole;
+  
+  if (userRole === UserRole.SUPERVISOR) {
+    return <Navigate to="/expenses" replace />;
+  }
+  
+  return <Navigate to="/dashboard" replace />;
+};
 
 // Layout component for authenticated pages
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
@@ -55,6 +66,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       <Navbar 
         onMenuClick={() => {}} // Empty function since we don't have a sidebar
         pageTitle={getPageTitle()}
+        userRole={userRole}
       />
       
       <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
@@ -76,6 +88,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
           <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
+          <Route path="/authenticated" element={<RoleBasedRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

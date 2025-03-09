@@ -36,7 +36,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       } else if (email === 'supervisor@example.com' && password === 'password') {
         localStorage.setItem('userRole', UserRole.SUPERVISOR);
         localStorage.setItem('userName', 'Supervisor User');
-        navigate('/dashboard');
+        navigate('/expenses'); // Direct supervisors to expenses page
       } else if (email === 'viewer@example.com' && password === 'password') {
         localStorage.setItem('userRole', UserRole.VIEWER);
         localStorage.setItem('userName', 'Viewer User');
