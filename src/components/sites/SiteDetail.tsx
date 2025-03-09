@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink } from 'lucide-react';
@@ -17,6 +16,7 @@ interface SiteDetailProps {
   advances: Advance[];
   fundsReceived: FundsReceived[];
   invoices: Invoice[];
+  supervisorInvoices?: Invoice[];
   onBack: () => void;
   onAddExpense: (expense: Partial<Expense>) => void;
   onAddAdvance: (advance: Partial<Advance>) => void;
@@ -31,6 +31,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   advances,
   fundsReceived,
   invoices,
+  supervisorInvoices = [],
   onBack,
   onAddExpense,
   onAddAdvance,
@@ -42,11 +43,14 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const isMobile = useIsMobile();
 
+  // Filter invoices by approverType to calculate financials correctly
+  const supervisorOnlyInvoices = invoices.filter(invoice => invoice.approverType === 'supervisor' || !invoice.approverType);
+  
   // Calculate site financial summary
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
-  const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+  const totalInvoices = supervisorOnlyInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
   const siteBalance = totalFundsReceived - totalExpenses - totalAdvances - totalInvoices;
   
   const handleMarkComplete = () => {
@@ -249,6 +253,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             advances={advances} 
             fundsReceived={fundsReceived} 
             invoices={invoices} 
+            supervisorInvoices={supervisorOnlyInvoices}
             onAddExpense={onAddExpense} 
             onAddAdvance={onAddAdvance} 
             onAddFunds={onAddFunds} 
