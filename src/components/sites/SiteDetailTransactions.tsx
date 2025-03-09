@@ -10,7 +10,6 @@ import AdvanceForm from '@/components/advances/AdvanceForm';
 import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
-
 interface SiteDetailTransactionsProps {
   siteId: string;
   expenses: Expense[];
@@ -22,7 +21,6 @@ interface SiteDetailTransactionsProps {
   onAddFunds: (funds: Partial<FundsReceived>) => void;
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
 }
-
 const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   siteId,
   expenses,
@@ -40,12 +38,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [activeTab, setActiveTab] = useState("expenses");
-
   const paidExpenses = expenses.filter(expense => expense.status === ApprovalStatus.APPROVED);
   const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
-
-  return (
-    <div className="grid grid-cols-1 gap-6">
+  return <div className="grid grid-cols-1 gap-6">
       <CustomCard>
         <h2 className="text-xl font-semibold mb-4 flex items-center">
           <Clock className="mr-2 h-5 w-5 text-muted-foreground" />
@@ -56,13 +51,12 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           <TabsList className="w-full mb-4">
             <TabsTrigger value="expenses" className="flex-1">EXPENSES PAID</TabsTrigger>
             <TabsTrigger value="advances" className="flex-1">ADVANCES PAID</TabsTrigger>
-            <TabsTrigger value="invoices" className="flex-1">INVOICES</TabsTrigger>
+            <TabsTrigger value="invoices" className="flex-1">PURCHASED INVOICE </TabsTrigger>
             <TabsTrigger value="funds" className="flex-1">FUNDS FROM H.O.</TabsTrigger>
           </TabsList>
           
           <TabsContent value="expenses" className="space-y-4">
-            {paidExpenses.length > 0 ? (
-              <div className="rounded-md border overflow-hidden">
+            {paidExpenses.length > 0 ? <div className="rounded-md border overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-muted">
                     <tr>
@@ -74,8 +68,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-gray-200">
-                    {paidExpenses.map((expense) => (
-                      <tr key={expense.id}>
+                    {paidExpenses.map(expense => <tr key={expense.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
                         <td className="px-4 py-3 text-sm uppercase">{expense.category}</td>
@@ -85,21 +78,16 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                             PAID
                           </span>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="text-center p-6 bg-muted/20 rounded-lg">
+              </div> : <div className="text-center p-6 bg-muted/20 rounded-lg">
                 <p className="text-muted-foreground">No expenses paid yet.</p>
-              </div>
-            )}
+              </div>}
           </TabsContent>
           
           <TabsContent value="advances" className="space-y-4">
-            {paidAdvances.length > 0 ? (
-              <div className="rounded-md border overflow-hidden">
+            {paidAdvances.length > 0 ? <div className="rounded-md border overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-muted">
                     <tr>
@@ -112,8 +100,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-gray-200">
-                    {paidAdvances.map((advance) => (
-                      <tr key={advance.id}>
+                    {paidAdvances.map(advance => <tr key={advance.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
                         <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
@@ -124,21 +111,16 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                             PAID
                           </span>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="text-center p-6 bg-muted/20 rounded-lg">
+              </div> : <div className="text-center p-6 bg-muted/20 rounded-lg">
                 <p className="text-muted-foreground">No advances paid yet.</p>
-              </div>
-            )}
+              </div>}
           </TabsContent>
           
           <TabsContent value="funds" className="space-y-4">
-            {fundsReceived.length > 0 ? (
-              <div className="rounded-md border overflow-hidden">
+            {fundsReceived.length > 0 ? <div className="rounded-md border overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-muted">
                     <tr>
@@ -147,25 +129,19 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-gray-200">
-                    {fundsReceived.map((fund) => (
-                      <tr key={fund.id}>
+                    {fundsReceived.map(fund => <tr key={fund.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="text-center p-6 bg-muted/20 rounded-lg">
+              </div> : <div className="text-center p-6 bg-muted/20 rounded-lg">
                 <p className="text-muted-foreground">No funds received yet.</p>
-              </div>
-            )}
+              </div>}
           </TabsContent>
           
           <TabsContent value="invoices" className="space-y-4">
-            {invoices.length > 0 ? (
-              <div className="rounded-md border overflow-hidden">
+            {invoices.length > 0 ? <div className="rounded-md border overflow-hidden">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-muted">
                     <tr>
@@ -178,38 +154,27 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     </tr>
                   </thead>
                   <tbody className="bg-card divide-y divide-gray-200">
-                    {invoices.map((invoice) => (
-                      <tr key={invoice.id}>
+                    {invoices.map(invoice => <tr key={invoice.id}>
                         <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
                         <td className="px-4 py-3 text-sm">{invoice.partyName}</td>
                         <td className="px-4 py-3 text-sm">{invoice.partyId}</td>
                         <td className="px-4 py-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                             {invoice.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
                           </span>
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => setSelectedInvoice(invoice)}
-                          >
+                          <Button variant="ghost" size="sm" onClick={() => setSelectedInvoice(invoice)}>
                             View
                           </Button>
                         </td>
-                      </tr>
-                    ))}
+                      </tr>)}
                   </tbody>
                 </table>
-              </div>
-            ) : (
-              <div className="text-center p-6 bg-muted/20 rounded-lg">
+              </div> : <div className="text-center p-6 bg-muted/20 rounded-lg">
                 <p className="text-muted-foreground">No invoices recorded yet.</p>
-              </div>
-            )}
+              </div>}
           </TabsContent>
         </Tabs>
       </CustomCard>
@@ -221,94 +186,54 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         </h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <Button 
-            onClick={() => setIsExpenseFormOpen(true)} 
-            className="flex items-center justify-center"
-            variant="outline"
-          >
+          <Button onClick={() => setIsExpenseFormOpen(true)} className="flex items-center justify-center" variant="outline">
             <Plus className="mr-2 h-4 w-4" />
             NEW EXPENSE
           </Button>
           
-          <Button 
-            onClick={() => setIsAdvanceFormOpen(true)} 
-            className="flex items-center justify-center"
-            variant="outline"
-          >
+          <Button onClick={() => setIsAdvanceFormOpen(true)} className="flex items-center justify-center" variant="outline">
             <ArrowUpDown className="mr-2 h-4 w-4" />
             NEW ADVANCE
           </Button>
           
-          <Button 
-            onClick={() => setIsInvoiceFormOpen(true)} 
-            className="flex items-center justify-center"
-            variant="outline"
-          >
+          <Button onClick={() => setIsInvoiceFormOpen(true)} className="flex items-center justify-center" variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             NEW INVOICE
           </Button>
           
-          <Button 
-            onClick={() => setIsFundsFormOpen(true)} 
-            className="flex items-center justify-center"
-            variant="outline"
-            style={{ backgroundColor: "#ffd700", color: "#000" }}
-          >
+          <Button onClick={() => setIsFundsFormOpen(true)} className="flex items-center justify-center" variant="outline" style={{
+          backgroundColor: "#ffd700",
+          color: "#000"
+        }}>
             <Truck className="mr-2 h-4 w-4" />
             FUNDS FROM H.O
           </Button>
         </div>
       </CustomCard>
 
-      <ExpenseForm
-        isOpen={isExpenseFormOpen}
-        onClose={() => setIsExpenseFormOpen(false)}
-        onSubmit={(expense) => {
-          onAddExpense({
-            ...expense,
-            siteId
-          });
-        }}
-        siteId={siteId}
-      />
+      <ExpenseForm isOpen={isExpenseFormOpen} onClose={() => setIsExpenseFormOpen(false)} onSubmit={expense => {
+      onAddExpense({
+        ...expense,
+        siteId
+      });
+    }} siteId={siteId} />
       
-      <AdvanceForm
-        isOpen={isAdvanceFormOpen}
-        onClose={() => setIsAdvanceFormOpen(false)}
-        onSubmit={(advance) => onAddAdvance({
-          ...advance,
-          siteId
-        })}
-        siteId={siteId}
-      />
+      <AdvanceForm isOpen={isAdvanceFormOpen} onClose={() => setIsAdvanceFormOpen(false)} onSubmit={advance => onAddAdvance({
+      ...advance,
+      siteId
+    })} siteId={siteId} />
       
-      <FundsReceivedForm
-        isOpen={isFundsFormOpen}
-        onClose={() => setIsFundsFormOpen(false)}
-        onSubmit={(funds) => onAddFunds({
-          ...funds,
-          siteId
-        })}
-      />
+      <FundsReceivedForm isOpen={isFundsFormOpen} onClose={() => setIsFundsFormOpen(false)} onSubmit={funds => onAddFunds({
+      ...funds,
+      siteId
+    })} />
       
-      <InvoiceForm
-        isOpen={isInvoiceFormOpen}
-        onClose={() => setIsInvoiceFormOpen(false)}
-        onSubmit={(invoice) => onAddInvoice({
-          ...invoice,
-          siteId
-        })}
-      />
+      <InvoiceForm isOpen={isInvoiceFormOpen} onClose={() => setIsInvoiceFormOpen(false)} onSubmit={invoice => onAddInvoice({
+      ...invoice,
+      siteId
+    })} />
       
-      {selectedInvoice && (
-        <InvoiceDetails
-          invoice={selectedInvoice}
-          isOpen={!!selectedInvoice}
-          onClose={() => setSelectedInvoice(null)}
-        />
-      )}
-    </div>
-  );
+      {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} />}
+    </div>;
 };
-
 export default SiteDetailTransactions;
