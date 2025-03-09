@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink } from 'lucide-react';
@@ -9,7 +8,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CustomCard from '@/components/ui/CustomCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SiteDetailTransactions from './SiteDetailTransactions';
-
 interface SiteDetailProps {
   site: Site;
   expenses: Expense[];
@@ -23,7 +21,6 @@ interface SiteDetailProps {
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
-
 const SiteDetail: React.FC<SiteDetailProps> = ({
   site,
   expenses,
@@ -35,7 +32,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   onAddAdvance,
   onAddFunds,
   onAddInvoice,
-  onCompleteSite,
+  onCompleteSite
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
@@ -46,43 +43,27 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
   const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
   const siteBalance = totalFundsReceived - totalExpenses - totalAdvances - totalInvoices;
-  
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
     setIsMarkingComplete(false);
   };
-  
   console.log("Invoices in SiteDetail:", invoices);
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <h1 className="text-2xl font-bold">{site.name}</h1>
-          {site.isCompleted ? (
-            <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge>
-          ) : (
-            <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Active</Badge>
-          )}
+          {site.isCompleted ? <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge> : <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Active</Badge>}
         </div>
         
-        {!site.isCompleted && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            className="text-green-600 border-green-200 hover:bg-green-50"
-            onClick={() => setIsMarkingComplete(true)}
-          >
+        {!site.isCompleted && <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => setIsMarkingComplete(true)}>
             <Check className="mr-2 h-4 w-4" />
             Mark as Complete
-          </Button>
-        )}
+          </Button>}
 
-        {isMarkingComplete && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        {isMarkingComplete && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <Card className="w-full max-w-md mx-4">
               <CardHeader>
                 <CardTitle>Mark Site as Complete?</CardTitle>
@@ -95,8 +76,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          </div>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -144,7 +124,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             </div>
             
             <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80">Debits TO worker:</p>
+              <p className="text-sm opacity-80">Debits to worker:</p>
               <p className="text-lg font-semibold">₹0</p>
             </div>
             
@@ -236,21 +216,9 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         </TabsContent>
         
         <TabsContent value="transactions">
-          <SiteDetailTransactions
-            siteId={site.id}
-            expenses={expenses}
-            advances={advances}
-            fundsReceived={fundsReceived}
-            invoices={invoices}
-            onAddExpense={onAddExpense}
-            onAddAdvance={onAddAdvance}
-            onAddFunds={onAddFunds}
-            onAddInvoice={onAddInvoice}
-          />
+          <SiteDetailTransactions siteId={site.id} expenses={expenses} advances={advances} fundsReceived={fundsReceived} invoices={invoices} onAddExpense={onAddExpense} onAddAdvance={onAddAdvance} onAddFunds={onAddFunds} onAddInvoice={onAddInvoice} />
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
-
 export default SiteDetail;
