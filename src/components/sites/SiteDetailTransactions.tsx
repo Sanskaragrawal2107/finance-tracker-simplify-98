@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,115 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const paidExpenses = expenses.filter(expense => expense.status === ApprovalStatus.APPROVED);
   const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
 
+  const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
+    return (
+      <div className="space-y-4">
+        {data.map((item, index) => (
+          <div key={item.id || index} className="border rounded-md overflow-hidden bg-white">
+            {renderRow(item)}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderExpenseMobileRow = (expense: Expense) => (
+    <div className="p-3 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Date:</span>
+        <span>{format(new Date(expense.date), 'MMM dd, yyyy')}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Purpose:</span>
+        <span className="text-right uppercase">{expense.description}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Category:</span>
+        <span className="uppercase">{expense.category}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Amount:</span>
+        <span className="font-medium">₹{expense.amount.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-center">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          PAID
+        </span>
+      </div>
+    </div>
+  );
+
+  const renderAdvanceMobileRow = (advance: Advance) => (
+    <div className="p-3 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Date:</span>
+        <span>{format(new Date(advance.date), 'MMM dd, yyyy')}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Recipient:</span>
+        <span className="uppercase">{advance.recipientName}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Purpose:</span>
+        <span className="text-right uppercase">{advance.purpose}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Amount:</span>
+        <span className="font-medium">₹{advance.amount.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-center">
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          PAID
+        </span>
+      </div>
+    </div>
+  );
+
+  const renderFundMobileRow = (fund: FundsReceived) => (
+    <div className="p-3 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Date:</span>
+        <span>{format(new Date(fund.date), 'MMM dd, yyyy')}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Amount:</span>
+        <span className="font-medium">₹{fund.amount.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+
+  const renderInvoiceMobileRow = (invoice: Invoice) => (
+    <div className="p-3 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Date:</span>
+        <span>{format(new Date(invoice.date), 'MMM dd, yyyy')}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Vendor:</span>
+        <span className="uppercase">{invoice.partyName}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Invoice No:</span>
+        <span className="uppercase">{invoice.partyId}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Amount:</span>
+        <span className="font-medium">₹{invoice.netAmount.toLocaleString()}</span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="font-medium">Status:</span>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+          {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
+        </span>
+      </div>
+      <div className="flex justify-center mt-2">
+        <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
+          VIEW DETAILS
+        </Button>
+      </div>
+    </div>
+  );
+
   return <div className="grid grid-cols-1 gap-6">
       <CustomCard className="bg-white">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -52,133 +162,211 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         </h2>
         
         <Tabs defaultValue="expenses" className="w-full">
-          <TabsList className="w-full mb-4 bg-gray-100 border border-gray-200">
-            <TabsTrigger value="expenses" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">EXPENSES PAID</TabsTrigger>
-            <TabsTrigger value="advances" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">ADVANCES PAID</TabsTrigger>
-            <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">PURCHASED INVOICE</TabsTrigger>
-            <TabsTrigger value="funds" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">FUNDS REC. FROM H.O.</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto pb-2">
+            <TabsList className="w-full mb-4 bg-gray-100 border border-gray-200 flex-nowrap whitespace-nowrap">
+              <TabsTrigger value="expenses" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                <span className="hidden sm:inline">EXPENSES PAID</span>
+                <span className="sm:hidden">EXP</span>
+              </TabsTrigger>
+              <TabsTrigger value="advances" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                <span className="hidden sm:inline">ADVANCES PAID</span>
+                <span className="sm:hidden">ADV</span>
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                <span className="hidden sm:inline">PURCHASED INVOICE</span>
+                <span className="sm:hidden">INV</span>
+              </TabsTrigger>
+              <TabsTrigger value="funds" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white">
+                <span className="hidden sm:inline">FUNDS REC. FROM H.O.</span>
+                <span className="sm:hidden">FUNDS</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
           <TabsContent value="expenses" className="space-y-4 bg-white">
-            {paidExpenses.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Category</th>
-                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {paidExpenses.map(expense => <tr key={expense.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{expense.category}</td>
-                        <td className="px-4 py-3 text-sm text-right">₹{expense.amount.toLocaleString()}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            PAID
-                          </span>
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
-              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+            {paidExpenses.length > 0 ? (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Category</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
+                        <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {paidExpenses.map(expense => <tr key={expense.id}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{expense.category}</td>
+                          <td className="px-4 py-3 text-sm text-right">₹{expense.amount.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              PAID
+                            </span>
+                          </td>
+                        </tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Cards */}
+                <div className="sm:hidden">
+                  {renderMobileTable(
+                    ['Date', 'Purpose', 'Category', 'Amount', 'Status'],
+                    paidExpenses,
+                    renderExpenseMobileRow
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No expenses paid yet.</p>
-              </div>}
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="advances" className="space-y-4 bg-white">
-            {paidAdvances.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Recipient</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Type</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
-                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {paidAdvances.map(advance => <tr key={advance.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
-                        <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            PAID
-                          </span>
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
-              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+            {paidAdvances.length > 0 ? (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Recipient</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Type</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
+                        <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {paidAdvances.map(advance => <tr key={advance.id}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
+                          <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              PAID
+                            </span>
+                          </td>
+                        </tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Cards */}
+                <div className="sm:hidden">
+                  {renderMobileTable(
+                    ['Date', 'Recipient', 'Purpose', 'Amount', 'Status'],
+                    paidAdvances,
+                    renderAdvanceMobileRow
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No advances paid yet.</p>
-              </div>}
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="funds" className="space-y-4 bg-white">
-            {fundsReceived.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {fundsReceived.map(fund => <tr key={fund.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
-                      </tr>)}
-                  </tbody>
-                </table>
-              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+            {fundsReceived.length > 0 ? (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {fundsReceived.map(fund => <tr key={fund.id}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
+                          <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
+                        </tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Cards */}
+                <div className="sm:hidden">
+                  {renderMobileTable(
+                    ['Date', 'Amount'],
+                    fundsReceived,
+                    renderFundMobileRow
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No funds received yet.</p>
-              </div>}
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="invoices" className="space-y-4 bg-white">
-            {invoices.length > 0 ? <div className="rounded-md overflow-hidden border border-gray-200">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Vendor</th>
-                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Invoice No.</th>
-                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
-                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
-                      <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {invoices.map(invoice => <tr key={invoice.id}>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{invoice.partyName}</td>
-                        <td className="px-4 py-3 text-sm uppercase">{invoice.partyId}</td>
-                        <td className="px-4 py-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                          <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
-                            VIEW
-                          </Button>
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
-              </div> : <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+            {invoices.length > 0 ? (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Vendor</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Invoice No.</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
+                        <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
+                        <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {invoices.map(invoice => <tr key={invoice.id}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{invoice.partyName}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{invoice.partyId}</td>
+                          <td className="px-4 py-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
+                              VIEW
+                            </Button>
+                          </td>
+                        </tr>)}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Cards */}
+                <div className="sm:hidden">
+                  {renderMobileTable(
+                    ['Date', 'Vendor', 'Invoice No.', 'Amount', 'Status', 'Actions'],
+                    invoices,
+                    renderInvoiceMobileRow
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No invoices recorded yet.</p>
-              </div>}
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </CustomCard>

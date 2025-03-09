@@ -60,6 +60,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervisorId }) => {
+  const [startDateOpen, setStartDateOpen] = React.useState(false);
+  const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -95,7 +98,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md w-[95vw] max-w-[95vw] sm:w-auto overflow-y-auto max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Create New Site</DialogTitle>
           <DialogDescription>
@@ -153,7 +156,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Start Date</FormLabel>
-                  <Popover>
+                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -176,7 +179,10 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setStartDateOpen(false);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -192,7 +198,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Estimated Completion Date (Optional)</FormLabel>
-                  <Popover>
+                  <Popover open={completionDateOpen} onOpenChange={setCompletionDateOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -215,7 +221,10 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                       <Calendar
                         mode="single"
                         selected={field.value || undefined}
-                        onSelect={field.onChange}
+                        onSelect={(date) => {
+                          field.onChange(date);
+                          setCompletionDateOpen(false);
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -226,10 +235,10 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
             />
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button type="submit">Create Site</Button>
+              <Button type="submit" className="w-full sm:w-auto">Create Site</Button>
             </DialogFooter>
           </form>
         </Form>

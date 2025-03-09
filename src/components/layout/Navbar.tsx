@@ -22,13 +22,14 @@ const Navbar: React.FC<NavbarProps> = ({
   
   return (
     <header className={cn("h-16 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10", className)}>
-      <div className="h-full container mx-auto px-4 flex items-center justify-between">
+      <div className="h-full container mx-auto px-2 md:px-4 flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button 
             variant="ghost" 
             size="icon" 
             onClick={() => navigate('/dashboard')}
-            className="p-2"
+            className="p-1 md:p-2"
+            aria-label="Go to Dashboard"
           >
             <Home className="h-5 w-5 text-muted-foreground" />
           </Button>
@@ -37,19 +38,19 @@ const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
         
-        <div className="flex-1 flex justify-center items-center">
-          <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex-1 flex justify-center items-center mx-1">
+          <div className="flex items-center gap-1 md:gap-3">
             {/* Logo image */}
             <img 
               src="/lovable-uploads/74a5a478-2c11-4188-88b3-76b7897376a9.png" 
               alt="MEW Logo" 
-              className="h-8 md:h-12 object-contain" 
+              className="h-7 md:h-12 object-contain" 
             />
-            {/* Company name image */}
+            {/* Company name image - hide on very small screens */}
             <img 
               src="/lovable-uploads/1d876bba-1f25-45bf-9f5b-8f81f72d4880.png" 
               alt="MAURICE ENGINEERING WORKS" 
-              className="h-7 md:h-10 object-contain" 
+              className="h-5 md:h-10 object-contain hidden xs:block" 
             />
           </div>
         </div>
@@ -59,8 +60,9 @@ const Navbar: React.FC<NavbarProps> = ({
             variant="ghost" 
             size="icon" 
             onClick={() => navigate('/expenses')}
-            className="p-2"
+            className="p-1 md:p-2"
             title="Go to Sites & Expenses"
+            aria-label="Go to Sites & Expenses"
           >
             <Building className="h-5 w-5 text-muted-foreground" />
           </Button>

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -81,6 +82,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit, si
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -255,12 +257,13 @@ Return ONLY the category name, with no additional text or explanation.
     if (date) {
       setSelectedDate(date);
       form.setValue("date", date);
+      setDatePickerOpen(false); // Close the datepicker after selection
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-xl max-w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New Expense</DialogTitle>
           <DialogDescription>
@@ -276,7 +279,7 @@ Return ONLY the category name, with no additional text or explanation.
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Date</FormLabel>
-                  <Popover>
+                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
@@ -299,7 +302,7 @@ Return ONLY the category name, with no additional text or explanation.
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={(date) => handleDateChange(date)}
+                        onSelect={handleDateChange}
                         initialFocus
                         className="pointer-events-auto"
                       />
@@ -397,7 +400,7 @@ Return ONLY the category name, with no additional text or explanation.
         {expenses.length > 0 && (
           <div className="mt-6 space-y-4">
             <h3 className="text-sm font-medium">Expenses List ({expenses.length})</h3>
-            <div className="border rounded-md overflow-hidden">
+            <div className="border rounded-md overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>
