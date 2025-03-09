@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -80,6 +79,7 @@ interface ExpenseItem {
 const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -90,6 +90,10 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ isOpen, onClose, onSubmit }) 
       amount: undefined,
     },
   });
+
+  React.useEffect(() => {
+    form.setValue("date", selectedDate);
+  }, [selectedDate, form]);
 
   const analyzePurpose = async (purposeText: string) => {
     if (!purposeText || purposeText.length < 3) return;
@@ -182,8 +186,9 @@ Return ONLY the category name, with no additional text or explanation.
     
     console.log("Adding expense to list:", newExpense);
     setExpenses([...expenses, newExpense]);
+    
     form.reset({
-      date: new Date(),
+      date: selectedDate,
       purpose: "",
       category: "",
       amount: undefined,
@@ -245,6 +250,13 @@ Return ONLY the category name, with no additional text or explanation.
     }
   };
 
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+      form.setValue("date", date);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
@@ -286,7 +298,7 @@ Return ONLY the category name, with no additional text or explanation.
                       <Calendar
                         mode="single"
                         selected={field.value}
-                        onSelect={field.onChange}
+                        onSelect={(date) => handleDateChange(date)}
                         initialFocus
                         className="pointer-events-auto"
                       />

@@ -158,7 +158,7 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
               </Button>
               <Button type="submit">
                 <DownloadCloud className="h-4 w-4 mr-2" />
-                Record Funds
+                Submit
               </Button>
             </DialogFooter>
           </form>
