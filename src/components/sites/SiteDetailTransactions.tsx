@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -191,24 +190,24 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         </h2>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-          <Button onClick={() => setIsExpenseFormOpen(true)} className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white" variant="default">
+          <Button onClick={() => setIsExpenseFormOpen(true)} className="flex items-center justify-center" variant="outline">
             <Plus className="mr-2 h-4 w-4" />
             NEW EXPENSE
           </Button>
           
-          <Button onClick={() => setIsAdvanceFormOpen(true)} className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white" variant="default">
+          <Button onClick={() => setIsAdvanceFormOpen(true)} className="flex items-center justify-center" variant="outline">
             <ArrowUpDown className="mr-2 h-4 w-4" />
             NEW ADVANCE
           </Button>
           
-          <Button onClick={() => setIsInvoiceFormOpen(true)} className="flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white" variant="default">
+          <Button onClick={() => setIsInvoiceFormOpen(true)} className="flex items-center justify-center" variant="outline">
             <FileText className="mr-2 h-4 w-4" />
             NEW INVOICE
           </Button>
           
           <Button onClick={() => setIsFundsFormOpen(true)} className="flex items-center justify-center" variant="outline" style={{
-          backgroundColor: "#1E90FF",
-          color: "white"
+          backgroundColor: "#ffd700",
+          color: "#000"
         }}>
             <Truck className="mr-2 h-4 w-4" />
             FUNDS REC. FROM H.O
