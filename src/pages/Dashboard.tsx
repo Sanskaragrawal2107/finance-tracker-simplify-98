@@ -8,6 +8,7 @@ import ExpenseChart from '@/components/dashboard/ExpenseChart';
 import RecentActivity from '@/components/dashboard/RecentActivity';
 import { BarChart3, IndianRupee, FileText, Wallet, Building2 } from 'lucide-react';
 import { Activity, ActivityType, BalanceSummary, ChartDataPoint } from '@/lib/types';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 // Mock data for demonstration
 const balanceData: BalanceSummary = {
@@ -85,6 +86,8 @@ const recentActivities: Activity[] = [
 ];
 
 const Dashboard: React.FC = () => {
+  const isMobile = useIsMobile();
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       <PageTitle 
@@ -93,13 +96,13 @@ const Dashboard: React.FC = () => {
         className="mb-4"
       />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <BalanceCard 
           balanceData={balanceData} 
           className="md:col-span-1"
         />
         
-        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
           <StatCard 
             title="Total Expenditure" 
             value={balanceData.totalExpenditure} 
@@ -128,7 +131,7 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         <ExpenseChart 
           data={expenseChartData} 
           title="Monthly Expenses"
@@ -140,7 +143,7 @@ const Dashboard: React.FC = () => {
         />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <ExpenseChart 
           data={categoryChartData} 
           title="Expense Categories (%)"

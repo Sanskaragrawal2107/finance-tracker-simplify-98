@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CustomCard from '@/components/ui/CustomCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SiteDetailTransactions from './SiteDetailTransactions';
+import { useIsMobile } from '@/hooks/use-mobile';
+
 interface SiteDetailProps {
   site: Site;
   expenses: Expense[];
@@ -22,6 +24,7 @@ interface SiteDetailProps {
   onAddInvoice: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
+
 const SiteDetail: React.FC<SiteDetailProps> = ({
   site,
   expenses,
@@ -37,6 +40,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const isMobile = useIsMobile();
 
   // Calculate site financial summary
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
@@ -44,12 +48,14 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
   const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
   const siteBalance = totalFundsReceived - totalExpenses - totalAdvances - totalInvoices;
+  
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
     setIsMarkingComplete(false);
   };
-  console.log("Invoices in SiteDetail:", invoices);
-  return <div className="space-y-6">
+  
+  return (
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8">
@@ -57,18 +63,34 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </Button>
           <div>
             <span className="text-sm font-medium text-muted-foreground">Site Name</span>
-            <h1 className="text-2xl font-bold">{site.name}</h1>
+            <h1 className="text-xl md:text-2xl font-bold">{site.name}</h1>
           </div>
-          {site.isCompleted ? <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">Completed</Badge> : <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Active</Badge>}
+          {site.isCompleted ? (
+            <Badge variant="outline" className="bg-green-100 text-green-800 hover:bg-green-100">
+              Completed
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+              Active
+            </Badge>
+          )}
         </div>
         
-        {!site.isCompleted && <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => setIsMarkingComplete(true)}>
+        {!site.isCompleted && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-green-600 border-green-200 hover:bg-green-50 w-full sm:w-auto mt-2 sm:mt-0" 
+            onClick={() => setIsMarkingComplete(true)}
+          >
             <Check className="mr-2 h-4 w-4" />
             Mark as Complete
-          </Button>}
+          </Button>
+        )}
 
-        {isMarkingComplete && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <Card className="w-full max-w-md mx-4">
+        {isMarkingComplete && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-md">
               <CardHeader>
                 <CardTitle>Mark Site as Complete?</CardTitle>
               </CardHeader>
@@ -80,12 +102,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
               </CardContent>
             </Card>
-          </div>}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <CustomCard className="md:col-span-2">
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Job Name</h3>
               <p className="text-lg font-semibold mt-1">{site.jobName}</p>
@@ -150,7 +173,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid grid-cols-2 w-full max-w-md mb-4">
+        <TabsList className={`grid grid-cols-2 ${isMobile ? 'w-full' : 'max-w-md'} mb-4`}>
           <TabsTrigger value="summary">Summary</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
         </TabsList>
@@ -220,9 +243,21 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         </TabsContent>
         
         <TabsContent value="transactions">
-          <SiteDetailTransactions siteId={site.id} expenses={expenses} advances={advances} fundsReceived={fundsReceived} invoices={invoices} onAddExpense={onAddExpense} onAddAdvance={onAddAdvance} onAddFunds={onAddFunds} onAddInvoice={onAddInvoice} />
+          <SiteDetailTransactions 
+            siteId={site.id} 
+            expenses={expenses} 
+            advances={advances} 
+            fundsReceived={fundsReceived} 
+            invoices={invoices} 
+            onAddExpense={onAddExpense} 
+            onAddAdvance={onAddAdvance} 
+            onAddFunds={onAddFunds} 
+            onAddInvoice={onAddInvoice} 
+          />
         </TabsContent>
       </Tabs>
-    </div>;
+    </div>
+  );
 };
+
 export default SiteDetail;

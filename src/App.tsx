@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,18 +9,18 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import NotFound from "./pages/NotFound";
-import Sidebar from "./components/layout/Sidebar";
 import Navbar from "./components/layout/Navbar";
 import { UserRole } from "./lib/types";
+import { useIsMobile } from "./hooks/use-mobile";
 
 const queryClient = new QueryClient();
 
 // Layout component for authenticated pages
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>(UserRole.VIEWER);
   const [userName, setUserName] = useState<string>('User');
   const location = useLocation();
+  const isMobile = useIsMobile();
   
   // Check if user is authenticated
   useEffect(() => {
@@ -50,26 +51,17 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   };
   
   return (
-    <div className="min-h-screen flex">
-      <Sidebar 
-        userRole={userRole}
-        userName={userName}
-        collapsed={sidebarCollapsed}
-        setCollapsed={setSidebarCollapsed}
+    <div className="min-h-screen flex flex-col">
+      <Navbar 
+        onMenuClick={() => {}} // Empty function since we don't have a sidebar
+        pageTitle={getPageTitle()}
       />
       
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
-        <Navbar 
-          onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          pageTitle={getPageTitle()}
-        />
-        
-        <main className="flex-1 overflow-y-auto p-6 bg-background">
-          <div className="container mx-auto">
-            {children}
-          </div>
-        </main>
-      </div>
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+        <div className="container mx-auto">
+          {children}
+        </div>
+      </main>
     </div>
   );
 };
