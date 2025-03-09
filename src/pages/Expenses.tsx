@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -19,6 +20,13 @@ const initialFunds: FundsReceived[] = [];
 const initialInvoices: Invoice[] = [];
 
 const SUPERVISOR_ID = "sup123";
+
+// These advance purposes should be treated as "Debits to worker" and not subtracted from funds
+const DEBIT_ADVANCE_PURPOSES = [
+  AdvancePurpose.SAFETY_SHOES,
+  AdvancePurpose.TOOLS,
+  AdvancePurpose.OTHER
+];
 
 const Expenses: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
@@ -168,7 +176,61 @@ const Expenses: React.FC = () => {
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
   const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
   
-  const supervisorInvoices = siteInvoices.filter(invoice => invoice.approverType === "supervisor" || !invoice.approverType);
+  // Filter invoices to get only supervisor-approved invoices
+  const supervisorInvoices = siteInvoices.filter(invoice => 
+    invoice.approverType === "supervisor" || !invoice.approverType
+  );
+
+  // Calculate financial summaries
+  const calculateSiteFinancials = (siteId: string) => {
+    const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
+    const siteExpenses = expenses.filter(expense => 
+      expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
+    );
+    const siteAdvances = advances.filter(advance => 
+      advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
+    );
+    const siteInvoices = invoices.filter(invoice => 
+      invoice.siteId === siteId && invoice.paymentStatus === 'paid'
+    );
+
+    // Regular advances (not debit to worker)
+    const regularAdvances = siteAdvances.filter(advance => 
+      !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+    );
+
+    // Debit to worker advances (safety shoes, tools, other)
+    const debitAdvances = siteAdvances.filter(advance => 
+      DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+    );
+
+    // Supervisor invoices only
+    const supervisorInvoices = siteInvoices.filter(invoice => 
+      invoice.approverType === "supervisor" || !invoice.approverType
+    );
+
+    const totalFunds = siteFunds.reduce((sum, fund) => sum + fund.amount, 0);
+    const totalExpenses = siteExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+    const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+    const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+    const pendingInvoicesTotal = siteInvoices
+      .filter(invoice => invoice.paymentStatus === 'pending')
+      .reduce((sum, invoice) => sum + invoice.netAmount, 0);
+
+    // Calculate total balance
+    const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
+
+    return {
+      fundsReceived: totalFunds,
+      totalExpenditure: totalExpenses,
+      totalAdvances: totalRegularAdvances,
+      debitsToWorker: totalDebitToWorker,
+      invoicesPaid: supervisorInvoiceTotal,
+      pendingInvoices: pendingInvoicesTotal,
+      totalBalance: totalBalance
+    };
+  };
 
   const getSelectedSupervisorName = () => {
     if (!selectedSupervisorId) return null;
@@ -193,6 +255,7 @@ const Expenses: React.FC = () => {
             onAddFunds={handleAddFunds}
             onAddInvoice={handleAddInvoice}
             onCompleteSite={handleCompleteSite}
+            balanceSummary={calculateSiteFinancials(selectedSite.id)}
           />
         </div>
       ) : (

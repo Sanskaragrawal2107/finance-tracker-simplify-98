@@ -1,9 +1,10 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Clock, FileText, ArrowUpDown, Truck } from 'lucide-react';
 import { format } from 'date-fns';
-import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus } from '@/lib/types';
+import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import AdvanceForm from '@/components/advances/AdvanceForm';
@@ -45,9 +46,11 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [activeTab, setActiveTab] = useState("expenses");
 
+  // Get the approved expenses and advances for display in history
   const paidExpenses = expenses.filter(expense => expense.status === ApprovalStatus.APPROVED);
   const paidAdvances = advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
 
+  // Use supervisor invoices if provided, otherwise use regular invoices
   const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
@@ -166,7 +169,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           Transaction History
         </h2>
         
-        <Tabs defaultValue="expenses" className="w-full">
+        <Tabs defaultValue="expenses" className="w-full" value={activeTab} onValueChange={setActiveTab}>
           <div className="overflow-x-auto pb-2">
             <TabsList className="w-full mb-4 bg-gray-100 border border-gray-200 flex-nowrap whitespace-nowrap">
               <TabsTrigger value="expenses" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
@@ -357,41 +360,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                   {renderMobileTable(
                     ['Date', 'Vendor', 'Invoice No.', 'Amount', 'Status', 'Actions'],
                     displayInvoices,
-                    (invoice) => (
-                      <div className="p-3 space-y-1.5">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-sm">Date:</span>
-                          <span className="text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-sm">Vendor:</span>
-                          <span className="text-sm uppercase">{invoice.partyName}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-sm">Invoice No:</span>
-                          <span className="text-sm uppercase">{invoice.partyId}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-sm">Approved By:</span>
-                          <span className="text-sm uppercase">{invoice.approverType || "supervisor"}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium text-sm">Amount:</span>
-                          <span className="font-medium text-sm">₹{invoice.netAmount.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-1.5">
-                          <span className="font-medium text-sm mr-2">Status:</span>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                            {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
-                          </span>
-                        </div>
-                        <div className="flex justify-center mt-2">
-                          <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
-                            VIEW DETAILS
-                          </Button>
-                        </div>
-                      </div>
-                    )
+                    renderInvoiceMobileRow
                   )}
                 </div>
               </>

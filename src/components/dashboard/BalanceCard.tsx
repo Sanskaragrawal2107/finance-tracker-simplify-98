@@ -21,6 +21,7 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
     totalAdvances: balanceData.totalAdvances || 0,
     debitsToWorker: balanceData.debitsToWorker || 0,
     invoicesPaid: balanceData.invoicesPaid || 0,
+    pendingInvoices: balanceData.pendingInvoices || 0,
     totalBalance: balanceData.totalBalance || 0
   };
 

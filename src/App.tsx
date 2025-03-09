@@ -60,6 +60,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return '';
     }
   };
+
+  // Check if user is supervisor and redirect from dashboard to expenses
+  useEffect(() => {
+    if (userRole === UserRole.SUPERVISOR && location.pathname === "/dashboard") {
+      window.location.href = "/expenses";
+    }
+  }, [userRole, location.pathname]);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -86,7 +93,14 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
+            } 
+          />
           <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
           <Route path="/authenticated" element={<RoleBasedRedirect />} />
           <Route path="*" element={<NotFound />} />
