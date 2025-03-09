@@ -53,7 +53,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   const displayExpenses = expenses;
   const displayAdvances = advances;
-
   const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
 
   const isDebitToWorker = (advance: Advance) => {
@@ -231,7 +230,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {displayExpenses.map(expense => <tr key={expense.id}>
+                      {displayExpenses.map(expense => (
+                        <tr key={expense.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(expense.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{expense.description}</td>
                           <td className="px-4 py-3 text-sm uppercase">{expense.category}</td>
@@ -247,7 +247,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                               {expense.status.toUpperCase()}
                             </span>
                           </td>
-                        </tr>)}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -284,7 +285,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {displayAdvances.map(advance => <tr key={advance.id}>
+                      {displayAdvances.map(advance => (
+                        <tr key={advance.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
@@ -304,7 +306,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                               {advance.status.toUpperCase()}
                             </span>
                           </td>
-                        </tr>)}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -336,10 +339,12 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {fundsReceived.map(fund => <tr key={fund.id}>
+                      {fundsReceived.map(fund => (
+                        <tr key={fund.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
-                        </tr>)}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -376,7 +381,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 bg-white">
-                      {displayInvoices.map(invoice => <tr key={invoice.id}>
+                      {displayInvoices.map(invoice => (
+                        <tr key={invoice.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(invoice.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{invoice.partyName}</td>
                           <td className="px-4 py-3 text-sm uppercase">{invoice.partyId}</td>
@@ -392,7 +398,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                               VIEW
                             </Button>
                           </td>
-                        </tr>)}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -447,30 +454,29 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       </CustomCard>
 
       <ExpenseForm isOpen={isExpenseFormOpen} onClose={() => setIsExpenseFormOpen(false)} onSubmit={expense => {
-      onAddExpense({
-        ...expense,
-        siteId
-      });
-    }} siteId={siteId} />
+        onAddExpense({
+          ...expense,
+          siteId
+        });
+      }} siteId={siteId} />
       
       <AdvanceForm isOpen={isAdvanceFormOpen} onClose={() => setIsAdvanceFormOpen(false)} onSubmit={advance => onAddAdvance({
-      ...advance,
-      siteId
-    })} siteId={siteId} />
+        ...advance,
+        siteId
+      })} siteId={siteId} />
       
       <FundsReceivedForm isOpen={isFundsFormOpen} onClose={() => setIsFundsFormOpen(false)} onSubmit={funds => onAddFunds({
-      ...funds,
-      siteId
-    })} />
+        ...funds,
+        siteId
+      })} />
       
       <InvoiceForm isOpen={isInvoiceFormOpen} onClose={() => setIsInvoiceFormOpen(false)} onSubmit={invoice => onAddInvoice({
-      ...invoice,
-      siteId
-    })} />
+        ...invoice,
+        siteId
+      })} />
       
       {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} />}
     </div>;
 };
 
 export default SiteDetailTransactions;
-

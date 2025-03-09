@@ -83,7 +83,7 @@ const Expenses: React.FC = () => {
     const expenseWithId: Expense = {
       ...newExpense as Expense,
       id: Date.now().toString(),
-      status: ApprovalStatus.PENDING,
+      status: ApprovalStatus.APPROVED, // Set status to APPROVED (paid) by default
       createdAt: new Date(),
       supervisorId: SUPERVISOR_ID,
     };
@@ -96,7 +96,7 @@ const Expenses: React.FC = () => {
     const advanceWithId: Advance = {
       ...newAdvance as Advance,
       id: Date.now().toString(),
-      status: ApprovalStatus.PENDING,
+      status: ApprovalStatus.APPROVED, // Set status to APPROVED (paid) by default
       createdAt: new Date(),
     };
     
@@ -181,15 +181,21 @@ const Expenses: React.FC = () => {
     invoice.approverType === "supervisor" || !invoice.approverType
   );
 
-  // Calculate financial summaries
+  // Calculate financial summaries with correct handling of debit to worker advances
   const calculateSiteFinancials = (siteId: string) => {
     const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
+    
+    // Get all expenses with APPROVED status for this site
     const siteExpenses = expenses.filter(expense => 
       expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
     );
+    
+    // Get all advances for this site
     const siteAdvances = advances.filter(advance => 
       advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
     );
+    
+    // Get all invoices with paid status for this site
     const siteInvoices = invoices.filter(invoice => 
       invoice.siteId === siteId && invoice.paymentStatus === 'paid'
     );
