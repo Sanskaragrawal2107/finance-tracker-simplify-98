@@ -31,17 +31,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     try {
       // Create admin user first
       await createTestUser('admin@example.com', 'adminpassword', 'admin', 'Admin User');
+      console.log("Admin user setup attempted");
       
       // Wait before creating supervisor users to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // Create just one supervisor to avoid rate limits
+      // Create supervisor user
       await createTestUser('supervisor1@example.com', 'password', 'supervisor', 'Mithlesh Singh');
+      console.log("Supervisor user setup attempted");
       
       toast.success("Test users set up successfully!");
+      localStorage.setItem('hasCreatedTestUsers', 'true');
     } catch (error) {
       console.error("Error setting up test users:", error);
-      toast.error("Failed to set up test users");
+      toast.error("Failed to set up test users. Try again later.");
     } finally {
       setCreatingTestUsers(false);
     }
@@ -52,16 +55,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     const hasCreatedUsers = localStorage.getItem('hasCreatedTestUsers');
     if (!hasCreatedUsers) {
       setupTestUsers();
-      localStorage.setItem('hasCreatedTestUsers', 'true');
     }
   }, []);
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     
     try {
+      console.log(`Attempting to log in with email: ${email}`);
+      
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -73,6 +77,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
       
       if (data.user) {
+        console.log("Sign in successful, fetching user profile");
+        
         // Fetch user profile to get role
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -81,8 +87,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           .single();
         
         if (profileError) {
-          throw profileError;
+          console.error("Error fetching profile:", profileError);
+          throw new Error("Failed to fetch user profile");
         }
+        
+        if (!profileData) {
+          console.error("No profile found for user");
+          throw new Error("User profile not found");
+        }
+        
+        console.log("Profile data retrieved:", profileData);
         
         // Store user info in localStorage
         localStorage.setItem('userRole', profileData.role);
@@ -90,6 +104,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         // If user is supervisor, fetch supervisor ID
         if (profileData.role === UserRole.SUPERVISOR) {
+          console.log("User is a supervisor, fetching supervisor ID");
+          
           const { data: supervisorData, error: supervisorError } = await supabase
             .from('supervisors')
             .select('id')
@@ -100,6 +116,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             console.warn('Could not fetch supervisor ID:', supervisorError);
           } else if (supervisorData) {
             localStorage.setItem('supervisorId', supervisorData.id);
+            console.log("Supervisor ID stored:", supervisorData.id);
           }
         }
         
@@ -116,15 +133,26 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
+      
       if (err.message === 'Invalid login credentials') {
         setError('Invalid email or password. Please check your credentials and try again.');
+        // If using demo credentials and getting error, suggest setting up test users again
+        if ((email === 'admin@example.com' || email === 'supervisor1@example.com')) {
+          setError('Demo account login failed. Please try setting up test users again by clicking "Reset Demo Users" below.');
+        }
       } else {
         setError(err.message || 'Failed to sign in');
       }
+      
       toast.error('Failed to sign in');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResetDemoUsers = () => {
+    localStorage.removeItem('hasCreatedTestUsers');
+    setupTestUsers();
   };
   
   return (
@@ -230,8 +258,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             </div>
           </div>
           
-          {creatingTestUsers && (
+          {creatingTestUsers ? (
             <p className="mt-2 text-amber-600">Setting up test users...</p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResetDemoUsers}
+              className="mt-3 px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors"
+            >
+              Reset Demo Users
+            </button>
           )}
         </div>
       </form>

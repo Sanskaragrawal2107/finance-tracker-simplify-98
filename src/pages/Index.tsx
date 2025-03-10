@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 import { UserRole } from '@/lib/types';
+import { Toaster } from 'sonner';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const Index: React.FC = () => {
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-50 to-indigo-50 p-4">
+      <Toaster position="top-right" />
       <div className="absolute inset-0 z-0 overflow-hidden">
         <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-blue-100 blur-3xl opacity-70 animate-pulse" style={{ animationDuration: '8s' }}></div>
         <div className="absolute top-1/4 -right-24 w-96 h-96 rounded-full bg-indigo-100 blur-3xl opacity-70 animate-pulse" style={{ animationDuration: '10s' }}></div>

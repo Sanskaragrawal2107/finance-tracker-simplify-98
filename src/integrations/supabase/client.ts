@@ -18,19 +18,7 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Helper function to create test users for development
 export const createTestUser = async (email: string, password: string, role: 'admin' | 'supervisor', fullName: string) => {
   try {
-    // First try to sign in to check if user exists
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (!signInError) {
-      console.log(`User with email ${email} already exists and credentials are valid`);
-      return;
-    }
-    
-    // Add a small delay to avoid rate limiting
-    await wait(500);
+    console.log(`Attempting to create or verify test user: ${email}`);
     
     // Create new user
     const { data, error } = await supabase.auth.signUp({
@@ -45,7 +33,10 @@ export const createTestUser = async (email: string, password: string, role: 'adm
     });
     
     if (error) {
-      if (error.message.includes('rate limit') || error.status === 429) {
+      if (error.message.includes('User already registered')) {
+        console.log(`User ${email} already exists. Proceeding.`);
+        return;
+      } else if (error.message.includes('rate limit') || error.status === 429) {
         console.log(`Rate limited when creating ${email}. Will try again later.`);
       } else {
         console.error('Error creating test user:', error.message);
@@ -71,6 +62,8 @@ export const createTestUser = async (email: string, password: string, role: 'adm
       
       if (supervisorError) {
         console.error('Error creating supervisor record:', supervisorError.message);
+      } else {
+        console.log(`Supervisor record created for ${email}`);
       }
     }
     
