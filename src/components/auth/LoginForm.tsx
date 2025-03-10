@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
 import { supabase, ensureUserExists } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface LoginFormProps {
   className?: string;
@@ -29,6 +30,7 @@ const TEST_USERS = [
 const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +59,12 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     setError(null);
     setLoading(true);
     
+    if (!selectedRole) {
+      setError('Please select a role to continue');
+      setLoading(false);
+      return;
+    }
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -78,39 +86,46 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           throw profileError;
         }
         
-        // If profile doesn't exist, create a basic one with default role
+        // If profile doesn't exist, create a basic one with the selected role
         if (!profileData) {
           const defaultName = email.split('@')[0];
-          const defaultRole = UserRole.VIEWER;
           
-          // Insert a profile for this user
+          // Insert a profile for this user with the selected role
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: data.user.id,
               full_name: defaultName,
-              role: defaultRole
+              role: selectedRole
             });
             
           if (insertError) {
             console.error('Failed to create profile:', insertError);
           }
           
-          localStorage.setItem('userRole', defaultRole);
+          localStorage.setItem('userRole', selectedRole);
           localStorage.setItem('userName', defaultName);
           
-          navigate('/dashboard');
+          // Direct redirection based on selected role
+          if (selectedRole === UserRole.SUPERVISOR) {
+            navigate('/expenses');
+          } else if (selectedRole === UserRole.ADMIN) {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
+          
           toast.success('Signed in successfully');
           return;
         }
         
-        const userRole = profileData.role || UserRole.VIEWER;
-        localStorage.setItem('userRole', userRole);
+        // Use the selected role rather than the profile role
+        localStorage.setItem('userRole', selectedRole);
         localStorage.setItem('userName', profileData.full_name || email.split('@')[0]);
         
-        console.log('User role from profile:', userRole);
+        console.log('Selected role:', selectedRole);
         
-        if (userRole === UserRole.SUPERVISOR) {
+        if (selectedRole === UserRole.SUPERVISOR) {
           const { data: supervisorData, error: supervisorError } = await supabase
             .from('supervisors')
             .select('id')
@@ -146,7 +161,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           
           console.log('Redirecting supervisor to /expenses');
           navigate('/expenses');
-        } else if (userRole === UserRole.ADMIN) {
+        } else if (selectedRole === UserRole.ADMIN) {
           console.log('Redirecting admin to /admin');
           navigate('/admin');
         } else {
@@ -162,6 +177,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       toast.error('Failed to sign in');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const setUserCredentials = (role: UserRole) => {
+    const user = TEST_USERS.find(user => user.role === role);
+    if (user) {
+      setEmail(user.email);
+      setPassword(user.password);
+      setSelectedRole(role);
     }
   };
   
@@ -180,6 +204,28 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           {error}
         </div>
       )}
+      
+      <div className="mb-6">
+        <div className="text-sm font-medium mb-2">Select your role</div>
+        <div className="grid grid-cols-2 gap-3">
+          <Button 
+            type="button" 
+            variant={selectedRole === UserRole.ADMIN ? "primary" : "outline"}
+            className="justify-center py-2 h-auto"
+            onClick={() => setSelectedRole(UserRole.ADMIN)}
+          >
+            Admin
+          </Button>
+          <Button 
+            type="button" 
+            variant={selectedRole === UserRole.SUPERVISOR ? "primary" : "outline"}
+            className="justify-center py-2 h-auto"
+            onClick={() => setSelectedRole(UserRole.SUPERVISOR)}
+          >
+            Supervisor
+          </Button>
+        </div>
+      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
@@ -247,10 +293,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !selectedRole}
           className={cn(
             "w-full py-2 rounded-md bg-primary text-primary-foreground font-medium transition-all",
-            loading ? "opacity-70" : "hover:bg-primary/90"
+            (loading || !selectedRole) ? "opacity-70" : "hover:bg-primary/90"
           )}
         >
           {loading ? 'Signing in...' : 'Sign in'}
@@ -258,10 +304,26 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <div className="text-center text-sm text-muted-foreground mt-6">
           <p>Demo Credentials:</p>
-          <p className="mt-1">Admin: finance.admin@example.com</p>
-          <p>Password: Admin@12345</p>
-          <p className="mt-1">Supervisor: site.supervisor@example.com</p>
-          <p>Password: Super@12345</p>
+          <div className="flex gap-2 mt-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              className="text-xs py-1 px-2 h-auto"
+              onClick={() => setUserCredentials(UserRole.ADMIN)}
+            >
+              Use Admin
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              className="text-xs py-1 px-2 h-auto"
+              onClick={() => setUserCredentials(UserRole.SUPERVISOR)}
+            >
+              Use Supervisor
+            </Button>
+          </div>
         </div>
       </form>
     </div>

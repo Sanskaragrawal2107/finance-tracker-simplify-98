@@ -41,7 +41,7 @@ const RoleBasedRedirect = () => {
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: UserRole }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const navigate = useLocation();
+  const location = useLocation();
   
   useEffect(() => {
     const checkAuth = async () => {
