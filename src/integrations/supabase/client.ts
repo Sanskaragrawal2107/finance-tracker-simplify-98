@@ -18,29 +18,14 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Helper function to create test users for development
 export const createTestUser = async (email: string, password: string, role: 'admin' | 'supervisor', fullName: string) => {
   try {
-    // First check if user exists by getting auth user by email
-    const { data: existingUsers, error: searchError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-      filters: {
-        email: email
-      }
+    // First try to sign in to check if user exists
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
-    
-    // If we get an error here, it's probably because admin functions aren't available
-    // Let's try to sign in instead to check if user exists
-    if (searchError) {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
 
-      if (!signInError) {
-        console.log(`User with email ${email} already exists and credentials are valid`);
-        return;
-      }
-    } else if (existingUsers && existingUsers.users.length > 0) {
-      console.log(`User with email ${email} already exists in system`);
+    if (!signInError) {
+      console.log(`User with email ${email} already exists and credentials are valid`);
       return;
     }
     
