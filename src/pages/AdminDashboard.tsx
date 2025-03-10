@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -53,7 +54,7 @@ const AdminDashboard: React.FC = () => {
             name: supervisor.name,
             userId: supervisor.user_id || undefined,
             createdAt: supervisor.created_at ? new Date(supervisor.created_at) : undefined,
-            email: supervisor.email || undefined,
+            email: undefined // Set email to undefined since it's not returned from the database
           }));
           
           setSupervisors(mappedSupervisors);
