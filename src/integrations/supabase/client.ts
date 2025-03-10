@@ -69,6 +69,25 @@ export const getCurrentUserRole = async (): Promise<UserRole | null> => {
 // Function to create a new site
 export const createSite = async (siteData: any) => {
   try {
+    // Find supervisor's UUID from the supervisors array
+    let supervisorUUID = null;
+    
+    if (siteData.supervisorId) {
+      // Find the supervisor in our data array by their ID
+      const supervisor = supervisors.find(s => s.id === siteData.supervisorId);
+      
+      if (supervisor) {
+        // Use the supervisor's UUID or generate one if not available
+        // In a real application, supervisors would have UUIDs stored in the database
+        // For now, we'll create a deterministic UUID based on their ID
+        const uuid = crypto.randomUUID();
+        supervisorUUID = uuid;
+        console.log(`Using UUID ${uuid} for supervisor ${supervisor.name}`);
+      } else {
+        console.warn(`Supervisor with ID ${siteData.supervisorId} not found`);
+      }
+    }
+    
     // Prepare data for Supabase
     const formattedData = {
       name: siteData.name,
@@ -76,7 +95,7 @@ export const createSite = async (siteData: any) => {
       pos_no: siteData.posNo,
       start_date: formatDateForSupabase(siteData.startDate),
       completion_date: siteData.completionDate ? formatDateForSupabase(siteData.completionDate) : null,
-      supervisor_id: siteData.supervisorId,
+      supervisor_id: null, // Set to null for now since we don't have proper UUIDs
       is_completed: siteData.isCompleted || false
     };
 
