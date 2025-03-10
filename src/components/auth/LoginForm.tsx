@@ -1,10 +1,10 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, createTestUser } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface LoginFormProps {
@@ -16,9 +16,52 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [creatingTestUsers, setCreatingTestUsers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
+  
+  // Function to create test users for development
+  const setupTestUsers = async () => {
+    if (creatingTestUsers) return;
+    
+    setCreatingTestUsers(true);
+    toast.info("Setting up test users, please wait...");
+    
+    try {
+      // Create admin user
+      await createTestUser('admin@example.com', 'adminpassword', 'admin', 'Admin User');
+      
+      // Create supervisor users
+      const supervisorNames = [
+        'Mithlesh Singh', 'Shubham Urmaliya', 'Yogesh Sharma', 
+        'Vivek Giri Goswami', 'M.P. Naidu', 'Dinesh Nath', 
+        'Jaspal Singh', 'Sanjay Shukla', 'Kundan Kumar', 
+        'Mahendra Pandey', 'Mithlesh Paul'
+      ];
+      
+      for (let i = 0; i < supervisorNames.length; i++) {
+        await createTestUser(
+          `supervisor${i+1}@example.com`,
+          'password',
+          'supervisor',
+          supervisorNames[i]
+        );
+      }
+      
+      toast.success("Test users set up successfully!");
+    } catch (error) {
+      console.error("Error setting up test users:", error);
+      toast.error("Failed to set up test users");
+    } finally {
+      setCreatingTestUsers(false);
+    }
+  };
+  
+  // Create test users when component loads
+  useEffect(() => {
+    setupTestUsers();
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,13 +212,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || creatingTestUsers}
           className={cn(
             "w-full py-2 rounded-md bg-primary text-primary-foreground font-medium transition-all",
-            loading ? "opacity-70" : "hover:bg-primary/90"
+            (loading || creatingTestUsers) ? "opacity-70" : "hover:bg-primary/90"
           )}
         >
-          {loading ? 'Signing in...' : 'Sign in'}
+          {loading ? 'Signing in...' : creatingTestUsers ? 'Setting up users...' : 'Sign in'}
         </button>
         
         <div className="text-center text-sm text-muted-foreground mt-6">
@@ -184,6 +227,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           <p>Password: adminpassword</p>
           <p className="mt-1">Supervisor: supervisor1@example.com (through supervisor11@example.com)</p>
           <p>Password: password</p>
+          {creatingTestUsers && (
+            <p className="mt-2 text-amber-600">Setting up test users...</p>
+          )}
         </div>
       </form>
     </div>
