@@ -30,14 +30,18 @@ export const createPredefinedUsers = async (): Promise<{
   const supervisorPassword = "Super@12345";
   
   try {
-    // Create admin user if it doesn't exist
-    const { data: adminExistsData } = await supabase.auth.signInWithPassword({
-      email: adminEmail,
-      password: adminPassword
-    });
+    // First check if users exist in auth system
+    const { data: adminUser, error: adminCheckError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', adminEmail)
+      .maybeSingle();
     
-    if (!adminExistsData.user) {
-      // Admin doesn't exist, create it
+    // If admin doesn't exist, create it
+    if (!adminUser && !adminCheckError) {
+      console.log("Admin profile doesn't exist, creating...");
+      
+      // Sign up the admin user
       const { data: adminData, error: adminError } = await supabase.auth.signUp({
         email: adminEmail,
         password: adminPassword,
@@ -51,31 +55,50 @@ export const createPredefinedUsers = async (): Promise<{
       
       if (adminError) {
         console.error("Failed to create admin user:", adminError);
-      } else {
-        console.log("Admin user created successfully");
         
-        // Also create a supervisors entry for demo
+        // Try signing in if sign up fails (user might exist but not accessible through profiles)
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: adminEmail,
+          password: adminPassword
+        });
+        
+        if (signInError) {
+          console.error("Failed to sign in as admin:", signInError);
+        } else {
+          console.log("Admin user signed in successfully");
+        }
+      } else {
+        console.log("Admin user created successfully", adminData);
+        
+        // Create a supervisors entry for admin
         const { error: supervisorAdminError } = await supabase
           .from('supervisors')
           .insert({
             name: "Finance Admin",
-            email: adminEmail
+            email: adminEmail,
+            user_id: adminData.user?.id
           });
         
         if (supervisorAdminError) {
           console.error("Failed to create admin supervisor entry:", supervisorAdminError);
         }
       }
+    } else {
+      console.log("Admin user already exists");
     }
     
-    // Create supervisor user if it doesn't exist
-    const { data: supervisorExistsData } = await supabase.auth.signInWithPassword({
-      email: supervisorEmail,
-      password: supervisorPassword
-    });
+    // Check if supervisor exists
+    const { data: supervisorUser, error: supervisorCheckError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', supervisorEmail)
+      .maybeSingle();
     
-    if (!supervisorExistsData.user) {
-      // Supervisor doesn't exist, create it
+    // If supervisor doesn't exist, create it
+    if (!supervisorUser && !supervisorCheckError) {
+      console.log("Supervisor profile doesn't exist, creating...");
+      
+      // Sign up the supervisor user
       const { data: supervisorData, error: supervisorError } = await supabase.auth.signUp({
         email: supervisorEmail,
         password: supervisorPassword,
@@ -89,11 +112,23 @@ export const createPredefinedUsers = async (): Promise<{
       
       if (supervisorError) {
         console.error("Failed to create supervisor user:", supervisorError);
+        
+        // Try signing in if sign up fails
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: supervisorEmail,
+          password: supervisorPassword
+        });
+        
+        if (signInError) {
+          console.error("Failed to sign in as supervisor:", signInError);
+        } else {
+          console.log("Supervisor user signed in successfully");
+        }
       } else {
         console.log("Supervisor user created successfully");
         
         // Create a supervisors entry
-        const { data: supervisorEntryData, error: supervisorEntryError } = await supabase
+        const { error: supervisorEntryError } = await supabase
           .from('supervisors')
           .insert({
             name: "Site Supervisor",
@@ -105,6 +140,8 @@ export const createPredefinedUsers = async (): Promise<{
           console.error("Failed to create supervisor entry:", supervisorEntryError);
         }
       }
+    } else {
+      console.log("Supervisor user already exists");
     }
     
     return {
