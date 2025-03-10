@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 interface HODebitsCardProps {
   totalDebits: number;
   className?: string;
+  valuePrefix?: string;
+  valueSuffix?: string;
   trend?: {
     value: number;
     isPositive: boolean;
@@ -18,6 +20,8 @@ interface HODebitsCardProps {
 const HODebitsCard: React.FC<HODebitsCardProps> = ({ 
   totalDebits,
   className,
+  valuePrefix = '',
+  valueSuffix = '',
   trend
 }) => {
   return (
@@ -28,8 +32,10 @@ const HODebitsCard: React.FC<HODebitsCardProps> = ({
       <CardContent>
         <div className="flex justify-between items-center">
           <div className="flex items-center text-xl md:text-2xl font-bold">
-            <IndianRupee className="h-5 w-5 mr-1 text-muted-foreground" />
+            {valuePrefix && <span className="mr-1">{valuePrefix}</span>}
+            {!valuePrefix && <IndianRupee className="h-5 w-5 mr-1 text-muted-foreground" />}
             {formatCurrency(totalDebits)}
+            {valueSuffix && <span className="ml-1">{valueSuffix}</span>}
           </div>
           
           {trend && (
