@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -51,7 +50,7 @@ const Expenses: React.FC = () => {
           .from('profiles')
           .select('role')
           .eq('id', data.session.user.id)
-          .single();
+          .maybeSingle();
           
         if (profileData) {
           setUserRole(profileData.role as UserRole);
@@ -62,12 +61,15 @@ const Expenses: React.FC = () => {
               .from('supervisors')
               .select('id')
               .eq('user_id', data.session.user.id)
-              .single();
+              .maybeSingle();
               
             if (supervisorData) {
               setSupervisorId(supervisorData.id);
               setSelectedSupervisorId(supervisorData.id);
               localStorage.setItem('supervisorId', supervisorData.id);
+            } else {
+              console.error('Supervisor record not found for user:', data.session.user.id);
+              toast.error('Supervisor profile not found. Please contact administrator.');
             }
           }
         }
@@ -324,10 +326,13 @@ const Expenses: React.FC = () => {
         job_name: newSite.jobName,
         pos_no: newSite.posNo,
         start_date: formatDateForSupabase(newSite.startDate!),
+        completion_date: newSite.completionDate ? formatDateForSupabase(newSite.completionDate) : null,
         supervisor_id: currentSupervisorId,
         is_completed: false,
         funds: 0
       };
+      
+      console.log('Creating site with data:', siteData);
       
       const { data, error } = await supabase
         .from('sites')
@@ -336,16 +341,19 @@ const Expenses: React.FC = () => {
         .single();
         
       if (error) {
+        console.error('Site creation error:', error);
         throw error;
       }
       
       if (data) {
+        console.log('Site created successfully:', data);
         const formattedSite: Site = {
           id: data.id,
           name: data.name,
           jobName: data.job_name,
           posNo: data.pos_no,
           startDate: new Date(data.start_date),
+          completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
           supervisorId: data.supervisor_id,
           createdAt: new Date(data.created_at),
           isCompleted: data.is_completed,
@@ -354,6 +362,34 @@ const Expenses: React.FC = () => {
         
         setSites(prevSites => [...prevSites, formattedSite]);
         toast.success(`Site "${formattedSite.name}" created successfully`);
+        
+        const supervisorToFetch = userRole === UserRole.ADMIN && selectedSupervisorId 
+          ? selectedSupervisorId 
+          : supervisorId;
+          
+        if (supervisorToFetch) {
+          const { data: refreshedSites } = await supabase
+            .from('sites')
+            .select('*')
+            .eq('supervisor_id', supervisorToFetch);
+            
+          if (refreshedSites) {
+            const formattedSites = refreshedSites.map(site => ({
+              id: site.id,
+              name: site.name,
+              jobName: site.job_name,
+              posNo: site.pos_no,
+              startDate: new Date(site.start_date),
+              completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+              supervisorId: site.supervisor_id,
+              createdAt: new Date(site.created_at),
+              isCompleted: site.is_completed,
+              funds: site.funds || 0
+            } as Site));
+            
+            setSites(formattedSites);
+          }
+        }
       }
     } catch (error: any) {
       console.error("Error adding site:", error);

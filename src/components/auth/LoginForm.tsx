@@ -72,7 +72,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           .from('profiles')
           .select('role, full_name')
           .eq('id', data.user.id)
-          .maybeSingle(); // Use maybeSingle instead of single to prevent JSON object error
+          .maybeSingle();
         
         if (profileError) {
           throw profileError;
@@ -112,7 +112,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             .from('supervisors')
             .select('id')
             .eq('user_id', data.user.id)
-            .maybeSingle(); // Use maybeSingle instead of single
+            .maybeSingle();
           
           if (supervisorError && supervisorError.code !== 'PGRST116') {
             console.warn('Error fetching supervisor ID:', supervisorError);
@@ -120,13 +120,30 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           
           if (supervisorData) {
             localStorage.setItem('supervisorId', supervisorData.id);
+          } else {
+            console.warn('No supervisor record found for this user. Creating one...');
+            
+            // Create a supervisor record if it doesn't exist
+            const { data: newSupervisor, error: createError } = await supabase
+              .from('supervisors')
+              .insert({
+                user_id: data.user.id,
+                name: profileData.full_name || email.split('@')[0]
+              })
+              .select('id')
+              .single();
+              
+            if (createError) {
+              console.error('Failed to create supervisor record:', createError);
+            } else if (newSupervisor) {
+              localStorage.setItem('supervisorId', newSupervisor.id);
+              console.log('Created new supervisor record:', newSupervisor);
+            }
           }
-        }
-        
-        if (profileData.role === UserRole.ADMIN) {
-          navigate('/admin');
-        } else if (profileData.role === UserRole.SUPERVISOR) {
+          
           navigate('/expenses');
+        } else if (profileData.role === UserRole.ADMIN) {
+          navigate('/admin');
         } else {
           navigate('/dashboard');
         }

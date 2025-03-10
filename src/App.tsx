@@ -106,13 +106,6 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return '';
     }
   };
-
-  // Check if user is supervisor and redirect from dashboard to expenses
-  useEffect(() => {
-    if ((userRole === UserRole.SUPERVISOR) && location.pathname === "/dashboard") {
-      window.location.href = "/expenses";
-    }
-  }, [userRole, location.pathname]);
   
   return (
     <div className="min-h-screen flex flex-col">
