@@ -227,5 +227,5 @@ export interface SupervisorType {
   name: string;
   userId?: string;
   createdAt?: Date;
-  email?: string; // Add this to match the model used in AdminDashboard
+  email?: string; // Make email optional to match the data structure from Supabase
 }

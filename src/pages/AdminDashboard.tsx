@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -15,7 +14,9 @@ import { supabase } from '@/integrations/supabase/client';
 interface SupervisorType {
   id: string;
   name: string;
-  email: string;
+  userId: string | undefined;
+  createdAt: Date | undefined;
+  email: string | undefined;
 }
 
 interface SupervisorStats {
@@ -46,7 +47,16 @@ const AdminDashboard: React.FC = () => {
         }
         
         if (data) {
-          setSupervisors(data);
+          // Map Supabase data to SupervisorType, ensuring all required properties are set
+          const mappedSupervisors: SupervisorType[] = data.map(supervisor => ({
+            id: supervisor.id,
+            name: supervisor.name,
+            userId: supervisor.user_id || undefined,
+            createdAt: supervisor.created_at ? new Date(supervisor.created_at) : undefined,
+            email: supervisor.email || undefined,
+          }));
+          
+          setSupervisors(mappedSupervisors);
           
           // Calculate stats for each supervisor
           const stats: Record<string, SupervisorStats> = {};
