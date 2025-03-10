@@ -9,16 +9,193 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string
+          date: string
+          description: string
+          id: string
+          site_id: string | null
+          status: string
+          supervisor_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by: string
+          date: string
+          description: string
+          id?: string
+          site_id?: string | null
+          status?: string
+          supervisor_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string
+          id?: string
+          site_id?: string | null
+          status?: string
+          supervisor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funds_received: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          method: string | null
+          reference: string | null
+          site_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date: string
+          id?: string
+          method?: string | null
+          reference?: string | null
+          site_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          method?: string | null
+          reference?: string | null
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funds_received_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      sites: {
+        Row: {
+          completion_date: string | null
+          created_at: string
+          funds: number | null
+          id: string
+          is_completed: boolean
+          job_name: string
+          name: string
+          pos_no: string
+          start_date: string
+          supervisor_id: string | null
+        }
+        Insert: {
+          completion_date?: string | null
+          created_at?: string
+          funds?: number | null
+          id?: string
+          is_completed?: boolean
+          job_name: string
+          name: string
+          pos_no: string
+          start_date: string
+          supervisor_id?: string | null
+        }
+        Update: {
+          completion_date?: string | null
+          created_at?: string
+          funds?: number | null
+          id?: string
+          is_completed?: boolean
+          job_name?: string
+          name?: string
+          pos_no?: string
+          start_date?: string
+          supervisor_id?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_primary_role: {
+        Args: {
+          _user_id: string
+        }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "supervisor" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never

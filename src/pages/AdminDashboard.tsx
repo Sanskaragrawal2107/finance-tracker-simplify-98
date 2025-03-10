@@ -11,6 +11,8 @@ import { UserRole } from '@/lib/types';
 import { supervisors } from '@/data/supervisors';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { getAllSites, getSitesBySupervisor } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface SupervisorStats {
   totalSites: number;
@@ -24,6 +26,12 @@ const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
+  // Fetch all sites from the database
+  const { data: allSites = [], isLoading, isError } = useQuery({
+    queryKey: ['sites'],
+    queryFn: () => getAllSites(),
+  });
+  
   // Check if user is admin
   useEffect(() => {
     const userRole = localStorage.getItem('userRole') as UserRole;
@@ -33,21 +41,40 @@ const AdminDashboard: React.FC = () => {
     }
   }, [navigate]);
 
-  // Simulate fetching supervisor statistics
+  // Generate supervisor statistics based on fetched sites
   useEffect(() => {
-    // In a real app, this would be an API call
-    const mockStats: Record<string, SupervisorStats> = {};
-    
-    supervisors.forEach(supervisor => {
-      mockStats[supervisor.id] = {
-        totalSites: Math.floor(Math.random() * 10) + 1,
-        activeSites: Math.floor(Math.random() * 6) + 1,
-        completedSites: Math.floor(Math.random() * 5) + 1
-      };
-    });
-    
-    setSupervisorStats(mockStats);
-  }, []);
+    if (allSites.length > 0) {
+      // Create stats object
+      const stats: Record<string, SupervisorStats> = {};
+      
+      // Initialize supervisor stats
+      supervisors.forEach(supervisor => {
+        stats[supervisor.id] = {
+          totalSites: 0,
+          activeSites: 0,
+          completedSites: 0
+        };
+      });
+      
+      // Count sites per supervisor
+      allSites.forEach(site => {
+        if (site.supervisor_id) {
+          const supervisorId = site.supervisor_id;
+          if (stats[supervisorId]) {
+            stats[supervisorId].totalSites += 1;
+            
+            if (site.is_completed) {
+              stats[supervisorId].completedSites += 1;
+            } else {
+              stats[supervisorId].activeSites += 1;
+            }
+          }
+        }
+      });
+      
+      setSupervisorStats(stats);
+    }
+  }, [allSites]);
 
   const handleViewSites = (supervisorId: string) => {
     navigate('/expenses', { state: { supervisorId } });
@@ -56,6 +83,10 @@ const AdminDashboard: React.FC = () => {
   const getSelectedSupervisor = () => {
     return supervisors.find(s => s.id === selectedSupervisorId);
   };
+
+  const totalSites = allSites.length;
+  const activeSites = allSites.filter(site => !site.is_completed).length;
+  const completedSites = allSites.filter(site => site.is_completed).length;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -86,7 +117,7 @@ const AdminDashboard: React.FC = () => {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Total Sites</h3>
               <p className="text-2xl font-bold">
-                {Object.values(supervisorStats).reduce((sum, stat) => sum + stat.totalSites, 0)}
+                {isLoading ? '...' : totalSites}
               </p>
             </div>
           </div>
@@ -100,7 +131,7 @@ const AdminDashboard: React.FC = () => {
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Active Sites</h3>
               <p className="text-2xl font-bold">
-                {Object.values(supervisorStats).reduce((sum, stat) => sum + stat.activeSites, 0)}
+                {isLoading ? '...' : activeSites}
               </p>
             </div>
           </div>
@@ -133,7 +164,13 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
         
-        {selectedSupervisorId && (
+        {isLoading && (
+          <div className="text-center py-6">
+            <p>Loading supervisor data...</p>
+          </div>
+        )}
+        
+        {!isLoading && selectedSupervisorId && supervisorStats[selectedSupervisorId] && (
           <div className="space-y-4">
             <div className="p-4 border rounded-lg bg-background">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -165,7 +202,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
         
-        {!selectedSupervisorId && (
+        {!isLoading && !selectedSupervisorId && (
           <div className="text-center py-6">
             <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
             <h3 className="text-lg font-medium mb-2">Select a Supervisor</h3>
@@ -219,6 +256,14 @@ const AdminDashboard: React.FC = () => {
           </Button>
         </div>
       </CustomCard>
+      
+      {isError && (
+        <CustomCard className="bg-red-50 border-red-200">
+          <div className="text-center py-4">
+            <p className="text-red-600">Error loading site data. Please try again later.</p>
+          </div>
+        </CustomCard>
+      )}
     </div>
   );
 };
