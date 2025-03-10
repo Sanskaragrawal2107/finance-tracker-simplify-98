@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 import { UserRole } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -10,19 +11,31 @@ const Index: React.FC = () => {
   
   useEffect(() => {
     // Check if user is already authenticated
-    const userRole = localStorage.getItem('userRole') as UserRole;
-    if (userRole) {
-      setIsAuthenticated(true);
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
       
-      // Redirect based on user role
-      if (userRole === UserRole.ADMIN) {
-        navigate('/admin');
-      } else if (userRole === UserRole.SUPERVISOR) {
-        navigate('/expenses');
-      } else {
-        navigate('/dashboard');
+      if (data.session) {
+        setIsAuthenticated(true);
+        
+        // Get stored user role
+        const userRole = localStorage.getItem('userRole') as UserRole;
+        console.log("Index page - User role:", userRole);
+        
+        // Redirect based on user role
+        if (userRole === UserRole.ADMIN) {
+          console.log("Index page - Redirecting admin to /admin");
+          navigate('/admin');
+        } else if (userRole === UserRole.SUPERVISOR) {
+          console.log("Index page - Redirecting supervisor to /expenses");
+          navigate('/expenses');
+        } else {
+          console.log("Index page - Redirecting default user to /dashboard");
+          navigate('/dashboard');
+        }
       }
-    }
+    };
+    
+    checkAuth();
   }, [navigate]);
   
   return (

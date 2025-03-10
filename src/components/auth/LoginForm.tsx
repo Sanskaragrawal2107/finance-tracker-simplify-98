@@ -104,10 +104,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           return;
         }
         
-        localStorage.setItem('userRole', profileData.role || UserRole.VIEWER);
+        const userRole = profileData.role || UserRole.VIEWER;
+        localStorage.setItem('userRole', userRole);
         localStorage.setItem('userName', profileData.full_name || email.split('@')[0]);
         
-        if (profileData.role === UserRole.SUPERVISOR) {
+        console.log('User role from profile:', userRole);
+        
+        if (userRole === UserRole.SUPERVISOR) {
           const { data: supervisorData, error: supervisorError } = await supabase
             .from('supervisors')
             .select('id')
@@ -141,10 +144,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             }
           }
           
+          console.log('Redirecting supervisor to /expenses');
           navigate('/expenses');
-        } else if (profileData.role === UserRole.ADMIN) {
+        } else if (userRole === UserRole.ADMIN) {
+          console.log('Redirecting admin to /admin');
           navigate('/admin');
         } else {
+          console.log('Redirecting user to /dashboard');
           navigate('/dashboard');
         }
         

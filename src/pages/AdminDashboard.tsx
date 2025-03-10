@@ -1,15 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { User, Users, Building2, BarChart } from 'lucide-react';
+import { User, Users, Building2, BarChart, CheckCircle, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserRole } from '@/lib/types';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { UserRole, Site } from '@/lib/types';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
+import SitesList from '@/components/sites/SitesList';
+import SiteDetail from '@/components/sites/SiteDetail';
 
 interface SupervisorType {
   id: string;
@@ -30,6 +34,9 @@ const AdminDashboard: React.FC = () => {
   const [supervisors, setSupervisors] = useState<SupervisorType[]>([]);
   const [supervisorStats, setSupervisorStats] = useState<Record<string, SupervisorStats>>({});
   const [loading, setLoading] = useState(true);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
@@ -47,13 +54,13 @@ const AdminDashboard: React.FC = () => {
         }
         
         if (data) {
-          // Map Supabase data to SupervisorType, ensuring all required properties are set
+          // Map Supabase data to SupervisorType
           const mappedSupervisors: SupervisorType[] = data.map(supervisor => ({
             id: supervisor.id,
             name: supervisor.name,
             userId: supervisor.user_id || undefined,
             createdAt: supervisor.created_at ? new Date(supervisor.created_at) : undefined,
-            email: undefined // Set email to undefined since it's not returned from the database
+            email: undefined
           }));
           
           setSupervisors(mappedSupervisors);
@@ -94,7 +101,58 @@ const AdminDashboard: React.FC = () => {
     
     fetchSupervisors();
   }, []);
-
+  
+  // Fetch sites based on selected supervisor or all sites
+  useEffect(() => {
+    const fetchSites = async () => {
+      setLoading(true);
+      try {
+        let query = supabase.from('sites').select('*');
+        
+        if (selectedSupervisorId) {
+          query = query.eq('supervisor_id', selectedSupervisorId);
+        }
+        
+        if (activeTab === 'active') {
+          query = query.eq('is_completed', false);
+        } else if (activeTab === 'completed') {
+          query = query.eq('is_completed', true);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const mappedSites: Site[] = data.map(site => ({
+            id: site.id,
+            name: site.name,
+            jobName: site.job_name,
+            posNo: site.pos_no,
+            startDate: new Date(site.start_date),
+            completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+            supervisorId: site.supervisor_id,
+            createdAt: new Date(site.created_at),
+            isCompleted: site.is_completed || false,
+            funds: site.funds
+          }));
+          
+          setSites(mappedSites);
+          setSelectedSiteId(null); // Reset selected site when fetching new sites
+        }
+      } catch (error: any) {
+        console.error('Error fetching sites:', error.message);
+        toast.error('Failed to load sites');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSites();
+  }, [selectedSupervisorId, activeTab]);
+  
   // Check if user is admin
   useEffect(() => {
     const checkAdminAccess = async () => {
@@ -126,14 +184,18 @@ const AdminDashboard: React.FC = () => {
     checkAdminAccess();
   }, [navigate]);
   
-  const handleViewSites = (supervisorId: string) => {
-    navigate('/expenses', { state: { supervisorId } });
+  const handleSelectSite = (siteId: string) => {
+    setSelectedSiteId(siteId);
   };
-
+  
+  const handleBackToSites = () => {
+    setSelectedSiteId(null);
+  };
+  
   const getSelectedSupervisor = () => {
     return supervisors.find(s => s.id === selectedSupervisorId);
   };
-
+  
   return (
     <div className="space-y-6 animate-fade-in">
       <PageTitle 
@@ -185,21 +247,25 @@ const AdminDashboard: React.FC = () => {
       </div>
       
       <CustomCard>
-        <h2 className="text-xl font-semibold mb-4">Supervisor Management</h2>
         <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">Supervisor Management</h2>
           <label className="text-sm font-medium text-muted-foreground mb-2 block">
             Select a supervisor to view their sites
           </label>
           <div className="max-w-md">
             <Select 
               value={selectedSupervisorId || ''} 
-              onValueChange={(value) => setSelectedSupervisorId(value || null)}
+              onValueChange={(value) => {
+                setSelectedSupervisorId(value || null);
+                setSelectedSiteId(null);
+              }}
             >
               <SelectTrigger className="w-full">
                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Select Supervisor" />
+                <SelectValue placeholder="All Supervisors" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="">All Supervisors</SelectItem>
                 {supervisors.map((supervisor) => (
                   <SelectItem key={supervisor.id} value={supervisor.id}>
                     {supervisor.name}
@@ -211,7 +277,7 @@ const AdminDashboard: React.FC = () => {
         </div>
         
         {selectedSupervisorId && (
-          <div className="space-y-4">
+          <div className="space-y-4 mb-6">
             <div className="p-4 border rounded-lg bg-background">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -233,23 +299,72 @@ const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
                 
-                <Button onClick={() => handleViewSites(selectedSupervisorId)}>
+                <Button onClick={() => navigate('/expenses', { state: { supervisorId: selectedSupervisorId } })}>
                   <Building2 className="h-4 w-4 mr-2" />
-                  View Sites
+                  Manage Sites
                 </Button>
               </div>
             </div>
           </div>
         )}
+      </CustomCard>
+      
+      <CustomCard>
+        <h2 className="text-xl font-semibold mb-4">Sites Management</h2>
         
-        {!selectedSupervisorId && (
-          <div className="text-center py-6">
-            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-medium mb-2">Select a Supervisor</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Choose a supervisor from the dropdown to view their sites and performance statistics.
-            </p>
+        {selectedSiteId ? (
+          <div>
+            <Button variant="outline" onClick={handleBackToSites} className="mb-4">
+              Back to Sites List
+            </Button>
+            <SiteDetail 
+              siteId={selectedSiteId}
+              onBack={handleBackToSites}
+            />
           </div>
+        ) : (
+          <>
+            <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="mb-4">
+              <TabsList>
+                <TabsTrigger value="all">All Sites</TabsTrigger>
+                <TabsTrigger value="active">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Active Sites
+                </TabsTrigger>
+                <TabsTrigger value="completed">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Completed Sites
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {loading ? (
+              <div className="text-center py-8">
+                <p>Loading sites...</p>
+              </div>
+            ) : sites.length === 0 ? (
+              <div className="text-center py-8 border rounded-lg">
+                <Building2 className="h-16 w-16 mx-auto mb-4 text-muted-foreground opacity-30" />
+                <h3 className="text-lg font-medium mb-2">No Sites Found</h3>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  {selectedSupervisorId 
+                    ? "This supervisor doesn't have any sites yet." 
+                    : "There are no sites in the system yet."}
+                </p>
+                <Button 
+                  className="mt-4"
+                  onClick={() => navigate('/expenses', { state: { newSite: true } })}
+                >
+                  Create New Site
+                </Button>
+              </div>
+            ) : (
+              <SitesList 
+                sites={sites} 
+                onSelectSite={handleSelectSite} 
+              />
+            )}
+          </>
         )}
       </CustomCard>
       

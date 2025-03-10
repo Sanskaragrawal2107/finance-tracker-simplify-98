@@ -21,32 +21,48 @@ const queryClient = new QueryClient();
 const RoleBasedRedirect = () => {
   const userRole = localStorage.getItem('userRole') as UserRole;
   
+  console.log("RoleBasedRedirect - User role:", userRole);
+  
   if (userRole === UserRole.ADMIN) {
+    console.log("Redirecting admin to /admin");
     return <Navigate to="/admin" replace />;
   }
   
   if (userRole === UserRole.SUPERVISOR) {
+    console.log("Redirecting supervisor to /expenses");
     return <Navigate to="/expenses" replace />;
   }
   
+  console.log("Redirecting default user to /dashboard");
   return <Navigate to="/dashboard" replace />;
 };
 
 // Protected route component
 const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: UserRole }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const userRole = localStorage.getItem('userRole') as UserRole;
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const navigate = useLocation();
   
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
       setIsAuthenticated(!!data.session);
+      
+      if (data.session) {
+        const storedRole = localStorage.getItem('userRole') as UserRole;
+        setUserRole(storedRole);
+      }
     };
     
     checkAuth();
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
+      
+      if (session) {
+        const storedRole = localStorage.getItem('userRole') as UserRole;
+        setUserRole(storedRole);
+      }
     });
     
     return () => {
@@ -60,10 +76,12 @@ const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode,
   }
   
   if (!isAuthenticated) {
+    console.log("Not authenticated, redirecting to /");
     return <Navigate to="/" replace />;
   }
   
   if (requiredRole && userRole !== requiredRole) {
+    console.log(`Required role: ${requiredRole}, user role: ${userRole}, redirecting to /authenticated`);
     return <Navigate to="/authenticated" replace />;
   }
   
