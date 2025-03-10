@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserRole, Site } from '@/lib/types';
+import { UserRole, Site, Expense, Advance, FundsReceived, Invoice, BalanceSummary } from '@/lib/types';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,10 +36,25 @@ const AdminDashboard: React.FC = () => {
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+  
+  const [selectedSite, setSelectedSite] = useState<Site | null>(null);
+  const [siteExpenses, setSiteExpenses] = useState<Expense[]>([]);
+  const [siteAdvances, setSiteAdvances] = useState<Advance[]>([]);
+  const [siteFundsReceived, setSiteFundsReceived] = useState<FundsReceived[]>([]);
+  const [siteInvoices, setSiteInvoices] = useState<Invoice[]>([]);
+  const [siteSupervisorInvoices, setSiteSupervisorInvoices] = useState<Invoice[]>([]);
+  const [siteBalanceSummary, setSiteBalanceSummary] = useState<BalanceSummary>({
+    fundsReceived: 0,
+    totalExpenditure: 0,
+    totalAdvances: 0,
+    debitsToWorker: 0,
+    totalBalance: 0
+  });
+  const [siteSupervisor, setSiteSupervisor] = useState<{ id: string; name: string } | null>(null);
+  
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // Fetch supervisors from Supabase
   useEffect(() => {
     const fetchSupervisors = async () => {
       setLoading(true);
@@ -54,7 +68,6 @@ const AdminDashboard: React.FC = () => {
         }
         
         if (data) {
-          // Map Supabase data to SupervisorType
           const mappedSupervisors: SupervisorType[] = data.map(supervisor => ({
             id: supervisor.id,
             name: supervisor.name,
@@ -65,7 +78,6 @@ const AdminDashboard: React.FC = () => {
           
           setSupervisors(mappedSupervisors);
           
-          // Calculate stats for each supervisor
           const stats: Record<string, SupervisorStats> = {};
           
           await Promise.all(data.map(async (supervisor) => {
@@ -102,7 +114,6 @@ const AdminDashboard: React.FC = () => {
     fetchSupervisors();
   }, []);
   
-  // Fetch sites based on selected supervisor or all sites
   useEffect(() => {
     const fetchSites = async () => {
       setLoading(true);
@@ -140,7 +151,7 @@ const AdminDashboard: React.FC = () => {
           }));
           
           setSites(mappedSites);
-          setSelectedSiteId(null); // Reset selected site when fetching new sites
+          setSelectedSiteId(null);
         }
       } catch (error: any) {
         console.error('Error fetching sites:', error.message);
@@ -153,7 +164,6 @@ const AdminDashboard: React.FC = () => {
     fetchSites();
   }, [selectedSupervisorId, activeTab]);
   
-  // Check if user is admin
   useEffect(() => {
     const checkAdminAccess = async () => {
       try {
@@ -184,16 +194,242 @@ const AdminDashboard: React.FC = () => {
     checkAdminAccess();
   }, [navigate]);
   
+  useEffect(() => {
+    const fetchSiteDetails = async () => {
+      if (!selectedSiteId) return;
+      
+      setLoading(true);
+      try {
+        const { data: siteData, error: siteError } = await supabase
+          .from('sites')
+          .select('*')
+          .eq('id', selectedSiteId)
+          .single();
+          
+        if (siteError) throw siteError;
+        
+        if (siteData) {
+          const mappedSite: Site = {
+            id: siteData.id,
+            name: siteData.name,
+            jobName: siteData.job_name,
+            posNo: siteData.pos_no,
+            startDate: new Date(siteData.start_date),
+            completionDate: siteData.completion_date ? new Date(siteData.completion_date) : undefined,
+            supervisorId: siteData.supervisor_id,
+            createdAt: new Date(siteData.created_at),
+            isCompleted: siteData.is_completed || false,
+            funds: siteData.funds
+          };
+          
+          setSelectedSite(mappedSite);
+          
+          if (mappedSite.supervisorId) {
+            const { data: supervisorData, error: supervisorError } = await supabase
+              .from('supervisors')
+              .select('id, name')
+              .eq('id', mappedSite.supervisorId)
+              .single();
+              
+            if (!supervisorError && supervisorData) {
+              setSiteSupervisor({
+                id: supervisorData.id,
+                name: supervisorData.name
+              });
+            }
+          }
+          
+          const { data: expensesData, error: expensesError } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (expensesError) throw expensesError;
+          
+          if (expensesData) {
+            const mappedExpenses: Expense[] = expensesData.map(expense => ({
+              id: expense.id,
+              date: new Date(expense.date),
+              description: expense.description,
+              category: expense.category,
+              amount: expense.amount,
+              status: expense.status,
+              createdBy: expense.created_by,
+              createdAt: new Date(expense.created_at),
+              siteId: expense.site_id,
+              supervisorId: expense.supervisor_id
+            }));
+            
+            setSiteExpenses(mappedExpenses);
+          }
+          
+          const { data: advancesData, error: advancesError } = await supabase
+            .from('advances')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (advancesError) throw advancesError;
+          
+          if (advancesData) {
+            const mappedAdvances: Advance[] = advancesData.map(advance => ({
+              id: advance.id,
+              date: new Date(advance.date),
+              recipientId: advance.recipient_id,
+              recipientName: advance.recipient_name,
+              recipientType: advance.recipient_type,
+              purpose: advance.purpose,
+              amount: advance.amount,
+              remarks: advance.remarks,
+              status: advance.status,
+              createdBy: advance.created_by,
+              createdAt: new Date(advance.created_at),
+              siteId: advance.site_id
+            }));
+            
+            setSiteAdvances(mappedAdvances);
+          }
+          
+          const { data: fundsData, error: fundsError } = await supabase
+            .from('funds_received')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (fundsError) throw fundsError;
+          
+          if (fundsData) {
+            const mappedFunds: FundsReceived[] = fundsData.map(fund => ({
+              id: fund.id,
+              date: new Date(fund.date),
+              amount: fund.amount,
+              siteId: fund.site_id,
+              createdAt: new Date(fund.created_at),
+              reference: fund.reference,
+              method: fund.method
+            }));
+            
+            setSiteFundsReceived(mappedFunds);
+          }
+          
+          const { data: invoicesData, error: invoicesError } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (invoicesError) throw invoicesError;
+          
+          if (invoicesData) {
+            const mappedInvoices: Invoice[] = invoicesData.map(invoice => ({
+              id: invoice.id,
+              date: new Date(invoice.date),
+              partyId: invoice.party_id,
+              partyName: invoice.party_name,
+              material: invoice.material,
+              quantity: invoice.quantity,
+              rate: invoice.rate,
+              gstPercentage: invoice.gst_percentage,
+              grossAmount: invoice.gross_amount,
+              netAmount: invoice.net_amount,
+              bankDetails: invoice.bank_details,
+              billUrl: invoice.bill_url,
+              invoiceImageUrl: invoice.invoice_image_url,
+              paymentStatus: invoice.payment_status,
+              createdBy: invoice.created_by,
+              createdAt: new Date(invoice.created_at),
+              approverType: invoice.approver_type,
+              siteId: invoice.site_id,
+              vendorName: invoice.vendor_name,
+              invoiceNumber: invoice.invoice_number,
+              amount: invoice.amount
+            }));
+            
+            setSiteInvoices(mappedInvoices);
+          }
+          
+          const totalExpenses = expensesData ? expensesData.reduce((sum, expense) => sum + expense.amount, 0) : 0;
+          const totalAdvances = advancesData ? advancesData.reduce((sum, advance) => sum + advance.amount, 0) : 0;
+          const totalFundsReceived = fundsData ? fundsData.reduce((sum, fund) => sum + fund.amount, 0) : 0;
+          const totalInvoices = invoicesData ? invoicesData.reduce((sum, invoice) => sum + invoice.net_amount, 0) : 0;
+          
+          setSiteBalanceSummary({
+            fundsReceived: totalFundsReceived,
+            totalExpenditure: totalExpenses,
+            totalAdvances: totalAdvances,
+            debitsToWorker: 0,
+            totalBalance: totalFundsReceived - totalExpenses - totalAdvances
+          });
+        }
+      } catch (error: any) {
+        console.error('Error fetching site details:', error.message);
+        toast.error('Failed to load site details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSiteDetails();
+  }, [selectedSiteId]);
+  
   const handleSelectSite = (siteId: string) => {
     setSelectedSiteId(siteId);
   };
   
   const handleBackToSites = () => {
     setSelectedSiteId(null);
+    setSelectedSite(null);
   };
   
   const getSelectedSupervisor = () => {
     return supervisors.find(s => s.id === selectedSupervisorId);
+  };
+  
+  const handleAddExpense = (expense: Partial<Expense>) => {
+    console.log('Adding expense:', expense);
+    toast.info('This functionality is not yet implemented');
+  };
+  
+  const handleAddAdvance = (advance: Partial<Advance>) => {
+    console.log('Adding advance:', advance);
+    toast.info('This functionality is not yet implemented');
+  };
+  
+  const handleAddFunds = (fund: Partial<FundsReceived>) => {
+    console.log('Adding funds:', fund);
+    toast.info('This functionality is not yet implemented');
+  };
+  
+  const handleAddInvoice = (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    console.log('Adding invoice:', invoice);
+    toast.info('This functionality is not yet implemented');
+  };
+  
+  const handleCompleteSite = async (siteId: string, completionDate: Date) => {
+    try {
+      const { error } = await supabase
+        .from('sites')
+        .update({ is_completed: true, completion_date: completionDate.toISOString() })
+        .eq('id', siteId);
+        
+      if (error) throw error;
+      
+      toast.success('Site marked as completed');
+      
+      if (selectedSite) {
+        setSelectedSite({
+          ...selectedSite,
+          isCompleted: true,
+          completionDate
+        });
+      }
+      
+      const updatedSites = sites.map(site => 
+        site.id === siteId ? { ...site, isCompleted: true, completionDate } : site
+      );
+      setSites(updatedSites);
+      
+    } catch (error: any) {
+      console.error('Error completing site:', error.message);
+      toast.error('Failed to mark site as completed');
+    }
   };
   
   return (
@@ -312,14 +548,26 @@ const AdminDashboard: React.FC = () => {
       <CustomCard>
         <h2 className="text-xl font-semibold mb-4">Sites Management</h2>
         
-        {selectedSiteId ? (
+        {selectedSiteId && selectedSite ? (
           <div>
             <Button variant="outline" onClick={handleBackToSites} className="mb-4">
               Back to Sites List
             </Button>
             <SiteDetail 
-              siteId={selectedSiteId}
+              site={selectedSite}
+              expenses={siteExpenses}
+              advances={siteAdvances}
+              fundsReceived={siteFundsReceived}
+              invoices={siteInvoices}
+              supervisorInvoices={siteSupervisorInvoices}
+              balanceSummary={siteBalanceSummary}
+              siteSupervisor={siteSupervisor}
               onBack={handleBackToSites}
+              onAddExpense={handleAddExpense}
+              onAddAdvance={handleAddAdvance}
+              onAddFunds={handleAddFunds}
+              onAddInvoice={handleAddInvoice}
+              onCompleteSite={handleCompleteSite}
             />
           </div>
         ) : (
