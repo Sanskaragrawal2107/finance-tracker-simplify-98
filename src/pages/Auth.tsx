@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Eye, EyeOff, Mail, User, Key } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,34 +55,6 @@ const Auth: React.FC = () => {
       await signUp(registerEmail, registerPassword, fullName);
     } catch (error) {
       // Error is already handled in the signUp function
-    }
-  };
-
-  const loginWithDemoCredentials = async (role: string) => {
-    let email = '';
-    const password = 'password';
-    
-    switch (role) {
-      case 'admin':
-        email = 'admin@example.com';
-        break;
-      case 'supervisor':
-        email = 'supervisor@example.com';
-        break;
-      case 'viewer':
-        email = 'viewer@example.com';
-        break;
-      default:
-        return;
-    }
-    
-    try {
-      setLoginEmail(email);
-      setLoginPassword(password);
-      console.log(`Demo login with ${role}:`, email, password);
-      await signIn(email, password);
-    } catch (error) {
-      console.error(`Error signing in as ${role}:`, error);
     }
   };
   
@@ -164,38 +135,8 @@ const Auth: React.FC = () => {
                   {loading ? 'Signing in...' : 'Sign in'}
                 </Button>
                 
-                <div className="text-center text-sm text-muted-foreground mt-6">
-                  <p>Demo Login:</p>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => loginWithDemoCredentials('admin')}
-                      disabled={loading}
-                    >
-                      Admin
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => loginWithDemoCredentials('supervisor')}
-                      disabled={loading}
-                    >
-                      Supervisor
-                    </Button>
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => loginWithDemoCredentials('viewer')}
-                      disabled={loading}
-                    >
-                      Viewer
-                    </Button>
-                  </div>
-                  <p className="mt-2 text-xs text-muted-foreground/70">Password for all: "password"</p>
+                <div className="text-center text-sm text-muted-foreground mt-2">
+                  <p>For first-time users, please register an account and then log in.</p>
                 </div>
               </form>
             </TabsContent>
