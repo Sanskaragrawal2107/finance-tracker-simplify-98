@@ -34,7 +34,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   
   const navigate = useNavigate();
   
-  // Create test users on component mount
   useEffect(() => {
     const createTestUsers = async () => {
       try {
@@ -58,7 +57,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     setLoading(true);
     
     try {
-      // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -69,7 +67,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
       
       if (data.user) {
-        // Fetch user profile to get role
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('role, full_name')
@@ -80,11 +77,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           throw profileError;
         }
         
-        // Store user info in localStorage
         localStorage.setItem('userRole', profileData.role || UserRole.VIEWER);
         localStorage.setItem('userName', profileData.full_name || email.split('@')[0]);
         
-        // If user is supervisor, fetch supervisor ID
         if (profileData.role === UserRole.SUPERVISOR) {
           const { data: supervisorData, error: supervisorError } = await supabase
             .from('supervisors')
@@ -101,7 +96,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           }
         }
         
-        // Redirect based on user role
         if (profileData.role === UserRole.ADMIN) {
           navigate('/admin');
         } else if (profileData.role === UserRole.SUPERVISOR) {

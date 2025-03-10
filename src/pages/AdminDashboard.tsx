@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -111,9 +110,9 @@ const AdminDashboard: React.FC = () => {
           .from('profiles')
           .select('role')
           .eq('id', session.session.user.id)
-          .single();
+          .maybeSingle();
         
-        if (error || profile?.role !== UserRole.ADMIN) {
+        if (error || !profile || profile?.role !== UserRole.ADMIN) {
           toast.error("You don't have permission to access this page");
           navigate('/');
         }
