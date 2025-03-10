@@ -12,20 +12,41 @@ export const formatDateForSupabase = (date: Date): string => {
   return date.toISOString();
 };
 
+// Wait function to help with rate limiting
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Helper function to create test users for development
 export const createTestUser = async (email: string, password: string, role: 'admin' | 'supervisor', fullName: string) => {
   try {
-    // Check if user already exists by signing in
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    // First check if user exists by getting auth user by email
+    const { data: existingUsers, error: searchError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1,
+      filters: {
+        email: email
+      }
     });
+    
+    // If we get an error here, it's probably because admin functions aren't available
+    // Let's try to sign in instead to check if user exists
+    if (searchError) {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (!signInError) {
-      console.log(`User with email ${email} already exists`);
+      if (!signInError) {
+        console.log(`User with email ${email} already exists and credentials are valid`);
+        return;
+      }
+    } else if (existingUsers && existingUsers.users.length > 0) {
+      console.log(`User with email ${email} already exists in system`);
       return;
     }
-
+    
+    // Add a small delay to avoid rate limiting
+    await wait(500);
+    
     // Create new user
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -39,7 +60,11 @@ export const createTestUser = async (email: string, password: string, role: 'adm
     });
     
     if (error) {
-      console.error('Error creating test user:', error.message);
+      if (error.message.includes('rate limit') || error.status === 429) {
+        console.log(`Rate limited when creating ${email}. Will try again later.`);
+      } else {
+        console.error('Error creating test user:', error.message);
+      }
       return;
     }
     
@@ -48,7 +73,7 @@ export const createTestUser = async (email: string, password: string, role: 'adm
     // If user is supervisor, we need to create supervisor record
     if (role === 'supervisor' && data.user) {
       // Wait for auth trigger to create profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await wait(1500);
       
       // Create supervisor record
       const { error: supervisorError } = await supabase

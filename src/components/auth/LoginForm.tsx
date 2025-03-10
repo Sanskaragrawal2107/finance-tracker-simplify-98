@@ -21,7 +21,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   
   const navigate = useNavigate();
   
-  // Function to create test users for development
+  // Helper function to create test users with throttling
   const setupTestUsers = async () => {
     if (creatingTestUsers) return;
     
@@ -29,25 +29,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     toast.info("Setting up test users, please wait...");
     
     try {
-      // Create admin user
+      // Create admin user first
       await createTestUser('admin@example.com', 'adminpassword', 'admin', 'Admin User');
       
-      // Create supervisor users
-      const supervisorNames = [
-        'Mithlesh Singh', 'Shubham Urmaliya', 'Yogesh Sharma', 
-        'Vivek Giri Goswami', 'M.P. Naidu', 'Dinesh Nath', 
-        'Jaspal Singh', 'Sanjay Shukla', 'Kundan Kumar', 
-        'Mahendra Pandey', 'Mithlesh Paul'
-      ];
+      // Wait before creating supervisor users to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      for (let i = 0; i < supervisorNames.length; i++) {
-        await createTestUser(
-          `supervisor${i+1}@example.com`,
-          'password',
-          'supervisor',
-          supervisorNames[i]
-        );
-      }
+      // Create just one supervisor to avoid rate limits
+      await createTestUser('supervisor1@example.com', 'password', 'supervisor', 'Mithlesh Singh');
       
       toast.success("Test users set up successfully!");
     } catch (error) {
@@ -58,9 +47,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     }
   };
   
-  // Create test users when component loads
+  // Create test users when component loads - but only once
   useEffect(() => {
-    setupTestUsers();
+    const hasCreatedUsers = localStorage.getItem('hasCreatedTestUsers');
+    if (!hasCreatedUsers) {
+      setupTestUsers();
+      localStorage.setItem('hasCreatedTestUsers', 'true');
+    }
   }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,10 +97,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             .single();
           
           if (supervisorError) {
-            throw supervisorError;
+            console.warn('Could not fetch supervisor ID:', supervisorError);
+          } else if (supervisorData) {
+            localStorage.setItem('supervisorId', supervisorData.id);
           }
-          
-          localStorage.setItem('supervisorId', supervisorData.id);
         }
         
         // Redirect based on user role
@@ -123,7 +116,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in');
+      if (err.message === 'Invalid login credentials') {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else {
+        setError(err.message || 'Failed to sign in');
+      }
       toast.error('Failed to sign in');
     } finally {
       setLoading(false);
@@ -222,11 +219,17 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         </button>
         
         <div className="text-center text-sm text-muted-foreground mt-6">
-          <p>Demo Credentials:</p>
-          <p className="mt-1">Admin: admin@example.com</p>
-          <p>Password: adminpassword</p>
-          <p className="mt-1">Supervisor: supervisor1@example.com (through supervisor11@example.com)</p>
-          <p>Password: password</p>
+          <p className="font-semibold">Demo Credentials:</p>
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-md">
+            <p className="mb-1"><span className="font-medium">Admin:</span> admin@example.com</p>
+            <p className="text-sm text-blue-600">Password: adminpassword</p>
+            
+            <div className="mt-3 pt-3 border-t border-blue-100">
+              <p className="mb-1"><span className="font-medium">Supervisor:</span> supervisor1@example.com</p>
+              <p className="text-sm text-blue-600">Password: password</p>
+            </div>
+          </div>
+          
           {creatingTestUsers && (
             <p className="mt-2 text-amber-600">Setting up test users...</p>
           )}
