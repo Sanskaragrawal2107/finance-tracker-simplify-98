@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
@@ -40,7 +39,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     const createTestUsers = async () => {
       try {
         for (const user of TEST_USERS) {
-          console.log(`Ensuring ${user.role} user exists...`);
           await ensureUserExists(user.email, user.password, {
             full_name: user.full_name,
             role: user.role
@@ -83,7 +81,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         }
         
         // Store user info in localStorage
-        localStorage.setItem('userRole', profileData.role);
+        localStorage.setItem('userRole', profileData.role || UserRole.VIEWER);
         localStorage.setItem('userName', profileData.full_name || email.split('@')[0]);
         
         // If user is supervisor, fetch supervisor ID
@@ -116,11 +114,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      if (err.code === 'email_provider_disabled') {
-        setError('Email login is disabled in Supabase settings. Please enable it in the Supabase dashboard.');
-      } else {
-        setError(err.message || 'Failed to sign in');
-      }
+      setError(err.message || 'Failed to sign in');
       toast.error('Failed to sign in');
     } finally {
       setLoading(false);
