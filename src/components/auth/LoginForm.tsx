@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
@@ -71,10 +72,36 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           .from('profiles')
           .select('role, full_name')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to prevent JSON object error
         
         if (profileError) {
           throw profileError;
+        }
+        
+        // If profile doesn't exist, create a basic one with default role
+        if (!profileData) {
+          const defaultName = email.split('@')[0];
+          const defaultRole = UserRole.VIEWER;
+          
+          // Insert a profile for this user
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              full_name: defaultName,
+              role: defaultRole
+            });
+            
+          if (insertError) {
+            console.error('Failed to create profile:', insertError);
+          }
+          
+          localStorage.setItem('userRole', defaultRole);
+          localStorage.setItem('userName', defaultName);
+          
+          navigate('/dashboard');
+          toast.success('Signed in successfully');
+          return;
         }
         
         localStorage.setItem('userRole', profileData.role || UserRole.VIEWER);
@@ -85,7 +112,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             .from('supervisors')
             .select('id')
             .eq('user_id', data.user.id)
-            .single();
+            .maybeSingle(); // Use maybeSingle instead of single
           
           if (supervisorError && supervisorError.code !== 'PGRST116') {
             console.warn('Error fetching supervisor ID:', supervisorError);
