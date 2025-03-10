@@ -54,10 +54,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session);
       setUser(session?.user || null);
       
       if (session?.user) {
         const userRole = await getCurrentUserRole();
+        console.log('User role:', userRole);
+        
         if (userRole) {
           setRole(userRole as UserRole);
           localStorage.setItem('userRole', userRole);
@@ -88,15 +91,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
+      
+      console.log('Signing in with:', email, password);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Sign in error:', error);
+        throw error;
+      }
+      
+      console.log('Sign in successful:', data);
       
       // Roles and redirects are handled by the auth state change listener
     } catch (error: any) {
+      console.error('Sign in error:', error);
       toast.error(error.message || 'Error signing in');
       throw error;
     } finally {
