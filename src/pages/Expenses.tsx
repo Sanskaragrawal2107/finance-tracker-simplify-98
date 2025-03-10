@@ -1,4 +1,4 @@
-<lov-code>
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -900,4 +900,52 @@ const Expenses: React.FC = () => {
           </div>
           
           {userRole === UserRole.ADMIN && selectedSupervisorId && (
-            <div className="mb-4 p-3 bg-blue-50 border border
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center">
+              <Users className="h-5 w-5 mr-2 text-blue-500" />
+              <span className="font-medium">
+                Viewing sites for: {getSelectedSupervisorName()}
+              </span>
+            </div>
+          )}
+          
+          <div className="overflow-y-auto flex-1 pr-2">
+            {sites.length > 0 ? (
+              <SitesList 
+                sites={filteredSites}
+                onSelectSite={(siteId) => setSelectedSiteId(siteId)}
+              />
+            ) : (
+              <CustomCard>
+                <div className="p-12 text-center">
+                  <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <h3 className="text-lg font-medium mb-2">No Sites Added Yet</h3>
+                  <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                    Create your first construction site to start tracking expenses. Each site will have its own dedicated expense tracking.
+                  </p>
+                  <Button 
+                    onClick={() => setIsSiteFormOpen(true)}
+                    className="mx-auto"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Site
+                  </Button>
+                </div>
+              </CustomCard>
+            )}
+          </div>
+        </>
+      )}
+
+      <SiteForm
+        isOpen={isSiteFormOpen}
+        onClose={() => setIsSiteFormOpen(false)}
+        onSubmit={handleAddSite}
+        supervisorId={userRole === UserRole.ADMIN && selectedSupervisorId 
+          ? selectedSupervisorId 
+          : supervisorId || ''}
+      />
+    </div>
+  );
+};
+
+export default Expenses;
