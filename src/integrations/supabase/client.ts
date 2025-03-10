@@ -2,11 +2,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { Site, UserRole } from '@/lib/types';
+import { format } from 'date-fns';
 
 const SUPABASE_URL = "https://jourdleqqgzkwdaylrcc.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvdXJkbGVxcWd6a3dkYXlscmNjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE2MDM0NzUsImV4cCI6MjA1NzE3OTQ3NX0.7s1WzoYy-t72agRmpoA_CP_MOykOZkhUFQ5jNqWEs0o";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Helper function to format dates for Supabase
+const formatDateForSupabase = (date: Date | undefined): string | null => {
+  if (!date) return null;
+  return format(date, 'yyyy-MM-dd');
+};
 
 // Helper function to assign a role to a user
 export const assignRoleToUser = async (userId: string, role: 'admin' | 'supervisor' | 'viewer') => {
@@ -74,17 +81,15 @@ export const getSitesBySupervisor = async (supervisorId: string) => {
 export const createSite = async (site: Partial<Site>) => {
   const { data, error } = await supabase
     .from('sites')
-    .insert([
-      {
-        name: site.name,
-        job_name: site.jobName,
-        pos_no: site.posNo,
-        start_date: site.startDate,
-        completion_date: site.completionDate,
-        supervisor_id: site.supervisorId,
-        is_completed: site.isCompleted || false
-      }
-    ])
+    .insert({
+      name: site.name,
+      job_name: site.jobName,
+      pos_no: site.posNo,
+      start_date: formatDateForSupabase(site.startDate),
+      completion_date: formatDateForSupabase(site.completionDate),
+      supervisor_id: site.supervisorId,
+      is_completed: site.isCompleted || false
+    })
     .select();
 
   if (error) {
@@ -119,8 +124,8 @@ export const updateSite = async (siteId: string, updates: Partial<Site>) => {
       name: updates.name,
       job_name: updates.jobName,
       pos_no: updates.posNo,
-      start_date: updates.startDate,
-      completion_date: updates.completionDate,
+      start_date: formatDateForSupabase(updates.startDate),
+      completion_date: formatDateForSupabase(updates.completionDate),
       is_completed: updates.isCompleted,
       funds: updates.funds
     })
@@ -154,15 +159,13 @@ export const getSiteExpenses = async (siteId: string) => {
 export const addFundsToSite = async (siteId: string, amount: number, date: Date, reference?: string, method?: string) => {
   const { data, error } = await supabase
     .from('funds_received')
-    .insert([
-      {
-        site_id: siteId,
-        amount,
-        date,
-        reference,
-        method
-      }
-    ])
+    .insert({
+      site_id: siteId,
+      amount,
+      date: formatDateForSupabase(date),
+      reference,
+      method
+    })
     .select();
 
   if (error) {
