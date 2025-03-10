@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
-import { supabase, createTestUser } from '@/integrations/supabase/client';
+import { supabase, createPredefinedUsers } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface LoginFormProps {
@@ -16,46 +16,36 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [creatingTestUsers, setCreatingTestUsers] = useState(false);
+  const [creatingUsers, setCreatingUsers] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [credentials, setCredentials] = useState<{
+    adminEmail: string;
+    adminPassword: string;
+    supervisorEmail: string;
+    supervisorPassword: string;
+  } | null>(null);
   
   const navigate = useNavigate();
   
-  // Helper function to create test users with throttling
-  const setupTestUsers = async () => {
-    if (creatingTestUsers) return;
-    
-    setCreatingTestUsers(true);
-    toast.info("Setting up test users, please wait...");
-    
-    try {
-      // Create admin user first
-      await createTestUser('admin@example.com', 'adminpassword', 'admin', 'Admin User');
-      console.log("Admin user setup attempted");
-      
-      // Wait before creating supervisor users to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Create supervisor user
-      await createTestUser('supervisor1@example.com', 'password', 'supervisor', 'Mithlesh Singh');
-      console.log("Supervisor user setup attempted");
-      
-      toast.success("Test users set up successfully!");
-      localStorage.setItem('hasCreatedTestUsers', 'true');
-    } catch (error) {
-      console.error("Error setting up test users:", error);
-      toast.error("Failed to set up test users. Try again later.");
-    } finally {
-      setCreatingTestUsers(false);
-    }
-  };
-  
-  // Create test users when component loads - but only once
+  // Initialize predefined users on component mount
   useEffect(() => {
-    const hasCreatedUsers = localStorage.getItem('hasCreatedTestUsers');
-    if (!hasCreatedUsers) {
-      setupTestUsers();
-    }
+    const initUsers = async () => {
+      setCreatingUsers(true);
+      try {
+        const userCreds = await createPredefinedUsers();
+        if (userCreds) {
+          setCredentials(userCreds);
+          toast.success("Access credentials are ready to use");
+        }
+      } catch (err) {
+        console.error("Failed to initialize users:", err);
+        toast.error("Failed to initialize account credentials");
+      } finally {
+        setCreatingUsers(false);
+      }
+    };
+    
+    initUsers();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,10 +126,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       
       if (err.message === 'Invalid login credentials') {
         setError('Invalid email or password. Please check your credentials and try again.');
-        // If using demo credentials and getting error, suggest setting up test users again
-        if ((email === 'admin@example.com' || email === 'supervisor1@example.com')) {
-          setError('Demo account login failed. Please try setting up test users again by clicking "Reset Demo Users" below.');
-        }
       } else {
         setError(err.message || 'Failed to sign in');
       }
@@ -148,11 +134,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleResetDemoUsers = () => {
-    localStorage.removeItem('hasCreatedTestUsers');
-    setupTestUsers();
   };
   
   return (
@@ -237,39 +218,38 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <button
           type="submit"
-          disabled={loading || creatingTestUsers}
+          disabled={loading || creatingUsers}
           className={cn(
             "w-full py-2 rounded-md bg-primary text-primary-foreground font-medium transition-all",
-            (loading || creatingTestUsers) ? "opacity-70" : "hover:bg-primary/90"
+            (loading || creatingUsers) ? "opacity-70" : "hover:bg-primary/90"
           )}
         >
-          {loading ? 'Signing in...' : creatingTestUsers ? 'Setting up users...' : 'Sign in'}
+          {loading ? 'Signing in...' : 'Sign in'}
         </button>
         
-        <div className="text-center text-sm text-muted-foreground mt-6">
-          <p className="font-semibold">Demo Credentials:</p>
-          <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-md">
-            <p className="mb-1"><span className="font-medium">Admin:</span> admin@example.com</p>
-            <p className="text-sm text-blue-600">Password: adminpassword</p>
-            
-            <div className="mt-3 pt-3 border-t border-blue-100">
-              <p className="mb-1"><span className="font-medium">Supervisor:</span> supervisor1@example.com</p>
-              <p className="text-sm text-blue-600">Password: password</p>
+        {/* Credentials Info Box */}
+        {credentials && (
+          <div className="text-center text-sm text-muted-foreground mt-6">
+            <p className="font-semibold">Access Credentials:</p>
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-md text-left">
+              <div className="mb-3">
+                <p className="font-medium text-blue-700">Admin Access:</p>
+                <p className="mb-1"><span className="font-medium">Email:</span> {credentials.adminEmail}</p>
+                <p className="text-sm text-blue-600">Password: {credentials.adminPassword}</p>
+              </div>
+              
+              <div className="pt-3 border-t border-blue-100">
+                <p className="font-medium text-blue-700">Supervisor Access:</p>
+                <p className="mb-1"><span className="font-medium">Email:</span> {credentials.supervisorEmail}</p>
+                <p className="text-sm text-blue-600">Password: {credentials.supervisorPassword}</p>
+              </div>
             </div>
+            
+            {creatingUsers && (
+              <p className="mt-2 text-amber-600">Initializing credentials...</p>
+            )}
           </div>
-          
-          {creatingTestUsers ? (
-            <p className="mt-2 text-amber-600">Setting up test users...</p>
-          ) : (
-            <button
-              type="button"
-              onClick={handleResetDemoUsers}
-              className="mt-3 px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-md transition-colors"
-            >
-              Reset Demo Users
-            </button>
-          )}
-        </div>
+        )}
       </form>
     </div>
   );

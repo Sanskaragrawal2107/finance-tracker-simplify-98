@@ -15,60 +15,108 @@ export const formatDateForSupabase = (date: Date): string => {
 // Wait function to help with rate limiting
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper function to create test users for development
-export const createTestUser = async (email: string, password: string, role: 'admin' | 'supervisor', fullName: string) => {
+// Create predefined users with guaranteed access
+export const createPredefinedUsers = async () => {
   try {
-    console.log(`Attempting to create or verify test user: ${email}`);
+    console.log("Creating predefined users...");
     
-    // Create new user
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-          role: role,
-        }
-      }
+    // First create admin user
+    const adminEmail = "finance.admin@example.com";
+    const adminPassword = "Admin@12345";
+    
+    // Check if admin exists by trying to sign in
+    const { error: adminSignInError } = await supabase.auth.signInWithPassword({
+      email: adminEmail,
+      password: adminPassword
     });
     
-    if (error) {
-      if (error.message.includes('User already registered')) {
-        console.log(`User ${email} already exists. Proceeding.`);
-        return;
-      } else if (error.message.includes('rate limit') || error.status === 429) {
-        console.log(`Rate limited when creating ${email}. Will try again later.`);
+    // If admin doesn't exist, create it
+    if (adminSignInError) {
+      console.log("Admin user doesn't exist, creating...");
+      const { data: adminData, error: adminError } = await supabase.auth.signUp({
+        email: adminEmail,
+        password: adminPassword,
+        options: {
+          data: {
+            full_name: "Finance Admin",
+            role: "admin",
+          }
+        }
+      });
+      
+      if (adminError) {
+        console.error("Error creating admin user:", adminError.message);
       } else {
-        console.error('Error creating test user:', error.message);
+        console.log("Admin user created successfully");
       }
-      return;
+      
+      // Wait to avoid rate limiting
+      await wait(2000);
+    } else {
+      console.log("Admin user already exists");
     }
     
-    console.log(`Test user created: ${email} with role ${role}`);
+    // Then create supervisor user
+    const supervisorEmail = "site.supervisor@example.com";
+    const supervisorPassword = "Super@12345";
     
-    // If user is supervisor, we need to create supervisor record
-    if (role === 'supervisor' && data.user) {
-      // Wait for auth trigger to create profile
-      await wait(1500);
-      
-      // Create supervisor record
-      const { error: supervisorError } = await supabase
-        .from('supervisors')
-        .insert({
-          name: fullName,
-          email: email,
-          user_id: data.user.id
-        });
+    // Check if supervisor exists by trying to sign in
+    const { error: supervisorSignInError } = await supabase.auth.signInWithPassword({
+      email: supervisorEmail,
+      password: supervisorPassword
+    });
+    
+    // If supervisor doesn't exist, create it
+    if (supervisorSignInError) {
+      console.log("Supervisor user doesn't exist, creating...");
+      const { data: supervisorData, error: supervisorError } = await supabase.auth.signUp({
+        email: supervisorEmail,
+        password: supervisorPassword,
+        options: {
+          data: {
+            full_name: "Site Supervisor",
+            role: "supervisor",
+          }
+        }
+      });
       
       if (supervisorError) {
-        console.error('Error creating supervisor record:', supervisorError.message);
+        console.error("Error creating supervisor user:", supervisorError.message);
       } else {
-        console.log(`Supervisor record created for ${email}`);
+        console.log("Supervisor user created successfully");
+        
+        // Wait for auth trigger to create profile
+        await wait(2000);
+        
+        // If user was created successfully, create supervisor record
+        if (supervisorData?.user) {
+          const { error: supervisorRecordError } = await supabase
+            .from('supervisors')
+            .insert({
+              name: "Site Supervisor",
+              email: supervisorEmail,
+              user_id: supervisorData.user.id
+            });
+          
+          if (supervisorRecordError) {
+            console.error("Error creating supervisor record:", supervisorRecordError.message);
+          } else {
+            console.log("Supervisor record created successfully");
+          }
+        }
       }
+    } else {
+      console.log("Supervisor user already exists");
     }
     
-    return data;
+    return {
+      adminEmail,
+      adminPassword,
+      supervisorEmail,
+      supervisorPassword
+    };
   } catch (error) {
-    console.error('Error in createTestUser:', error);
+    console.error("Error creating predefined users:", error);
+    return null;
   }
 };
