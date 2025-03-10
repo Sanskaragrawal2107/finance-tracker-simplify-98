@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface LoginFormProps {
   className?: string;
@@ -18,33 +20,71 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   
   const navigate = useNavigate();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     
-    // Simulate login API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Demo credentials for testing
-      if (email === 'admin@example.com' && password === 'password') {
-        // Store user info in localStorage or a state management solution
-        localStorage.setItem('userRole', UserRole.ADMIN);
-        localStorage.setItem('userName', 'Admin User');
-        navigate('/admin'); // Redirect admin to admin dashboard page
-      } else if (email === 'supervisor@example.com' && password === 'password') {
-        localStorage.setItem('userRole', UserRole.SUPERVISOR);
-        localStorage.setItem('userName', 'Supervisor User');
-        navigate('/expenses'); // Direct supervisors to expenses page
-      } else if (email === 'viewer@example.com' && password === 'password') {
-        localStorage.setItem('userRole', UserRole.VIEWER);
-        localStorage.setItem('userName', 'Viewer User');
-        navigate('/dashboard');
-      } else {
-        setError('Invalid email or password');
+      if (error) {
+        throw error;
       }
-    }, 1000);
+      
+      if (data.user) {
+        // Fetch user profile to get role
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, full_name')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        // Store user info in localStorage
+        localStorage.setItem('userRole', profileData.role);
+        localStorage.setItem('userName', profileData.full_name || email.split('@')[0]);
+        
+        // If user is supervisor, fetch supervisor ID
+        if (profileData.role === UserRole.SUPERVISOR) {
+          const { data: supervisorData, error: supervisorError } = await supabase
+            .from('supervisors')
+            .select('id')
+            .eq('user_id', data.user.id)
+            .single();
+          
+          if (supervisorError) {
+            throw supervisorError;
+          }
+          
+          localStorage.setItem('supervisorId', supervisorData.id);
+        }
+        
+        // Redirect based on user role
+        if (profileData.role === UserRole.ADMIN) {
+          navigate('/admin');
+        } else if (profileData.role === UserRole.SUPERVISOR) {
+          navigate('/expenses');
+        } else {
+          navigate('/dashboard');
+        }
+        
+        toast.success('Signed in successfully');
+      }
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to sign in');
+      toast.error('Failed to sign in');
+    } finally {
+      setLoading(false);
+    }
   };
   
   return (
@@ -141,9 +181,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         <div className="text-center text-sm text-muted-foreground mt-6">
           <p>Demo Credentials:</p>
           <p className="mt-1">Admin: admin@example.com</p>
-          <p>Supervisor: supervisor@example.com</p>
-          <p>Viewer: viewer@example.com</p>
-          <p className="mt-1">Password: password</p>
+          <p>Password: adminpassword</p>
+          <p className="mt-1">Supervisor: supervisor1@example.com (through supervisor11@example.com)</p>
+          <p>Password: password</p>
         </div>
       </form>
     </div>

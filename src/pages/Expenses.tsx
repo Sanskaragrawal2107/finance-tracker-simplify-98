@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -13,16 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-
-import { supervisors } from '@/data/supervisors';
-
-const initialExpenses: Expense[] = [];
-const initialSites: Site[] = [];
-const initialAdvances: Advance[] = [];
-const initialFunds: FundsReceived[] = [];
-const initialInvoices: Invoice[] = [];
-
-const SUPERVISOR_ID = "sup123";
+import { supabase } from '@/integrations/supabase/client';
 
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
@@ -32,37 +24,241 @@ const DEBIT_ADVANCE_PURPOSES = [
 
 const Expenses: React.FC = () => {
   const location = useLocation();
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [sites, setSites] = useState<Site[]>(initialSites);
-  const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
-  const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [advances, setAdvances] = useState<Advance[]>([]);
+  const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
+  const [supervisors, setSupervisors] = useState<any[]>([]);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
+  const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [supervisorId, setSupervisorId] = useState<string | null>(null);
 
+  // Check auth state and user role
   useEffect(() => {
-    const storedUserRole = localStorage.getItem('userRole') as UserRole;
-    if (storedUserRole) {
-      setUserRole(storedUserRole);
-      
-      if (storedUserRole === UserRole.SUPERVISOR) {
-        setSelectedSupervisorId(SUPERVISOR_ID);
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setCurrentUserId(data.session.user.id);
+        
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', data.session.user.id)
+          .single();
+          
+        if (profileData) {
+          setUserRole(profileData.role as UserRole);
+          localStorage.setItem('userRole', profileData.role);
+          
+          if (profileData.role === UserRole.SUPERVISOR) {
+            const { data: supervisorData } = await supabase
+              .from('supervisors')
+              .select('id')
+              .eq('user_id', data.session.user.id)
+              .single();
+              
+            if (supervisorData) {
+              setSupervisorId(supervisorData.id);
+              setSelectedSupervisorId(supervisorData.id);
+              localStorage.setItem('supervisorId', supervisorData.id);
+            }
+          }
+        }
       }
-    }
+    };
     
+    checkAuth();
+  }, []);
+  
+  // Fetch supervisors
+  useEffect(() => {
+    const fetchSupervisors = async () => {
+      const { data, error } = await supabase
+        .from('supervisors')
+        .select('*');
+        
+      if (error) {
+        console.error('Error fetching supervisors:', error);
+        toast.error('Failed to load supervisors');
+      } else if (data) {
+        setSupervisors(data);
+      }
+    };
+    
+    fetchSupervisors();
+  }, []);
+  
+  // Fetch sites based on filters
+  useEffect(() => {
+    const fetchSites = async () => {
+      setLoading(true);
+      
+      try {
+        let query = supabase.from('sites').select('*');
+        
+        // Filter by supervisor if selected
+        if (selectedSupervisorId) {
+          query = query.eq('supervisor_id', selectedSupervisorId);
+        }
+        
+        // Filter by status if needed
+        if (filterStatus === 'active') {
+          query = query.eq('is_completed', false);
+        } else if (filterStatus === 'completed') {
+          query = query.eq('is_completed', true);
+        }
+        
+        const { data, error } = await query;
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          const formattedSites = data.map(site => ({
+            ...site,
+            id: site.id,
+            name: site.name,
+            jobName: site.job_name,
+            posNo: site.pos_no,
+            startDate: new Date(site.start_date),
+            completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+            supervisorId: site.supervisor_id,
+            createdAt: new Date(site.created_at),
+            isCompleted: site.is_completed,
+            funds: site.funds
+          }));
+          
+          setSites(formattedSites);
+        }
+      } catch (error: any) {
+        console.error('Error fetching sites:', error.message);
+        toast.error('Failed to load sites');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchSites();
+  }, [selectedSupervisorId, filterStatus]);
+  
+  // Fetch data for selected site
+  useEffect(() => {
+    if (selectedSiteId) {
+      const fetchSiteData = async () => {
+        setLoading(true);
+        
+        try {
+          // Fetch expenses for the site
+          const { data: expensesData, error: expensesError } = await supabase
+            .from('expenses')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (expensesError) throw expensesError;
+          
+          if (expensesData) {
+            const formattedExpenses = expensesData.map(expense => ({
+              ...expense,
+              id: expense.id,
+              date: new Date(expense.date),
+              createdAt: new Date(expense.created_at),
+              siteId: expense.site_id,
+              supervisorId: expense.supervisor_id
+            }));
+            
+            setExpenses(formattedExpenses);
+          }
+          
+          // Fetch advances for the site
+          const { data: advancesData, error: advancesError } = await supabase
+            .from('advances')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (advancesError) throw advancesError;
+          
+          if (advancesData) {
+            const formattedAdvances = advancesData.map(advance => ({
+              ...advance,
+              id: advance.id,
+              date: new Date(advance.date),
+              createdAt: new Date(advance.created_at),
+              siteId: advance.site_id,
+            }));
+            
+            setAdvances(formattedAdvances);
+          }
+          
+          // Fetch funds received for the site
+          const { data: fundsData, error: fundsError } = await supabase
+            .from('funds_received')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (fundsError) throw fundsError;
+          
+          if (fundsData) {
+            const formattedFunds = fundsData.map(fund => ({
+              ...fund,
+              id: fund.id,
+              date: new Date(fund.date),
+              createdAt: new Date(fund.created_at),
+              siteId: fund.site_id,
+            }));
+            
+            setFundsReceived(formattedFunds);
+          }
+          
+          // Fetch invoices for the site
+          const { data: invoicesData, error: invoicesError } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('site_id', selectedSiteId);
+            
+          if (invoicesError) throw invoicesError;
+          
+          if (invoicesData) {
+            const formattedInvoices = invoicesData.map(invoice => ({
+              ...invoice,
+              id: invoice.id,
+              date: new Date(invoice.date),
+              createdAt: new Date(invoice.created_at),
+              siteId: invoice.site_id,
+              bankDetails: invoice.bank_details,
+            }));
+            
+            setInvoices(formattedInvoices);
+          }
+        } catch (error: any) {
+          console.error('Error fetching site data:', error.message);
+          toast.error('Failed to load site data');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchSiteData();
+    }
+  }, [selectedSiteId]);
+  
+  useEffect(() => {
     const locationState = location.state as { supervisorId?: string, newSite?: boolean } | null;
-    if (locationState?.supervisorId && storedUserRole === UserRole.ADMIN) {
+    if (locationState?.supervisorId && userRole === UserRole.ADMIN) {
       setSelectedSupervisorId(locationState.supervisorId);
     }
     
-    if (locationState?.newSite && storedUserRole === UserRole.ADMIN) {
+    if (locationState?.newSite && userRole === UserRole.ADMIN) {
       setIsSiteFormOpen(true);
     }
-  }, [location]);
+  }, [location, userRole]);
 
   const ensureDateObjects = (site: Site): Site => {
     return {
@@ -74,97 +270,353 @@ const Expenses: React.FC = () => {
     };
   };
 
-  const handleAddSite = (newSite: Partial<Site>) => {
-    const currentSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
-      ? selectedSupervisorId 
-      : SUPERVISOR_ID;
+  const handleAddSite = async (newSite: Partial<Site>) => {
+    try {
+      const currentSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
+        ? selectedSupervisorId 
+        : supervisorId;
       
-    const siteWithId: Site = {
-      ...newSite as Site,
-      id: Date.now().toString(),
-      supervisorId: currentSupervisorId,
-      createdAt: new Date(),
-      isCompleted: false,
-      funds: 0
-    };
-    
-    setSites(prevSites => [...prevSites, siteWithId]);
-    toast.success(`Site "${siteWithId.name}" created successfully`);
+      if (!currentSupervisorId) {
+        toast.error("Supervisor ID is required");
+        return;
+      }
+        
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (!userData.user) {
+        toast.error("You must be logged in to add a site");
+        return;
+      }
+      
+      // Prepare site data for Supabase
+      const siteData = {
+        name: newSite.name,
+        job_name: newSite.jobName,
+        pos_no: newSite.posNo,
+        start_date: newSite.startDate,
+        supervisor_id: currentSupervisorId,
+        is_completed: false,
+        funds: 0
+      };
+      
+      const { data, error } = await supabase
+        .from('sites')
+        .insert(siteData)
+        .select('*')
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedSite: Site = {
+          id: data.id,
+          name: data.name,
+          jobName: data.job_name,
+          posNo: data.pos_no,
+          startDate: new Date(data.start_date),
+          supervisorId: data.supervisor_id,
+          createdAt: new Date(data.created_at),
+          isCompleted: data.is_completed,
+          funds: data.funds || 0
+        };
+        
+        setSites(prevSites => [...prevSites, formattedSite]);
+        toast.success(`Site "${formattedSite.name}" created successfully`);
+      }
+    } catch (error: any) {
+      console.error("Error adding site:", error);
+      toast.error(`Failed to add site: ${error.message}`);
+    }
   };
 
-  const handleAddExpense = (newExpense: Partial<Expense>) => {
-    const expenseWithId: Expense = {
-      ...newExpense as Expense,
-      id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED,
-      createdAt: new Date(),
-      supervisorId: SUPERVISOR_ID,
-    };
-    
-    setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
-    toast.success("Expense added successfully");
+  const handleAddExpense = async (newExpense: Partial<Expense>) => {
+    try {
+      if (!currentUserId) {
+        toast.error("You must be logged in to add an expense");
+        return;
+      }
+      
+      const targetSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
+        ? selectedSupervisorId 
+        : supervisorId;
+        
+      if (!targetSupervisorId) {
+        toast.error("Supervisor ID is required");
+        return;
+      }
+        
+      // Prepare expense data for Supabase
+      const expenseData = {
+        date: newExpense.date,
+        description: newExpense.description,
+        category: newExpense.category,
+        amount: newExpense.amount,
+        status: ApprovalStatus.APPROVED,
+        created_by: currentUserId,
+        site_id: newExpense.siteId,
+        supervisor_id: targetSupervisorId
+      };
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert(expenseData)
+        .select('*')
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedExpense: Expense = {
+          id: data.id,
+          date: new Date(data.date),
+          description: data.description,
+          category: data.category,
+          amount: data.amount,
+          status: data.status,
+          createdBy: data.created_by,
+          createdAt: new Date(data.created_at),
+          siteId: data.site_id,
+          supervisorId: data.supervisor_id
+        };
+        
+        setExpenses(prevExpenses => [formattedExpense, ...prevExpenses]);
+        toast.success("Expense added successfully");
+      }
+    } catch (error: any) {
+      console.error("Error adding expense:", error);
+      toast.error(`Failed to add expense: ${error.message}`);
+    }
   };
 
-  const handleAddAdvance = (newAdvance: Partial<Advance>) => {
-    const advanceWithId: Advance = {
-      ...newAdvance as Advance,
-      id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED,
-      createdAt: new Date(),
-    };
-    
-    setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
-    toast.success("Advance added successfully");
+  const handleAddAdvance = async (newAdvance: Partial<Advance>) => {
+    try {
+      if (!currentUserId) {
+        toast.error("You must be logged in to add an advance");
+        return;
+      }
+      
+      // Prepare advance data for Supabase
+      const advanceData = {
+        date: newAdvance.date,
+        recipient_id: newAdvance.recipientId,
+        recipient_name: newAdvance.recipientName,
+        recipient_type: newAdvance.recipientType,
+        purpose: newAdvance.purpose,
+        amount: newAdvance.amount,
+        remarks: newAdvance.remarks,
+        status: ApprovalStatus.APPROVED,
+        created_by: currentUserId,
+        site_id: newAdvance.siteId
+      };
+      
+      const { data, error } = await supabase
+        .from('advances')
+        .insert(advanceData)
+        .select('*')
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedAdvance: Advance = {
+          id: data.id,
+          date: new Date(data.date),
+          recipientId: data.recipient_id,
+          recipientName: data.recipient_name,
+          recipientType: data.recipient_type,
+          purpose: data.purpose,
+          amount: data.amount,
+          remarks: data.remarks,
+          status: data.status,
+          createdBy: data.created_by,
+          createdAt: new Date(data.created_at),
+          siteId: data.site_id
+        };
+        
+        setAdvances(prevAdvances => [formattedAdvance, ...prevAdvances]);
+        toast.success("Advance added successfully");
+      }
+    } catch (error: any) {
+      console.error("Error adding advance:", error);
+      toast.error(`Failed to add advance: ${error.message}`);
+    }
   };
 
-  const handleAddFunds = (newFund: Partial<FundsReceived>) => {
-    const fundWithId: FundsReceived = {
-      ...newFund as FundsReceived,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    
-    setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
-    
-    if (fundWithId.siteId) {
-      setSites(prevSites =>
-        prevSites.map(site =>
-          site.id === fundWithId.siteId
-            ? { ...site, funds: (site.funds || 0) + fundWithId.amount }
+  const handleAddFunds = async (newFund: Partial<FundsReceived>) => {
+    try {
+      // Prepare funds received data for Supabase
+      const fundsData = {
+        date: newFund.date,
+        amount: newFund.amount,
+        site_id: newFund.siteId,
+        reference: newFund.reference,
+        method: newFund.method
+      };
+      
+      const { data, error } = await supabase
+        .from('funds_received')
+        .insert(fundsData)
+        .select('*')
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedFund: FundsReceived = {
+          id: data.id,
+          date: new Date(data.date),
+          amount: data.amount,
+          siteId: data.site_id,
+          createdAt: new Date(data.created_at),
+          reference: data.reference,
+          method: data.method
+        };
+        
+        setFundsReceived(prevFunds => [formattedFund, ...prevFunds]);
+        
+        // Update site funds
+        if (data.site_id) {
+          const { data: siteData, error: siteError } = await supabase
+            .from('sites')
+            .select('funds')
+            .eq('id', data.site_id)
+            .single();
+            
+          if (!siteError && siteData) {
+            const updatedFunds = (siteData.funds || 0) + data.amount;
+            
+            await supabase
+              .from('sites')
+              .update({ funds: updatedFunds })
+              .eq('id', data.site_id);
+              
+            setSites(prevSites =>
+              prevSites.map(site =>
+                site.id === data.site_id
+                  ? { ...site, funds: updatedFunds }
+                  : site
+              )
+            );
+          }
+        }
+        
+        toast.success("Funds received recorded successfully");
+      }
+    } catch (error: any) {
+      console.error("Error adding funds:", error);
+      toast.error(`Failed to add funds: ${error.message}`);
+    }
+  };
+
+  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    try {
+      if (!currentUserId) {
+        toast.error("You must be logged in to add an invoice");
+        return;
+      }
+      
+      // Prepare invoice data for Supabase
+      const invoiceData = {
+        date: newInvoice.date,
+        party_id: newInvoice.partyId,
+        party_name: newInvoice.partyName,
+        material: newInvoice.material,
+        quantity: newInvoice.quantity,
+        rate: newInvoice.rate,
+        gst_percentage: newInvoice.gstPercentage,
+        gross_amount: newInvoice.grossAmount,
+        net_amount: newInvoice.netAmount,
+        bank_details: newInvoice.bankDetails,
+        bill_url: newInvoice.billUrl,
+        invoice_image_url: newInvoice.invoiceImageUrl,
+        payment_status: newInvoice.paymentStatus,
+        created_by: currentUserId,
+        approver_type: newInvoice.approverType,
+        site_id: newInvoice.siteId,
+        vendor_name: newInvoice.vendorName,
+        invoice_number: newInvoice.invoiceNumber,
+        amount: newInvoice.amount
+      };
+      
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert(invoiceData)
+        .select('*')
+        .single();
+        
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedInvoice: Invoice = {
+          id: data.id,
+          date: new Date(data.date),
+          partyId: data.party_id,
+          partyName: data.party_name,
+          material: data.material,
+          quantity: data.quantity,
+          rate: data.rate,
+          gstPercentage: data.gst_percentage,
+          grossAmount: data.gross_amount,
+          netAmount: data.net_amount,
+          bankDetails: data.bank_details,
+          billUrl: data.bill_url,
+          invoiceImageUrl: data.invoice_image_url,
+          paymentStatus: data.payment_status,
+          createdBy: data.created_by,
+          createdAt: new Date(data.created_at),
+          approverType: data.approver_type,
+          siteId: data.site_id,
+          vendorName: data.vendor_name,
+          invoiceNumber: data.invoice_number,
+          amount: data.amount
+        };
+        
+        setInvoices(prevInvoices => [formattedInvoice, ...prevInvoices]);
+        toast.success("Invoice added successfully");
+      }
+    } catch (error: any) {
+      console.error("Error adding invoice:", error);
+      toast.error(`Failed to add invoice: ${error.message}`);
+    }
+  };
+
+  const handleCompleteSite = async (siteId: string, completionDate: Date) => {
+    try {
+      const { error } = await supabase
+        .from('sites')
+        .update({ 
+          is_completed: true, 
+          completion_date: completionDate 
+        })
+        .eq('id', siteId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setSites(prevSites => 
+        prevSites.map(site => 
+          site.id === siteId 
+            ? { ...site, isCompleted: true, completionDate } 
             : site
         )
       );
+      
+      toast.success("Site marked as completed");
+    } catch (error: any) {
+      console.error("Error completing site:", error);
+      toast.error(`Failed to complete site: ${error.message}`);
     }
-    
-    toast.success("Funds received recorded successfully");
-  };
-
-  const handleAddInvoice = (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    console.log("Adding new invoice with data:", newInvoice);
-    
-    const invoiceWithId: Invoice = {
-      ...newInvoice,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    
-    console.log("Created invoice with ID:", invoiceWithId.id);
-    console.log("Invoice image URL:", invoiceWithId.invoiceImageUrl);
-    
-    setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
-    toast.success("Invoice added successfully");
-  };
-
-  const handleCompleteSite = (siteId: string, completionDate: Date) => {
-    setSites(prevSites => 
-      prevSites.map(site => 
-        site.id === siteId 
-          ? { ...site, isCompleted: true, completionDate } 
-          : site
-      )
-    );
-    
-    toast.success("Site marked as completed");
   };
 
   const filteredSites = sites.filter(site => {
@@ -173,16 +625,7 @@ const Expenses: React.FC = () => {
       site.jobName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       site.posNo.toLowerCase().includes(searchTerm.toLowerCase());
       
-    const matchesSupervisor = selectedSupervisorId 
-      ? site.supervisorId === selectedSupervisorId 
-      : true;
-    
-    const matchesStatus = 
-      filterStatus === 'all' ? true :
-      filterStatus === 'active' ? !site.isCompleted :
-      filterStatus === 'completed' ? site.isCompleted : true;
-      
-    return matchesSearch && matchesSupervisor && matchesStatus;
+    return matchesSearch;
   });
 
   const selectedSite = selectedSiteId 
@@ -260,7 +703,14 @@ const Expenses: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
-      {selectedSite ? (
+      {loading && (
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-2">Loading...</span>
+        </div>
+      )}
+      
+      {!loading && selectedSite ? (
         <div className="overflow-y-auto flex-1 pr-2">
           <SiteDetail 
             site={selectedSite}
@@ -442,7 +892,7 @@ const Expenses: React.FC = () => {
         onSubmit={handleAddSite}
         supervisorId={userRole === UserRole.ADMIN && selectedSupervisorId 
           ? selectedSupervisorId 
-          : SUPERVISOR_ID}
+          : supervisorId || ''}
       />
     </div>
   );

@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
 import { UserRole } from "./lib/types";
 import { useIsMobile } from "./hooks/use-mobile";
+import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,44 @@ const RoleBasedRedirect = () => {
   }
   
   return <Navigate to="/dashboard" replace />;
+};
+
+// Protected route component
+const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: UserRole }) => {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const userRole = localStorage.getItem('userRole') as UserRole;
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session);
+    });
+    
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+  
+  if (isAuthenticated === null) {
+    // Still checking authentication
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+  
+  if (requiredRole && userRole !== requiredRole) {
+    return <Navigate to="/authenticated" replace />;
+  }
+  
+  return <>{children}</>;
 };
 
 // Layout component for authenticated pages
@@ -103,13 +142,33 @@ const App = () => (
           <Route 
             path="/dashboard" 
             element={
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
+              <ProtectedRoute>
+                <AppLayout>
+                  <Dashboard />
+                </AppLayout>
+              </ProtectedRoute>
             } 
           />
-          <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
-          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
+          <Route 
+            path="/expenses" 
+            element={
+              <ProtectedRoute>
+                <AppLayout>
+                  <Expenses />
+                </AppLayout>
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requiredRole={UserRole.ADMIN}>
+                <AppLayout>
+                  <AdminDashboard />
+                </AppLayout>
+              </ProtectedRoute>
+            } 
+          />
           <Route path="/authenticated" element={<RoleBasedRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

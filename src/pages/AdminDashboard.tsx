@@ -3,14 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { User, Users, Building2, PieChart, BarChart } from 'lucide-react';
+import { User, Users, Building2, BarChart } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/lib/types';
-import { supervisors } from '@/data/supervisors';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SupervisorType {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface SupervisorStats {
   totalSites: number;
@@ -20,35 +26,96 @@ interface SupervisorStats {
 
 const AdminDashboard: React.FC = () => {
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
+  const [supervisors, setSupervisors] = useState<SupervisorType[]>([]);
   const [supervisorStats, setSupervisorStats] = useState<Record<string, SupervisorStats>>({});
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  // Check if user is admin
+  // Fetch supervisors from Supabase
   useEffect(() => {
-    const userRole = localStorage.getItem('userRole') as UserRole;
-    if (userRole !== UserRole.ADMIN) {
-      toast.error("You don't have permission to access this page");
-      navigate('/');
-    }
-  }, [navigate]);
-
-  // Simulate fetching supervisor statistics
-  useEffect(() => {
-    // In a real app, this would be an API call
-    const mockStats: Record<string, SupervisorStats> = {};
+    const fetchSupervisors = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('supervisors')
+          .select('*');
+          
+        if (error) {
+          throw error;
+        }
+        
+        if (data) {
+          setSupervisors(data);
+          
+          // Calculate stats for each supervisor
+          const stats: Record<string, SupervisorStats> = {};
+          
+          await Promise.all(data.map(async (supervisor) => {
+            const { data: sitesData, error: sitesError } = await supabase
+              .from('sites')
+              .select('*')
+              .eq('supervisor_id', supervisor.id);
+              
+            if (sitesError) {
+              throw sitesError;
+            }
+            
+            const totalSites = sitesData ? sitesData.length : 0;
+            const activeSites = sitesData ? sitesData.filter(site => !site.is_completed).length : 0;
+            const completedSites = sitesData ? sitesData.filter(site => site.is_completed).length : 0;
+            
+            stats[supervisor.id] = {
+              totalSites,
+              activeSites,
+              completedSites
+            };
+          }));
+          
+          setSupervisorStats(stats);
+        }
+      } catch (error: any) {
+        console.error('Error fetching supervisors:', error.message);
+        toast.error('Failed to load supervisors');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    supervisors.forEach(supervisor => {
-      mockStats[supervisor.id] = {
-        totalSites: Math.floor(Math.random() * 10) + 1,
-        activeSites: Math.floor(Math.random() * 6) + 1,
-        completedSites: Math.floor(Math.random() * 5) + 1
-      };
-    });
-    
-    setSupervisorStats(mockStats);
+    fetchSupervisors();
   }, []);
 
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdminAccess = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) {
+          toast.error("You must be logged in");
+          navigate('/');
+          return;
+        }
+        
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.session.user.id)
+          .single();
+        
+        if (error || profile?.role !== UserRole.ADMIN) {
+          toast.error("You don't have permission to access this page");
+          navigate('/');
+        }
+      } catch (error) {
+        console.error("Error checking admin access:", error);
+        toast.error("Error verifying your access");
+        navigate('/');
+      }
+    };
+    
+    checkAdminAccess();
+  }, [navigate]);
+  
   const handleViewSites = (supervisorId: string) => {
     navigate('/expenses', { state: { supervisorId } });
   };
@@ -181,7 +248,7 @@ const AdminDashboard: React.FC = () => {
           <h2 className="text-xl font-semibold">Quick Actions</h2>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Button 
             variant="outline" 
             className="h-auto py-6 flex flex-col items-center justify-center text-center"
@@ -191,18 +258,6 @@ const AdminDashboard: React.FC = () => {
             <span className="text-base font-medium">View All Sites</span>
             <span className="text-xs text-muted-foreground mt-1">
               Access complete site listing
-            </span>
-          </Button>
-          
-          <Button 
-            variant="outline" 
-            className="h-auto py-6 flex flex-col items-center justify-center text-center"
-            onClick={() => navigate('/dashboard')}
-          >
-            <PieChart className="h-8 w-8 mb-2" />
-            <span className="text-base font-medium">Financial Overview</span>
-            <span className="text-xs text-muted-foreground mt-1">
-              View financial statistics
             </span>
           </Button>
           
