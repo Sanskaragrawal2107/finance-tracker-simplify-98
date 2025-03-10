@@ -13,7 +13,6 @@ import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
 import { UserRole } from "./lib/types";
 import { useIsMobile } from "./hooks/use-mobile";
-import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
@@ -21,71 +20,15 @@ const queryClient = new QueryClient();
 const RoleBasedRedirect = () => {
   const userRole = localStorage.getItem('userRole') as UserRole;
   
-  console.log("RoleBasedRedirect - User role:", userRole);
-  
   if (userRole === UserRole.ADMIN) {
-    console.log("Redirecting admin to /admin");
     return <Navigate to="/admin" replace />;
   }
   
   if (userRole === UserRole.SUPERVISOR) {
-    console.log("Redirecting supervisor to /expenses");
     return <Navigate to="/expenses" replace />;
   }
   
-  console.log("Redirecting default user to /dashboard");
   return <Navigate to="/dashboard" replace />;
-};
-
-// Protected route component
-const ProtectedRoute = ({ children, requiredRole }: { children: React.ReactNode, requiredRole?: UserRole }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const location = useLocation();
-  
-  useEffect(() => {
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      setIsAuthenticated(!!data.session);
-      
-      if (data.session) {
-        const storedRole = localStorage.getItem('userRole') as UserRole;
-        setUserRole(storedRole);
-      }
-    };
-    
-    checkAuth();
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-      
-      if (session) {
-        const storedRole = localStorage.getItem('userRole') as UserRole;
-        setUserRole(storedRole);
-      }
-    });
-    
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-  
-  if (isAuthenticated === null) {
-    // Still checking authentication
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-  
-  if (!isAuthenticated) {
-    console.log("Not authenticated, redirecting to /");
-    return <Navigate to="/" replace />;
-  }
-  
-  if (requiredRole && userRole !== requiredRole) {
-    console.log(`Required role: ${requiredRole}, user role: ${userRole}, redirecting to /authenticated`);
-    return <Navigate to="/authenticated" replace />;
-  }
-  
-  return <>{children}</>;
 };
 
 // Layout component for authenticated pages
@@ -124,6 +67,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return '';
     }
   };
+
+  // Check if user is supervisor and redirect from dashboard to expenses
+  useEffect(() => {
+    if ((userRole === UserRole.SUPERVISOR) && location.pathname === "/dashboard") {
+      window.location.href = "/expenses";
+    }
+  }, [userRole, location.pathname]);
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -153,33 +103,13 @@ const App = () => (
           <Route 
             path="/dashboard" 
             element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Dashboard />
-                </AppLayout>
-              </ProtectedRoute>
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
             } 
           />
-          <Route 
-            path="/expenses" 
-            element={
-              <ProtectedRoute>
-                <AppLayout>
-                  <Expenses />
-                </AppLayout>
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/admin" 
-            element={
-              <ProtectedRoute requiredRole={UserRole.ADMIN}>
-                <AppLayout>
-                  <AdminDashboard />
-                </AppLayout>
-              </ProtectedRoute>
-            } 
-          />
+          <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
+          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
           <Route path="/authenticated" element={<RoleBasedRedirect />} />
           <Route path="*" element={<NotFound />} />
         </Routes>

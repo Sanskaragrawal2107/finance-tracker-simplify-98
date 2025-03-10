@@ -1,192 +1,50 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
-import { supabase, ensureUserExists } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
 
 interface LoginFormProps {
   className?: string;
 }
 
-const TEST_USERS = [
-  {
-    email: 'finance.admin@example.com',
-    password: 'Admin@12345',
-    full_name: 'Finance Admin',
-    role: UserRole.ADMIN
-  },
-  {
-    email: 'site.supervisor@example.com',
-    password: 'Super@12345',
-    full_name: 'Site Supervisor',
-    role: UserRole.SUPERVISOR
-  }
-];
-
 const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
   
-  useEffect(() => {
-    const createTestUsers = async () => {
-      try {
-        for (const user of TEST_USERS) {
-          await ensureUserExists(user.email, user.password, {
-            full_name: user.full_name,
-            role: user.role
-          });
-        }
-      } catch (err) {
-        console.error('Error creating test users:', err);
-      }
-    };
-    
-    createTestUsers();
-  }, []);
-  
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     
-    if (!selectedRole) {
-      setError('Please select a role to continue');
+    // Simulate login API call
+    setTimeout(() => {
       setLoading(false);
-      return;
-    }
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
       
-      if (error) {
-        throw error;
+      // Demo credentials for testing
+      if (email === 'admin@example.com' && password === 'password') {
+        // Store user info in localStorage or a state management solution
+        localStorage.setItem('userRole', UserRole.ADMIN);
+        localStorage.setItem('userName', 'Admin User');
+        navigate('/admin'); // Redirect admin to admin dashboard page
+      } else if (email === 'supervisor@example.com' && password === 'password') {
+        localStorage.setItem('userRole', UserRole.SUPERVISOR);
+        localStorage.setItem('userName', 'Supervisor User');
+        navigate('/expenses'); // Direct supervisors to expenses page
+      } else if (email === 'viewer@example.com' && password === 'password') {
+        localStorage.setItem('userRole', UserRole.VIEWER);
+        localStorage.setItem('userName', 'Viewer User');
+        navigate('/dashboard');
+      } else {
+        setError('Invalid email or password');
       }
-      
-      if (data.user) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('role, full_name')
-          .eq('id', data.user.id)
-          .maybeSingle();
-        
-        if (profileError) {
-          throw profileError;
-        }
-        
-        // If profile doesn't exist, create a basic one with the selected role
-        if (!profileData) {
-          const defaultName = email.split('@')[0];
-          
-          // Insert a profile for this user with the selected role
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              full_name: defaultName,
-              role: selectedRole
-            });
-            
-          if (insertError) {
-            console.error('Failed to create profile:', insertError);
-          }
-          
-          localStorage.setItem('userRole', selectedRole);
-          localStorage.setItem('userName', defaultName);
-          
-          // Direct redirection based on selected role
-          if (selectedRole === UserRole.SUPERVISOR) {
-            navigate('/expenses');
-          } else if (selectedRole === UserRole.ADMIN) {
-            navigate('/admin');
-          } else {
-            navigate('/dashboard');
-          }
-          
-          toast.success('Signed in successfully');
-          return;
-        }
-        
-        // Use the selected role rather than the profile role
-        localStorage.setItem('userRole', selectedRole);
-        localStorage.setItem('userName', profileData.full_name || email.split('@')[0]);
-        
-        console.log('Selected role:', selectedRole);
-        
-        if (selectedRole === UserRole.SUPERVISOR) {
-          const { data: supervisorData, error: supervisorError } = await supabase
-            .from('supervisors')
-            .select('id')
-            .eq('user_id', data.user.id)
-            .maybeSingle();
-          
-          if (supervisorError && supervisorError.code !== 'PGRST116') {
-            console.warn('Error fetching supervisor ID:', supervisorError);
-          }
-          
-          if (supervisorData) {
-            localStorage.setItem('supervisorId', supervisorData.id);
-          } else {
-            console.warn('No supervisor record found for this user. Creating one...');
-            
-            // Create a supervisor record if it doesn't exist
-            const { data: newSupervisor, error: createError } = await supabase
-              .from('supervisors')
-              .insert({
-                user_id: data.user.id,
-                name: profileData.full_name || email.split('@')[0]
-              })
-              .select('id')
-              .single();
-              
-            if (createError) {
-              console.error('Failed to create supervisor record:', createError);
-            } else if (newSupervisor) {
-              localStorage.setItem('supervisorId', newSupervisor.id);
-              console.log('Created new supervisor record:', newSupervisor);
-            }
-          }
-          
-          console.log('Redirecting supervisor to /expenses');
-          navigate('/expenses');
-        } else if (selectedRole === UserRole.ADMIN) {
-          console.log('Redirecting admin to /admin');
-          navigate('/admin');
-        } else {
-          console.log('Redirecting user to /dashboard');
-          navigate('/dashboard');
-        }
-        
-        toast.success('Signed in successfully');
-      }
-    } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in');
-      toast.error('Failed to sign in');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const setUserCredentials = (role: UserRole) => {
-    const user = TEST_USERS.find(user => user.role === role);
-    if (user) {
-      setEmail(user.email);
-      setPassword(user.password);
-      setSelectedRole(role);
-    }
+    }, 1000);
   };
   
   return (
@@ -204,28 +62,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           {error}
         </div>
       )}
-      
-      <div className="mb-6">
-        <div className="text-sm font-medium mb-2">Select your role</div>
-        <div className="grid grid-cols-2 gap-3">
-          <Button 
-            type="button" 
-            variant={selectedRole === UserRole.ADMIN ? "primary" : "outline"}
-            className="justify-center py-2 h-auto"
-            onClick={() => setSelectedRole(UserRole.ADMIN)}
-          >
-            Admin
-          </Button>
-          <Button 
-            type="button" 
-            variant={selectedRole === UserRole.SUPERVISOR ? "primary" : "outline"}
-            className="justify-center py-2 h-auto"
-            onClick={() => setSelectedRole(UserRole.SUPERVISOR)}
-          >
-            Supervisor
-          </Button>
-        </div>
-      </div>
       
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
@@ -293,10 +129,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <button
           type="submit"
-          disabled={loading || !selectedRole}
+          disabled={loading}
           className={cn(
             "w-full py-2 rounded-md bg-primary text-primary-foreground font-medium transition-all",
-            (loading || !selectedRole) ? "opacity-70" : "hover:bg-primary/90"
+            loading ? "opacity-70" : "hover:bg-primary/90"
           )}
         >
           {loading ? 'Signing in...' : 'Sign in'}
@@ -304,26 +140,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <div className="text-center text-sm text-muted-foreground mt-6">
           <p>Demo Credentials:</p>
-          <div className="flex gap-2 mt-2">
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              className="text-xs py-1 px-2 h-auto"
-              onClick={() => setUserCredentials(UserRole.ADMIN)}
-            >
-              Use Admin
-            </Button>
-            <Button 
-              type="button" 
-              variant="outline" 
-              size="sm" 
-              className="text-xs py-1 px-2 h-auto"
-              onClick={() => setUserCredentials(UserRole.SUPERVISOR)}
-            >
-              Use Supervisor
-            </Button>
-          </div>
+          <p className="mt-1">Admin: admin@example.com</p>
+          <p>Supervisor: supervisor@example.com</p>
+          <p>Viewer: viewer@example.com</p>
+          <p className="mt-1">Password: password</p>
         </div>
       </form>
     </div>
