@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -8,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserRole, Site, Expense, Advance, FundsReceived, Invoice, BalanceSummary, ApprovalStatus, RecipientType, PaymentMethod, BankDetails } from '@/lib/types';
+import { UserRole, Site, Expense, Advance, FundsReceived, Invoice, BalanceSummary, ApprovalStatus, RecipientType, PaymentMethod, BankDetails, PaymentStatus, AdvancePurpose } from '@/lib/types';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -254,7 +253,7 @@ const AdminDashboard: React.FC = () => {
               description: expense.description,
               category: expense.category,
               amount: expense.amount,
-              status: expense.status as ApprovalStatus, // Cast to enum type
+              status: expense.status as ApprovalStatus,
               createdBy: expense.created_by,
               createdAt: new Date(expense.created_at),
               siteId: expense.site_id,
@@ -277,11 +276,11 @@ const AdminDashboard: React.FC = () => {
               date: new Date(advance.date),
               recipientId: advance.recipient_id,
               recipientName: advance.recipient_name,
-              recipientType: advance.recipient_type as RecipientType, // Cast to enum type
-              purpose: advance.purpose,
+              recipientType: advance.recipient_type as RecipientType,
+              purpose: advance.purpose as AdvancePurpose,
               amount: advance.amount,
               remarks: advance.remarks,
-              status: advance.status as ApprovalStatus, // Cast to enum type
+              status: advance.status as ApprovalStatus,
               createdBy: advance.created_by,
               createdAt: new Date(advance.created_at),
               siteId: advance.site_id
@@ -305,7 +304,7 @@ const AdminDashboard: React.FC = () => {
               siteId: fund.site_id,
               createdAt: new Date(fund.created_at),
               reference: fund.reference,
-              method: fund.method as PaymentMethod // Cast to enum type
+              method: fund.method as PaymentMethod
             }));
             
             setSiteFundsReceived(mappedFunds);
@@ -330,13 +329,13 @@ const AdminDashboard: React.FC = () => {
               gstPercentage: invoice.gst_percentage,
               grossAmount: invoice.gross_amount,
               netAmount: invoice.net_amount,
-              bankDetails: invoice.bank_details as unknown as BankDetails, // Convert Json to BankDetails
+              bankDetails: invoice.bank_details as unknown as BankDetails,
               billUrl: invoice.bill_url,
               invoiceImageUrl: invoice.invoice_image_url,
-              paymentStatus: invoice.payment_status as PaymentStatus, // Cast to enum type 
+              paymentStatus: invoice.payment_status as PaymentStatus,
               createdBy: invoice.created_by,
               createdAt: new Date(invoice.created_at),
-              approverType: invoice.approver_type,
+              approverType: invoice.approver_type as "ho" | "supervisor",
               siteId: invoice.site_id,
               vendorName: invoice.vendor_name,
               invoiceNumber: invoice.invoice_number,
