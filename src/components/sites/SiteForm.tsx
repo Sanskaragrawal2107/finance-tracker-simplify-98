@@ -33,6 +33,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Site } from "@/lib/types";
+import { supabase, formatDateForSupabase } from "@/integrations/supabase/client";
 
 interface SiteFormProps {
   isOpen: boolean;
@@ -62,6 +63,7 @@ type FormValues = z.infer<typeof formSchema>;
 const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervisorId }) => {
   const [startDateOpen, setStartDateOpen] = React.useState(false);
   const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -74,26 +76,69 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
     },
   });
 
-  const handleSubmit = (values: FormValues) => {
-    // Transform values to uppercase
-    const uppercaseValues = {
-      ...values,
-      name: values.name.toUpperCase(),
-      jobName: values.jobName.toUpperCase(),
-      posNo: values.posNo.toUpperCase(),
-    };
-    
-    const newSite: Partial<Site> = {
-      ...uppercaseValues,
-      supervisorId,
-      isCompleted: false,
-      createdAt: new Date(),
-    };
-    
-    onSubmit(newSite);
-    form.reset();
-    onClose();
-    toast.success("Site created successfully");
+  const handleSubmit = async (values: FormValues) => {
+    try {
+      setIsSubmitting(true);
+      
+      // Transform values to uppercase
+      const uppercaseValues = {
+        ...values,
+        name: values.name.toUpperCase(),
+        jobName: values.jobName.toUpperCase(),
+        posNo: values.posNo.toUpperCase(),
+      };
+      
+      if (!supervisorId) {
+        toast.error("Supervisor ID is required");
+        return;
+      }
+      
+      // Create site directly in Supabase to ensure it's saved
+      const siteData = {
+        name: uppercaseValues.name,
+        job_name: uppercaseValues.jobName,
+        pos_no: uppercaseValues.posNo,
+        start_date: formatDateForSupabase(uppercaseValues.startDate),
+        completion_date: uppercaseValues.completionDate ? formatDateForSupabase(uppercaseValues.completionDate) : null,
+        supervisor_id: supervisorId,
+        is_completed: false,
+        funds: 0
+      };
+      
+      console.log("Creating site with data:", siteData);
+      
+      const { data, error } = await supabase
+        .from('sites')
+        .insert(siteData)
+        .select()
+        .single();
+        
+      if (error) {
+        console.error("Error creating site:", error);
+        throw error;
+      }
+      
+      if (data) {
+        console.log("Site created successfully:", data);
+        const newSite: Partial<Site> = {
+          ...uppercaseValues,
+          id: data.id,
+          supervisorId,
+          isCompleted: false,
+          createdAt: new Date(),
+        };
+        
+        onSubmit(newSite);
+        form.reset();
+        onClose();
+        toast.success("Site created successfully");
+      }
+    } catch (error: any) {
+      console.error("Error creating site:", error);
+      toast.error(`Failed to create site: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -235,10 +280,12 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
             />
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
+              <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto" disabled={isSubmitting}>
                 Cancel
               </Button>
-              <Button type="submit" className="w-full sm:w-auto">Create Site</Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+                {isSubmitting ? 'Creating...' : 'Create Site'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
