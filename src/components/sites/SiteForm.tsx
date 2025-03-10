@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -95,8 +94,18 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         createdAt: new Date(),
       };
       
+      console.log('Submitting site data:', newSite);
+      
       // First create the site in the database
-      const createdSite = await createSite(newSite);
+      const createdSite = await createSite({
+        name: newSite.name,
+        jobName: newSite.jobName,
+        posNo: newSite.posNo, 
+        startDate: newSite.startDate,
+        completionDate: newSite.completionDate,
+        supervisorId: newSite.supervisorId,
+        isCompleted: newSite.isCompleted
+      });
       
       if (createdSite) {
         // Then call the onSubmit callback with the created site data
