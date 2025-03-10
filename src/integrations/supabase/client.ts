@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { UserRole } from '@/lib/types';
+import { format } from 'date-fns';
 
 const SUPABASE_URL = "https://kpfrojdpkfjyazgcznko.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtwZnJvamRwa2ZqeWF6Z2N6bmtvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1OTQxNjUsImV4cCI6MjA1NzE3MDE2NX0.2CjS2cNtR0Z-WJhBeSSUqEk4xtHNJizDyNeZ6XTYi08";
@@ -11,6 +12,25 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Helper to format dates for Supabase
+export const formatDateForSupabase = (date: Date): string => {
+  return format(date, 'yyyy-MM-dd');
+};
+
+// Helper to convert DB types to App types
+export const mapDbTypeToAppType = <T extends Record<string, any>>(dbData: any, fieldMappings: Record<string, string>): T => {
+  if (!dbData) return {} as T;
+  
+  const result: Record<string, any> = {};
+  Object.entries(dbData).forEach(([key, value]) => {
+    // Map snake_case to camelCase
+    const appKey = fieldMappings[key] || key;
+    result[appKey] = value;
+  });
+  
+  return result as T;
+};
 
 // Function to ensure a user exists (sign up if not already registered)
 export async function ensureUserExists(email: string, password: string, userData?: { full_name?: string; role?: UserRole }) {

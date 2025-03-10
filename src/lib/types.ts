@@ -220,3 +220,12 @@ export interface Activity {
   date: Date;
   user: string;
 }
+
+// Database mapping types - added to fix type issues
+export interface SupervisorType {
+  id: string;
+  name: string;
+  userId?: string;
+  createdAt?: Date;
+  email?: string; // Add this to match the model used in AdminDashboard
+}

@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, RecipientType, PaymentStatus, PaymentMethod, BankDetails } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -14,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, formatDateForSupabase } from '@/integrations/supabase/client';
+import { Json } from '@/integrations/supabase/types';
 
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
@@ -40,7 +40,6 @@ const Expenses: React.FC = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [supervisorId, setSupervisorId] = useState<string | null>(null);
 
-  // Check auth state and user role
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
@@ -77,7 +76,6 @@ const Expenses: React.FC = () => {
     checkAuth();
   }, []);
   
-  // Fetch supervisors
   useEffect(() => {
     const fetchSupervisors = async () => {
       const { data, error } = await supabase
@@ -95,7 +93,6 @@ const Expenses: React.FC = () => {
     fetchSupervisors();
   }, []);
   
-  // Fetch sites based on filters
   useEffect(() => {
     const fetchSites = async () => {
       setLoading(true);
@@ -103,12 +100,10 @@ const Expenses: React.FC = () => {
       try {
         let query = supabase.from('sites').select('*');
         
-        // Filter by supervisor if selected
         if (selectedSupervisorId) {
           query = query.eq('supervisor_id', selectedSupervisorId);
         }
         
-        // Filter by status if needed
         if (filterStatus === 'active') {
           query = query.eq('is_completed', false);
         } else if (filterStatus === 'completed') {
@@ -123,7 +118,6 @@ const Expenses: React.FC = () => {
         
         if (data) {
           const formattedSites = data.map(site => ({
-            ...site,
             id: site.id,
             name: site.name,
             jobName: site.job_name,
@@ -134,7 +128,7 @@ const Expenses: React.FC = () => {
             createdAt: new Date(site.created_at),
             isCompleted: site.is_completed,
             funds: site.funds
-          }));
+          } as Site));
           
           setSites(formattedSites);
         }
@@ -149,14 +143,12 @@ const Expenses: React.FC = () => {
     fetchSites();
   }, [selectedSupervisorId, filterStatus]);
   
-  // Fetch data for selected site
   useEffect(() => {
     if (selectedSiteId) {
       const fetchSiteData = async () => {
         setLoading(true);
         
         try {
-          // Fetch expenses for the site
           const { data: expensesData, error: expensesError } = await supabase
             .from('expenses')
             .select('*')
@@ -166,18 +158,21 @@ const Expenses: React.FC = () => {
           
           if (expensesData) {
             const formattedExpenses = expensesData.map(expense => ({
-              ...expense,
               id: expense.id,
               date: new Date(expense.date),
-              createdAt: new Date(expense.created_at),
+              description: expense.description,
+              category: expense.category as ExpenseCategory,
+              amount: expense.amount,
+              status: expense.status as ApprovalStatus,
+              createdBy: expense.created_by || "",
+              createdAt: new Date(expense.created_at || new Date()),
               siteId: expense.site_id,
-              supervisorId: expense.supervisor_id
-            }));
+              supervisorId: expense.supervisor_id || ""
+            } as Expense));
             
             setExpenses(formattedExpenses);
           }
           
-          // Fetch advances for the site
           const { data: advancesData, error: advancesError } = await supabase
             .from('advances')
             .select('*')
@@ -187,17 +182,23 @@ const Expenses: React.FC = () => {
           
           if (advancesData) {
             const formattedAdvances = advancesData.map(advance => ({
-              ...advance,
               id: advance.id,
               date: new Date(advance.date),
-              createdAt: new Date(advance.created_at),
-              siteId: advance.site_id,
-            }));
+              recipientId: advance.recipient_id,
+              recipientName: advance.recipient_name,
+              recipientType: advance.recipient_type as RecipientType,
+              purpose: advance.purpose as AdvancePurpose,
+              amount: advance.amount,
+              remarks: advance.remarks,
+              status: advance.status as ApprovalStatus,
+              createdBy: advance.created_by || "",
+              createdAt: new Date(advance.created_at || new Date()),
+              siteId: advance.site_id
+            } as Advance));
             
             setAdvances(formattedAdvances);
           }
           
-          // Fetch funds received for the site
           const { data: fundsData, error: fundsError } = await supabase
             .from('funds_received')
             .select('*')
@@ -207,17 +208,18 @@ const Expenses: React.FC = () => {
           
           if (fundsData) {
             const formattedFunds = fundsData.map(fund => ({
-              ...fund,
               id: fund.id,
               date: new Date(fund.date),
-              createdAt: new Date(fund.created_at),
-              siteId: fund.site_id,
-            }));
+              amount: fund.amount,
+              siteId: fund.site_id || "",
+              createdAt: new Date(fund.created_at || new Date()),
+              reference: fund.reference,
+              method: fund.method as PaymentMethod
+            } as FundsReceived));
             
             setFundsReceived(formattedFunds);
           }
           
-          // Fetch invoices for the site
           const { data: invoicesData, error: invoicesError } = await supabase
             .from('invoices')
             .select('*')
@@ -226,14 +228,48 @@ const Expenses: React.FC = () => {
           if (invoicesError) throw invoicesError;
           
           if (invoicesData) {
-            const formattedInvoices = invoicesData.map(invoice => ({
-              ...invoice,
-              id: invoice.id,
-              date: new Date(invoice.date),
-              createdAt: new Date(invoice.created_at),
-              siteId: invoice.site_id,
-              bankDetails: invoice.bank_details,
-            }));
+            const formattedInvoices = invoicesData.map(invoice => {
+              let bankDetails: BankDetails = {
+                accountNumber: "",
+                bankName: "",
+                ifscCode: ""
+              };
+              
+              if (invoice.bank_details) {
+                const bd = invoice.bank_details as Record<string, any>;
+                bankDetails = {
+                  accountNumber: bd.accountNumber || bd.account_number || "",
+                  bankName: bd.bankName || bd.bank_name || "",
+                  ifscCode: bd.ifscCode || bd.ifsc_code || "",
+                  email: bd.email,
+                  mobile: bd.mobile
+                };
+              }
+              
+              return {
+                id: invoice.id,
+                date: new Date(invoice.date),
+                partyId: invoice.party_id || "",
+                partyName: invoice.party_name || "",
+                material: invoice.material || "",
+                quantity: invoice.quantity || 0,
+                rate: invoice.rate || 0,
+                gstPercentage: invoice.gst_percentage || 0,
+                grossAmount: invoice.gross_amount || 0,
+                netAmount: invoice.netAmount,
+                bankDetails: bankDetails,
+                billUrl: invoice.bill_url,
+                invoiceImageUrl: invoice.invoice_image_url,
+                paymentStatus: invoice.payment_status as PaymentStatus,
+                createdBy: invoice.created_by || "",
+                createdAt: new Date(invoice.created_at || new Date()),
+                approverType: invoice.approver_type as "ho" | "supervisor" | undefined,
+                siteId: invoice.site_id,
+                vendorName: invoice.vendor_name,
+                invoiceNumber: invoice.invoice_number,
+                amount: invoice.amount
+              } as Invoice;
+            });
             
             setInvoices(formattedInvoices);
           }
@@ -261,13 +297,7 @@ const Expenses: React.FC = () => {
   }, [location, userRole]);
 
   const ensureDateObjects = (site: Site): Site => {
-    return {
-      ...site,
-      startDate: site.startDate instanceof Date ? site.startDate : new Date(site.startDate),
-      completionDate: site.completionDate ? 
-        (site.completionDate instanceof Date ? site.completionDate : new Date(site.completionDate)) 
-        : undefined
-    };
+    return site;
   };
 
   const handleAddSite = async (newSite: Partial<Site>) => {
@@ -288,12 +318,11 @@ const Expenses: React.FC = () => {
         return;
       }
       
-      // Prepare site data for Supabase
       const siteData = {
         name: newSite.name,
         job_name: newSite.jobName,
         pos_no: newSite.posNo,
-        start_date: newSite.startDate,
+        start_date: formatDateForSupabase(newSite.startDate!),
         supervisor_id: currentSupervisorId,
         is_completed: false,
         funds: 0
@@ -347,9 +376,8 @@ const Expenses: React.FC = () => {
         return;
       }
         
-      // Prepare expense data for Supabase
       const expenseData = {
-        date: newExpense.date,
+        date: formatDateForSupabase(newExpense.date!),
         description: newExpense.description,
         category: newExpense.category,
         amount: newExpense.amount,
@@ -374,13 +402,13 @@ const Expenses: React.FC = () => {
           id: data.id,
           date: new Date(data.date),
           description: data.description,
-          category: data.category,
+          category: data.category as ExpenseCategory,
           amount: data.amount,
-          status: data.status,
-          createdBy: data.created_by,
+          status: data.status as ApprovalStatus,
+          createdBy: data.created_by || "",
           createdAt: new Date(data.created_at),
           siteId: data.site_id,
-          supervisorId: data.supervisor_id
+          supervisorId: data.supervisor_id || ""
         };
         
         setExpenses(prevExpenses => [formattedExpense, ...prevExpenses]);
@@ -399,9 +427,8 @@ const Expenses: React.FC = () => {
         return;
       }
       
-      // Prepare advance data for Supabase
       const advanceData = {
-        date: newAdvance.date,
+        date: formatDateForSupabase(newAdvance.date!),
         recipient_id: newAdvance.recipientId,
         recipient_name: newAdvance.recipientName,
         recipient_type: newAdvance.recipientType,
@@ -429,12 +456,12 @@ const Expenses: React.FC = () => {
           date: new Date(data.date),
           recipientId: data.recipient_id,
           recipientName: data.recipient_name,
-          recipientType: data.recipient_type,
-          purpose: data.purpose,
+          recipientType: data.recipient_type as RecipientType,
+          purpose: data.purpose as AdvancePurpose,
           amount: data.amount,
           remarks: data.remarks,
-          status: data.status,
-          createdBy: data.created_by,
+          status: data.status as ApprovalStatus,
+          createdBy: data.created_by || "",
           createdAt: new Date(data.created_at),
           siteId: data.site_id
         };
@@ -450,9 +477,8 @@ const Expenses: React.FC = () => {
 
   const handleAddFunds = async (newFund: Partial<FundsReceived>) => {
     try {
-      // Prepare funds received data for Supabase
       const fundsData = {
-        date: newFund.date,
+        date: formatDateForSupabase(newFund.date!),
         amount: newFund.amount,
         site_id: newFund.siteId,
         reference: newFund.reference,
@@ -474,15 +500,14 @@ const Expenses: React.FC = () => {
           id: data.id,
           date: new Date(data.date),
           amount: data.amount,
-          siteId: data.site_id,
+          siteId: data.site_id || "",
           createdAt: new Date(data.created_at),
           reference: data.reference,
-          method: data.method
+          method: data.method as PaymentMethod
         };
         
         setFundsReceived(prevFunds => [formattedFund, ...prevFunds]);
         
-        // Update site funds
         if (data.site_id) {
           const { data: siteData, error: siteError } = await supabase
             .from('sites')
@@ -523,9 +548,16 @@ const Expenses: React.FC = () => {
         return;
       }
       
-      // Prepare invoice data for Supabase
+      const bankDetailsJson: Record<string, any> = {
+        accountNumber: newInvoice.bankDetails.accountNumber,
+        bankName: newInvoice.bankDetails.bankName,
+        ifscCode: newInvoice.bankDetails.ifscCode,
+        email: newInvoice.bankDetails.email,
+        mobile: newInvoice.bankDetails.mobile
+      };
+      
       const invoiceData = {
-        date: newInvoice.date,
+        date: formatDateForSupabase(newInvoice.date),
         party_id: newInvoice.partyId,
         party_name: newInvoice.partyName,
         material: newInvoice.material,
@@ -534,16 +566,16 @@ const Expenses: React.FC = () => {
         gst_percentage: newInvoice.gstPercentage,
         gross_amount: newInvoice.grossAmount,
         net_amount: newInvoice.netAmount,
-        bank_details: newInvoice.bankDetails,
+        bank_details: bankDetailsJson,
         bill_url: newInvoice.billUrl,
         invoice_image_url: newInvoice.invoiceImageUrl,
         payment_status: newInvoice.paymentStatus,
         created_by: currentUserId,
         approver_type: newInvoice.approverType,
         site_id: newInvoice.siteId,
-        vendor_name: newInvoice.vendorName,
-        invoice_number: newInvoice.invoiceNumber,
-        amount: newInvoice.amount
+        vendor_name: newInvoice.vendorName || newInvoice.partyName,
+        invoice_number: newInvoice.invoiceNumber || `INV-${Date.now().toString().slice(-6)}`,
+        amount: newInvoice.amount || newInvoice.netAmount
       };
       
       const { data, error } = await supabase
@@ -557,24 +589,41 @@ const Expenses: React.FC = () => {
       }
       
       if (data) {
+        let bankDetails: BankDetails = {
+          accountNumber: "",
+          bankName: "",
+          ifscCode: ""
+        };
+        
+        if (data.bank_details) {
+          const bd = data.bank_details as Record<string, any>;
+          bankDetails = {
+            accountNumber: bd.accountNumber || "",
+            bankName: bd.bankName || "",
+            ifscCode: bd.ifscCode || "",
+            email: bd.email,
+            mobile: bd.mobile
+          };
+        }
+        
         const formattedInvoice: Invoice = {
           id: data.id,
           date: new Date(data.date),
-          partyId: data.party_id,
-          partyName: data.party_name,
-          material: data.material,
-          quantity: data.quantity,
-          rate: data.rate,
-          gstPercentage: data.gst_percentage,
-          grossAmount: data.gross_amount,
+          partyId: data.party_id || "",
+          partyName: data.party_name || "",
+          material: data.material || "",
+          quantity: data.quantity || 0,
+          rate: data.rate || 0,
+          gstPercentage: data.gst_percentage || 0,
+          grossAmount: data.gross_amount || 0,
           netAmount: data.net_amount,
-          bankDetails: data.bank_details,
+          bankDetails: bankDetails,
           billUrl: data.bill_url,
           invoiceImageUrl: data.invoice_image_url,
-          paymentStatus: data.payment_status,
-          createdBy: data.created_by,
+          paymentStatus: data.payment_status as PaymentStatus,
+          createdBy: data.created_by || "",
           createdAt: new Date(data.created_at),
-          approverType: data.approver_type,
+          approverType: data.approver_type as "ho" | "supervisor" | undefined,
           siteId: data.site_id,
           vendorName: data.vendor_name,
           invoiceNumber: data.invoice_number,
@@ -596,7 +645,7 @@ const Expenses: React.FC = () => {
         .from('sites')
         .update({ 
           is_completed: true, 
-          completion_date: completionDate 
+          completion_date: formatDateForSupabase(completionDate)
         })
         .eq('id', siteId);
         
