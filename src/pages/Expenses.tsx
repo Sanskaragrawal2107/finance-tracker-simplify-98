@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -67,6 +68,7 @@ const Expenses: React.FC = () => {
               setSupervisorId(supervisorData.id);
               setSelectedSupervisorId(supervisorData.id);
               localStorage.setItem('supervisorId', supervisorData.id);
+              console.log("Set supervisor ID:", supervisorData.id);
             } else {
               console.error('Supervisor record not found for user:', data.session.user.id);
               toast.error('Supervisor profile not found. Please contact administrator.');
@@ -311,6 +313,7 @@ const Expenses: React.FC = () => {
       
       if (!currentSupervisorId) {
         toast.error("Supervisor ID is required");
+        console.error("Missing supervisorId. User role:", userRole, "Selected supervisor:", selectedSupervisorId, "Local supervisor:", supervisorId);
         return;
       }
         

@@ -65,6 +65,11 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
   const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   
+  // For debugging
+  React.useEffect(() => {
+    console.log("SiteForm supervisorId:", supervisorId);
+  }, [supervisorId]);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -89,7 +94,8 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
       };
       
       if (!supervisorId) {
-        toast.error("Supervisor ID is required");
+        console.error("Missing supervisorId:", supervisorId);
+        toast.error("Supervisor ID is required. Please check if you're logged in correctly.");
         return;
       }
       
