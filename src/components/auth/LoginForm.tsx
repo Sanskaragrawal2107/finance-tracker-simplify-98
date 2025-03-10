@@ -1,15 +1,30 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, ensureUserExists } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface LoginFormProps {
   className?: string;
 }
+
+const TEST_USERS = [
+  {
+    email: 'finance.admin@example.com',
+    password: 'Admin@12345',
+    full_name: 'Finance Admin',
+    role: UserRole.ADMIN
+  },
+  {
+    email: 'site.supervisor@example.com',
+    password: 'Super@12345',
+    full_name: 'Site Supervisor',
+    role: UserRole.SUPERVISOR
+  }
+];
 
 const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [email, setEmail] = useState('');
@@ -19,6 +34,25 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [error, setError] = useState<string | null>(null);
   
   const navigate = useNavigate();
+  
+  // Create test users on component mount
+  useEffect(() => {
+    const createTestUsers = async () => {
+      try {
+        for (const user of TEST_USERS) {
+          console.log(`Ensuring ${user.role} user exists...`);
+          await ensureUserExists(user.email, user.password, {
+            full_name: user.full_name,
+            role: user.role
+          });
+        }
+      } catch (err) {
+        console.error('Error creating test users:', err);
+      }
+    };
+    
+    createTestUsers();
+  }, []);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,11 +94,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             .eq('user_id', data.user.id)
             .single();
           
-          if (supervisorError) {
-            throw supervisorError;
+          if (supervisorError && supervisorError.code !== 'PGRST116') {
+            console.warn('Error fetching supervisor ID:', supervisorError);
           }
           
-          localStorage.setItem('supervisorId', supervisorData.id);
+          if (supervisorData) {
+            localStorage.setItem('supervisorId', supervisorData.id);
+          }
         }
         
         // Redirect based on user role
@@ -80,7 +116,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Failed to sign in');
+      if (err.code === 'email_provider_disabled') {
+        setError('Email login is disabled in Supabase settings. Please enable it in the Supabase dashboard.');
+      } else {
+        setError(err.message || 'Failed to sign in');
+      }
       toast.error('Failed to sign in');
     } finally {
       setLoading(false);
@@ -180,10 +220,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <div className="text-center text-sm text-muted-foreground mt-6">
           <p>Demo Credentials:</p>
-          <p className="mt-1">Admin: admin@example.com</p>
-          <p>Password: adminpassword</p>
-          <p className="mt-1">Supervisor: supervisor1@example.com (through supervisor11@example.com)</p>
-          <p>Password: password</p>
+          <p className="mt-1">Admin: finance.admin@example.com</p>
+          <p>Password: Admin@12345</p>
+          <p className="mt-1">Supervisor: site.supervisor@example.com</p>
+          <p>Password: Super@12345</p>
         </div>
       </form>
     </div>
