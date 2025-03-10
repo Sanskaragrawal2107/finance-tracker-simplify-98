@@ -4,7 +4,7 @@ import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, RecipientType, PaymentStatus, PaymentMethod, BankDetails } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -14,8 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { supabase, formatDateForSupabase } from '@/integrations/supabase/client';
-import { Json } from '@/integrations/supabase/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
@@ -167,13 +166,9 @@ const Expenses: React.FC = () => {
           
           if (expensesData) {
             const formattedExpenses = expensesData.map(expense => ({
+              ...expense,
               id: expense.id,
               date: new Date(expense.date),
-              description: expense.description,
-              category: expense.category as ExpenseCategory,
-              amount: expense.amount,
-              status: expense.status as ApprovalStatus,
-              createdBy: expense.created_by,
               createdAt: new Date(expense.created_at),
               siteId: expense.site_id,
               supervisorId: expense.supervisor_id
@@ -192,18 +187,11 @@ const Expenses: React.FC = () => {
           
           if (advancesData) {
             const formattedAdvances = advancesData.map(advance => ({
+              ...advance,
               id: advance.id,
               date: new Date(advance.date),
-              recipientId: advance.recipient_id,
-              recipientName: advance.recipient_name,
-              recipientType: advance.recipient_type as RecipientType,
-              purpose: advance.purpose as AdvancePurpose,
-              amount: advance.amount,
-              remarks: advance.remarks,
-              status: advance.status as ApprovalStatus,
-              createdBy: advance.created_by,
               createdAt: new Date(advance.created_at),
-              siteId: advance.site_id
+              siteId: advance.site_id,
             }));
             
             setAdvances(formattedAdvances);
@@ -219,13 +207,11 @@ const Expenses: React.FC = () => {
           
           if (fundsData) {
             const formattedFunds = fundsData.map(fund => ({
+              ...fund,
               id: fund.id,
               date: new Date(fund.date),
-              amount: fund.amount,
-              siteId: fund.site_id,
               createdAt: new Date(fund.created_at),
-              reference: fund.reference,
-              method: fund.method as PaymentMethod
+              siteId: fund.site_id,
             }));
             
             setFundsReceived(formattedFunds);
@@ -241,27 +227,12 @@ const Expenses: React.FC = () => {
           
           if (invoicesData) {
             const formattedInvoices = invoicesData.map(invoice => ({
+              ...invoice,
               id: invoice.id,
               date: new Date(invoice.date),
-              partyId: invoice.party_id,
-              partyName: invoice.party_name,
-              material: invoice.material,
-              quantity: invoice.quantity,
-              rate: invoice.rate,
-              gstPercentage: invoice.gst_percentage,
-              grossAmount: invoice.gross_amount,
-              netAmount: invoice.net_amount,
-              bankDetails: invoice.bank_details as unknown as BankDetails,
-              billUrl: invoice.bill_url,
-              invoiceImageUrl: invoice.invoice_image_url,
-              paymentStatus: invoice.payment_status as PaymentStatus,
-              createdBy: invoice.created_by,
               createdAt: new Date(invoice.created_at),
-              approverType: invoice.approver_type as "ho" | "supervisor",
               siteId: invoice.site_id,
-              vendorName: invoice.vendor_name,
-              invoiceNumber: invoice.invoice_number,
-              amount: invoice.amount
+              bankDetails: invoice.bank_details,
             }));
             
             setInvoices(formattedInvoices);
@@ -322,7 +293,7 @@ const Expenses: React.FC = () => {
         name: newSite.name,
         job_name: newSite.jobName,
         pos_no: newSite.posNo,
-        start_date: newSite.startDate ? formatDateForSupabase(newSite.startDate) : null,
+        start_date: newSite.startDate,
         supervisor_id: currentSupervisorId,
         is_completed: false,
         funds: 0
@@ -378,7 +349,7 @@ const Expenses: React.FC = () => {
         
       // Prepare expense data for Supabase
       const expenseData = {
-        date: newExpense.date ? formatDateForSupabase(newExpense.date) : null,
+        date: newExpense.date,
         description: newExpense.description,
         category: newExpense.category,
         amount: newExpense.amount,
@@ -403,9 +374,9 @@ const Expenses: React.FC = () => {
           id: data.id,
           date: new Date(data.date),
           description: data.description,
-          category: data.category as ExpenseCategory,
+          category: data.category,
           amount: data.amount,
-          status: data.status as ApprovalStatus,
+          status: data.status,
           createdBy: data.created_by,
           createdAt: new Date(data.created_at),
           siteId: data.site_id,
@@ -430,7 +401,7 @@ const Expenses: React.FC = () => {
       
       // Prepare advance data for Supabase
       const advanceData = {
-        date: newAdvance.date ? formatDateForSupabase(newAdvance.date) : null,
+        date: newAdvance.date,
         recipient_id: newAdvance.recipientId,
         recipient_name: newAdvance.recipientName,
         recipient_type: newAdvance.recipientType,
@@ -458,11 +429,11 @@ const Expenses: React.FC = () => {
           date: new Date(data.date),
           recipientId: data.recipient_id,
           recipientName: data.recipient_name,
-          recipientType: data.recipient_type as RecipientType,
-          purpose: data.purpose as AdvancePurpose,
+          recipientType: data.recipient_type,
+          purpose: data.purpose,
           amount: data.amount,
           remarks: data.remarks,
-          status: data.status as ApprovalStatus,
+          status: data.status,
           createdBy: data.created_by,
           createdAt: new Date(data.created_at),
           siteId: data.site_id
@@ -481,7 +452,7 @@ const Expenses: React.FC = () => {
     try {
       // Prepare funds received data for Supabase
       const fundsData = {
-        date: newFund.date ? formatDateForSupabase(newFund.date) : null,
+        date: newFund.date,
         amount: newFund.amount,
         site_id: newFund.siteId,
         reference: newFund.reference,
@@ -506,7 +477,7 @@ const Expenses: React.FC = () => {
           siteId: data.site_id,
           createdAt: new Date(data.created_at),
           reference: data.reference,
-          method: data.method as PaymentMethod
+          method: data.method
         };
         
         setFundsReceived(prevFunds => [formattedFund, ...prevFunds]);
@@ -554,7 +525,7 @@ const Expenses: React.FC = () => {
       
       // Prepare invoice data for Supabase
       const invoiceData = {
-        date: newInvoice.date ? formatDateForSupabase(newInvoice.date) : null,
+        date: newInvoice.date,
         party_id: newInvoice.partyId,
         party_name: newInvoice.partyName,
         material: newInvoice.material,
@@ -563,7 +534,7 @@ const Expenses: React.FC = () => {
         gst_percentage: newInvoice.gstPercentage,
         gross_amount: newInvoice.grossAmount,
         net_amount: newInvoice.netAmount,
-        bank_details: newInvoice.bankDetails as unknown as Json,
+        bank_details: newInvoice.bankDetails,
         bill_url: newInvoice.billUrl,
         invoice_image_url: newInvoice.invoiceImageUrl,
         payment_status: newInvoice.paymentStatus,
@@ -597,13 +568,13 @@ const Expenses: React.FC = () => {
           gstPercentage: data.gst_percentage,
           grossAmount: data.gross_amount,
           netAmount: data.net_amount,
-          bankDetails: data.bank_details as unknown as BankDetails,
+          bankDetails: data.bank_details,
           billUrl: data.bill_url,
           invoiceImageUrl: data.invoice_image_url,
-          paymentStatus: data.payment_status as PaymentStatus,
+          paymentStatus: data.payment_status,
           createdBy: data.created_by,
           createdAt: new Date(data.created_at),
-          approverType: data.approver_type as "ho" | "supervisor",
+          approverType: data.approver_type,
           siteId: data.site_id,
           vendorName: data.vendor_name,
           invoiceNumber: data.invoice_number,
@@ -625,7 +596,7 @@ const Expenses: React.FC = () => {
         .from('sites')
         .update({ 
           is_completed: true, 
-          completion_date: formatDateForSupabase(completionDate)
+          completion_date: completionDate 
         })
         .eq('id', siteId);
         

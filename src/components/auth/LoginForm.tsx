@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
-import { supabase, createPredefinedUsers } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface LoginFormProps {
@@ -16,46 +16,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [creatingUsers, setCreatingUsers] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [credentials, setCredentials] = useState<{
-    adminEmail: string;
-    adminPassword: string;
-    supervisorEmail: string;
-    supervisorPassword: string;
-  } | null>(null);
   
   const navigate = useNavigate();
   
-  // Initialize predefined users on component mount
-  useEffect(() => {
-    const initUsers = async () => {
-      setCreatingUsers(true);
-      try {
-        const userCreds = await createPredefinedUsers();
-        if (userCreds) {
-          setCredentials(userCreds);
-          toast.success("Access credentials are ready to use");
-        }
-      } catch (err) {
-        console.error("Failed to initialize users:", err);
-        toast.error("Failed to initialize account credentials");
-      } finally {
-        setCreatingUsers(false);
-      }
-    };
-    
-    initUsers();
-  }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     
     try {
-      console.log(`Attempting to log in with email: ${email}`);
-      
       // Sign in with Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -67,8 +37,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
       
       if (data.user) {
-        console.log("Sign in successful, fetching user profile");
-        
         // Fetch user profile to get role
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
@@ -77,16 +45,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           .single();
         
         if (profileError) {
-          console.error("Error fetching profile:", profileError);
-          throw new Error("Failed to fetch user profile");
+          throw profileError;
         }
-        
-        if (!profileData) {
-          console.error("No profile found for user");
-          throw new Error("User profile not found");
-        }
-        
-        console.log("Profile data retrieved:", profileData);
         
         // Store user info in localStorage
         localStorage.setItem('userRole', profileData.role);
@@ -94,8 +54,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         // If user is supervisor, fetch supervisor ID
         if (profileData.role === UserRole.SUPERVISOR) {
-          console.log("User is a supervisor, fetching supervisor ID");
-          
           const { data: supervisorData, error: supervisorError } = await supabase
             .from('supervisors')
             .select('id')
@@ -103,11 +61,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             .single();
           
           if (supervisorError) {
-            console.warn('Could not fetch supervisor ID:', supervisorError);
-          } else if (supervisorData) {
-            localStorage.setItem('supervisorId', supervisorData.id);
-            console.log("Supervisor ID stored:", supervisorData.id);
+            throw supervisorError;
           }
+          
+          localStorage.setItem('supervisorId', supervisorData.id);
         }
         
         // Redirect based on user role
@@ -123,13 +80,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      
-      if (err.message === 'Invalid login credentials') {
-        setError('Invalid email or password. Please check your credentials and try again.');
-      } else {
-        setError(err.message || 'Failed to sign in');
-      }
-      
+      setError(err.message || 'Failed to sign in');
       toast.error('Failed to sign in');
     } finally {
       setLoading(false);
@@ -218,38 +169,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         
         <button
           type="submit"
-          disabled={loading || creatingUsers}
+          disabled={loading}
           className={cn(
             "w-full py-2 rounded-md bg-primary text-primary-foreground font-medium transition-all",
-            (loading || creatingUsers) ? "opacity-70" : "hover:bg-primary/90"
+            loading ? "opacity-70" : "hover:bg-primary/90"
           )}
         >
           {loading ? 'Signing in...' : 'Sign in'}
         </button>
         
-        {/* Credentials Info Box */}
-        {credentials && (
-          <div className="text-center text-sm text-muted-foreground mt-6">
-            <p className="font-semibold">Access Credentials:</p>
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-md text-left">
-              <div className="mb-3">
-                <p className="font-medium text-blue-700">Admin Access:</p>
-                <p className="mb-1"><span className="font-medium">Email:</span> {credentials.adminEmail}</p>
-                <p className="text-sm text-blue-600">Password: {credentials.adminPassword}</p>
-              </div>
-              
-              <div className="pt-3 border-t border-blue-100">
-                <p className="font-medium text-blue-700">Supervisor Access:</p>
-                <p className="mb-1"><span className="font-medium">Email:</span> {credentials.supervisorEmail}</p>
-                <p className="text-sm text-blue-600">Password: {credentials.supervisorPassword}</p>
-              </div>
-            </div>
-            
-            {creatingUsers && (
-              <p className="mt-2 text-amber-600">Initializing credentials...</p>
-            )}
-          </div>
-        )}
+        <div className="text-center text-sm text-muted-foreground mt-6">
+          <p>Demo Credentials:</p>
+          <p className="mt-1">Admin: admin@example.com</p>
+          <p>Password: adminpassword</p>
+          <p className="mt-1">Supervisor: supervisor1@example.com (through supervisor11@example.com)</p>
+          <p>Password: password</p>
+        </div>
       </form>
     </div>
   );
