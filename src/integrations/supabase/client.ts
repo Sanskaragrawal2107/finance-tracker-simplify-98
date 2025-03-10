@@ -7,6 +7,11 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
+// Helper function to format date objects for Supabase
+export const formatDateForSupabase = (date: Date): string => {
+  return date.toISOString();
+};
+
 // Helper function to create test users for development
 export const createTestUser = async (email: string, password: string, role: 'admin' | 'supervisor', fullName: string) => {
   try {
