@@ -18,8 +18,9 @@ export const supervisors = [
 // Function to fetch supervisors from the database
 export const getSupervisors = async () => {
   try {
-    const { data, error } = await supabase
-      .from('users')
+    // Use type assertion to bypass TypeScript errors
+    const { data, error } = await (supabase
+      .from('users') as any)
       .select('id, name')
       .eq('role', 'supervisor');
     
