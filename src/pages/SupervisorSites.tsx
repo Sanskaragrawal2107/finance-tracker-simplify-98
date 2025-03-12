@@ -17,11 +17,18 @@ const SupervisorSites: React.FC = () => {
   const [sites, setSites] = useState<any[]>([]);
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>(UserRole.VIEWER);
+  const [supervisorId, setSupervisorId] = useState<string | null>(null);
   
   useEffect(() => {
     const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    const storedSupervisorId = localStorage.getItem('supervisorId');
+    
     if (storedUserRole) {
       setUserRole(storedUserRole);
+    }
+    
+    if (storedSupervisorId) {
+      setSupervisorId(storedSupervisorId);
     }
     
     fetchSites();
@@ -79,9 +86,15 @@ const SupervisorSites: React.FC = () => {
   
   const handleAddSite = async (siteData: any) => {
     try {
+      // Add supervisor_id to site data
+      const siteWithSupervisorId = {
+        ...siteData,
+        supervisor_id: supervisorId,
+      };
+      
       const { data, error } = await supabase
         .from('sites')
-        .insert(siteData)
+        .insert(siteWithSupervisorId)
         .select()
         .single();
       
@@ -121,7 +134,6 @@ const SupervisorSites: React.FC = () => {
       
       <SitesList 
         sites={sites} 
-        isLoading={isLoading}
         onSiteClick={handleSiteClick}
       />
       
@@ -129,6 +141,7 @@ const SupervisorSites: React.FC = () => {
         isOpen={isSiteFormOpen}
         onClose={() => setIsSiteFormOpen(false)}
         onSubmit={handleAddSite}
+        supervisorId={supervisorId || ''}
       />
     </div>
   );
