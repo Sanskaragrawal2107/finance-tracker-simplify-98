@@ -374,13 +374,8 @@ const Expenses: React.FC = () => {
     console.log("Adding new invoice with data:", newInvoice);
     
     try {
-      if (newInvoice.id) {
-        setInvoices(prevInvoices => [newInvoice as Invoice, ...prevInvoices]);
-        toast.success("Invoice added successfully");
-      } else {
-        await fetchInvoices(newInvoice.siteId || '');
-        toast.success("Invoice added successfully");
-      }
+      await fetchInvoices(newInvoice.siteId || '');
+      toast.success("Invoice added successfully");
     } catch (error: any) {
       console.error('Error adding invoice:', error);
       toast.error('Failed to add invoice: ' + error.message);

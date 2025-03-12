@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -169,7 +168,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
           gst_percentage: invoiceData.gstPercentage,
           gross_amount: invoiceData.grossAmount,
           net_amount: invoiceData.netAmount,
-          bank_details: invoiceData.bankDetails,
+          bank_details: invoiceData.bankDetails as any,
           bill_url: invoiceData.billUrl,
           invoice_image_url: invoiceData.invoiceImageUrl,
           payment_status: invoiceData.paymentStatus,
@@ -263,11 +262,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
       const invoiceId = await saveInvoiceToDatabase(newInvoice);
       
       if (invoiceId) {
-        onSubmit({
-          ...newInvoice,
-          id: invoiceId,
-          createdAt: new Date()
-        });
+        onSubmit(newInvoice);
         form.reset();
         setInvoiceImage(null);
         setBillImage(null);
