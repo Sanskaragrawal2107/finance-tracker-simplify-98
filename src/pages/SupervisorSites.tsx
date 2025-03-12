@@ -83,9 +83,18 @@ const SupervisorSites: React.FC = () => {
           } else if (userData) {
             console.log("User data fetched from database:", userData);
             
-            if (userData.role && !storedUserRole) {
-              localStorage.setItem('userRole', userData.role);
-              setUserRole(userData.role);
+            if (userData.role) {
+              // Convert string role to UserRole enum
+              if (userData.role === 'admin') {
+                setUserRole(UserRole.ADMIN);
+                localStorage.setItem('userRole', UserRole.ADMIN);
+              } else if (userData.role === 'supervisor') {
+                setUserRole(UserRole.SUPERVISOR);
+                localStorage.setItem('userRole', UserRole.SUPERVISOR);
+              } else {
+                setUserRole(UserRole.VIEWER);
+                localStorage.setItem('userRole', UserRole.VIEWER);
+              }
               console.log("Setting userRole from database:", userData.role);
             }
             

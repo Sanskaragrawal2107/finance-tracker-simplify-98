@@ -83,7 +83,23 @@ const Expenses: React.FC = () => {
     );
   }
   
-  return <ExpensesPageContent siteData={siteData} />;
+  // Pass individual props to ExpensesPageContent instead of the siteData object
+  return (
+    <ExpensesPageContent 
+      site={siteData.site}
+      expenses={siteData.expenses}
+      advances={siteData.advances}
+      fundsReceived={siteData.fundsReceived}
+      invoices={siteData.invoices}
+      balanceSummary={siteData.balanceSummary}
+      onAddExpense={siteData.handleAddExpense}
+      onAddAdvance={siteData.handleAddAdvance}
+      onAddFunds={siteData.handleAddFunds}
+      onAddInvoice={siteData.handleAddInvoice}
+      onBack={() => navigate('/supervisor/sites')}
+      onCompleteSite={siteData.handleCompleteSite}
+    />
+  );
 };
 
 export default Expenses;
