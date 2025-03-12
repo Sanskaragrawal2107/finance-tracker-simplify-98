@@ -103,7 +103,7 @@ const Expenses: React.FC = () => {
     }
   };
 
-  const calculateSiteFinancials = async (siteId: string) => {
+  const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> => {
     try {
       // First try to get the financial summary from the view
       const { data: summaryData, error: summaryError } = await supabase

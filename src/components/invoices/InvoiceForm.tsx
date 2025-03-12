@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -267,7 +268,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, si
       gstPercentage: values.gstPercentage || 0,
       grossAmount: values.grossAmount || 0,
       netAmount: values.netAmount || 0,
-      bankDetails: values.bankDetails,
+      bankDetails: {
+        accountNumber: values.bankDetails.accountNumber,
+        bankName: values.bankDetails.bankName,
+        ifscCode: values.bankDetails.ifscCode,
+        email: values.bankDetails.email,
+        mobile: values.bankDetails.mobile,
+      },
       billUrl: values.billUrl,
       invoiceImageUrl: values.invoiceImageUrl,
       paymentStatus: values.paymentStatus,
