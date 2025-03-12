@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -37,7 +37,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Site } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { useAuth } from '@/hooks/use-auth';
-import { getSupervisors } from '@/data/supervisors';
 
 interface Supervisor {
   id: string;
@@ -82,8 +81,16 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
   useEffect(() => {
     const fetchSupervisors = async () => {
       try {
-        const supervisorsList = await getSupervisors();
-        setSupervisors(supervisorsList);
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, name')
+          .eq('role', 'supervisor');
+        
+        if (error) {
+          throw error;
+        }
+        
+        setSupervisors(data);
       } catch (error) {
         console.error('Error fetching supervisors:', error);
         toast.error('Failed to load supervisors');
@@ -115,6 +122,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
     try {
       setIsLoading(true);
       
+      // Transform values to uppercase
       const uppercaseValues = {
         ...values,
         name: values.name.toUpperCase(),
@@ -122,6 +130,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         posNo: values.posNo.toUpperCase(),
       };
       
+      // Insert site into Supabase
       const { data, error } = await supabase
         .from('sites')
         .insert([
@@ -135,32 +144,32 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
             is_completed: false
           }
         ])
-        .select() as any;
+        .select()
+        .single();
       
       if (error) {
         throw error;
       }
       
-      if (data && data.length > 0) {
-        const siteData = data[0];
-        const newSite: Site = {
-          id: siteData.id,
-          name: siteData.name,
-          jobName: siteData.job_name,
-          posNo: siteData.pos_no,
-          startDate: new Date(siteData.start_date),
-          completionDate: siteData.completion_date ? new Date(siteData.completion_date) : undefined,
-          supervisorId: siteData.supervisor_id,
-          createdAt: new Date(siteData.created_at),
-          isCompleted: siteData.is_completed,
-          funds: siteData.funds || 0
-        };
-        
-        onSubmit(newSite);
-        form.reset();
-        onClose();
-        toast.success("Site created successfully");
-      }
+      // Transform the response to match our Site type
+      const newSite: Site = {
+        id: data.id,
+        name: data.name,
+        jobName: data.job_name,
+        posNo: data.pos_no,
+        startDate: new Date(data.start_date),
+        completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+        supervisorId: data.supervisor_id,
+        createdAt: new Date(data.created_at),
+        isCompleted: data.is_completed,
+        funds: data.funds || 0
+      };
+      
+      // Call the onSubmit callback
+      onSubmit(newSite);
+      form.reset();
+      onClose();
+      toast.success("Site created successfully");
     } catch (error: any) {
       console.error('Error creating site:', error);
       toast.error(error.message || 'Failed to create site');
@@ -307,7 +316,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
               )}
             />
             
-            {user?.role === 'admin' && (
+            {user?.role === UserRole.ADMIN && (
               <FormField
                 control={form.control}
                 name="supervisorId"

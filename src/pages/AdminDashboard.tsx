@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -6,12 +7,13 @@ import { User, Users, Building2, PieChart, BarChart, UserPlus } from 'lucide-rea
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { UserRole } from '@/lib/types';
+import { getSupervisors } from '@/data/supervisors';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/use-auth';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
-import { getSupervisors } from '@/data/supervisors';
 
 interface SupervisorStats {
   totalSites: number;
@@ -41,18 +43,19 @@ const AdminDashboard: React.FC = () => {
         const supervisors = await getSupervisors();
         setSupervisorsList(supervisors);
         
+        // Fetch statistics for each supervisor
         const stats: Record<string, SupervisorStats> = {};
         
         for (const supervisor of supervisors) {
           const { data, error } = await supabase
             .from('sites')
             .select('id, is_completed')
-            .eq('supervisor_id', supervisor.id) as any;
+            .eq('supervisor_id', supervisor.id);
             
           if (!error && data) {
             const total = data.length;
-            const active = data.filter((site: any) => !site.is_completed).length;
-            const completed = data.filter((site: any) => site.is_completed).length;
+            const active = data.filter(site => !site.is_completed).length;
+            const completed = data.filter(site => site.is_completed).length;
             
             stats[supervisor.id] = {
               totalSites: total,
