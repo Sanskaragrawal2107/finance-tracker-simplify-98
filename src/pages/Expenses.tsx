@@ -1,123 +1,89 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import PageTitle from '@/components/common/PageTitle';
-import { Expense, Advance, Invoice, FundsReceived } from '@/lib/types';
-import ExpenseForm from '@/components/expenses/ExpenseForm';
-import AdvanceForm from '@/components/advances/AdvanceForm';
-import InvoiceForm from '@/components/invoices/InvoiceForm';
-import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import ExpensesPageContent from '@/components/expenses/ExpensesPageContent';
 import { useSiteData } from '@/hooks/use-site-data';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft } from 'lucide-react';
 
-const ExpensesPage = () => {
-  const { siteId } = useParams();
+const Expenses: React.FC = () => {
+  const { siteId } = useParams<{ siteId: string }>();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
-  const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
-  const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
-  const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
+  const [validSiteId, setValidSiteId] = useState<string | undefined>(undefined);
   
-  const { 
-    site,
-    expenses, 
-    advances, 
-    fundsReceived, 
-    invoices, 
-    balanceSummary,
-    isLoading, 
-    error,
-    handleAddExpense,
-    handleAddAdvance,
-    handleAddFunds,
-    handleAddInvoice,
-    handleCompleteSite,
-    refreshData
-  } = useSiteData(siteId);
-
-  const handleBack = () => {
-    navigate(-1);
-  };
-
-  if (isLoading) {
+  // Validate the siteId parameter
+  useEffect(() => {
+    // Check if siteId exists and is a valid UUID format
+    const isValidUUID = siteId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(siteId);
+    
+    if (!isValidUUID) {
+      console.error('Invalid site ID format:', siteId);
+      toast.error('Invalid site ID', {
+        description: 'Please select a valid site from the sites page'
+      });
+      // Redirect back to sites page after a short delay
+      const timer = setTimeout(() => {
+        navigate('/supervisor/sites');
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    } else {
+      console.log('Valid site ID detected:', siteId);
+      setValidSiteId(siteId);
+    }
+  }, [siteId, navigate]);
+  
+  // Only pass the siteId to useSiteData if it's valid
+  const siteData = useSiteData(validSiteId);
+  
+  if (!validSiteId) {
     return (
-      <div className="container mx-auto py-6 flex items-center justify-center min-h-[80vh]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading site data...</p>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-semibold mb-2">Invalid Site ID</h2>
+          <p className="text-muted-foreground">Redirecting you to the sites page...</p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/supervisor/sites')}
+          className="flex items-center"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Go to Sites
+        </Button>
       </div>
     );
   }
-
-  if (error) {
+  
+  if (siteData.isLoading) {
     return (
-      <div className="container mx-auto py-6 text-center">
-        <h2 className="text-xl font-semibold">Error</h2>
-        <p className="mt-2 text-muted-foreground">{error}</p>
-        <button className="mt-4 px-4 py-2 bg-primary text-white rounded-md" onClick={handleBack}>Go Back</button>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
-
-  if (!site) {
+  
+  if (siteData.error) {
     return (
-      <div className="container mx-auto py-6 text-center">
-        <h2 className="text-xl font-semibold">Site not found</h2>
-        <p className="mt-2 text-muted-foreground">The requested site could not be found.</p>
-        <button className="mt-4 px-4 py-2 bg-primary text-white rounded-md" onClick={handleBack}>Go Back</button>
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-semibold mb-2">Error Loading Site</h2>
+          <p className="text-muted-foreground">{siteData.error}</p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/supervisor/sites')}
+          className="flex items-center"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Sites
+        </Button>
       </div>
     );
   }
-
-  return (
-    <div className="container mx-auto py-6 space-y-6">
-      <PageTitle title={site.name} />
-      
-      <ExpensesPageContent 
-        site={site}
-        expenses={expenses}
-        advances={advances}
-        fundsReceived={fundsReceived}
-        invoices={invoices}
-        balanceSummary={balanceSummary}
-        onAddExpense={() => setIsExpenseFormOpen(true)}
-        onAddAdvance={() => setIsAdvanceFormOpen(true)}
-        onAddFunds={() => setIsFundsFormOpen(true)}
-        onAddInvoice={() => setIsInvoiceFormOpen(true)}
-        onBack={handleBack}
-        onCompleteSite={handleCompleteSite}
-      />
-
-      <ExpenseForm 
-        isOpen={isExpenseFormOpen} 
-        onClose={() => setIsExpenseFormOpen(false)} 
-        onSubmit={handleAddExpense}
-        siteId={siteId || ''}
-      />
-      
-      <AdvanceForm 
-        isOpen={isAdvanceFormOpen} 
-        onClose={() => setIsAdvanceFormOpen(false)} 
-        onSubmit={handleAddAdvance}
-        siteId={siteId || ''}
-      />
-      
-      <FundsReceivedForm 
-        isOpen={isFundsFormOpen} 
-        onClose={() => setIsFundsFormOpen(false)} 
-        onSubmit={handleAddFunds}
-      />
-      
-      <InvoiceForm 
-        isOpen={isInvoiceFormOpen} 
-        onClose={() => setIsInvoiceFormOpen(false)} 
-        onSubmit={handleAddInvoice}
-      />
-    </div>
-  );
+  
+  return <ExpensesPageContent siteData={siteData} />;
 };
 
-export default ExpensesPage;
+export default Expenses;
