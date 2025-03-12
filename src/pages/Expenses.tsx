@@ -1,11 +1,11 @@
 
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Search } from 'lucide-react';
-import { ExpenseCategory, Expense, Advance, Invoice, FundsReceived, BalanceSummary } from '@/lib/types';
+import { ExpenseCategory, Expense, Advance, Invoice, FundsReceived, BalanceSummary, ApprovalStatus } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import PageTitle from '@/components/common/PageTitle';
 import SiteDetail from '@/components/sites/SiteDetail';
@@ -25,7 +25,7 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     if (fundsError) throw fundsError;
     
-    const fundsReceived = fundsData.reduce((sum, fund) => sum + parseFloat(fund.amount), 0);
+    const fundsReceived = fundsData.reduce((sum, fund) => sum + parseFloat(String(fund.amount)), 0);
     
     // Fetch expenses
     const { data: expensesData, error: expensesError } = await supabase
@@ -35,7 +35,7 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     if (expensesError) throw expensesError;
     
-    const totalExpenditure = expensesData.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+    const totalExpenditure = expensesData.reduce((sum, expense) => sum + parseFloat(String(expense.amount)), 0);
     
     // Fetch advances
     const { data: advancesData, error: advancesError } = await supabase
@@ -51,9 +51,9 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     for (const advance of advancesData) {
       if (['safety_shoes', 'tools', 'other'].includes(advance.purpose)) {
-        debitsToWorker += parseFloat(advance.amount);
+        debitsToWorker += parseFloat(String(advance.amount));
       } else {
-        totalAdvances += parseFloat(advance.amount);
+        totalAdvances += parseFloat(String(advance.amount));
       }
     }
     
@@ -71,9 +71,9 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     for (const invoice of invoicesData) {
       if (invoice.payment_status === 'paid') {
-        invoicesPaid += parseFloat(invoice.net_amount);
+        invoicesPaid += parseFloat(String(invoice.net_amount));
       } else {
-        pendingInvoices += parseFloat(invoice.net_amount);
+        pendingInvoices += parseFloat(String(invoice.net_amount));
       }
     }
     
@@ -106,6 +106,7 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
 
 const ExpensesPage = () => {
   const { siteId } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
@@ -158,8 +159,21 @@ const ExpensesPage = () => {
 
     if (expensesError) {
       console.error('Error fetching expenses:', expensesError);
-    } else {
-      setExpenses(expensesData || []);
+    } else if (expensesData) {
+      // Transform the data to match the Expense type
+      const formattedExpenses: Expense[] = expensesData.map(expense => ({
+        id: expense.id,
+        date: new Date(expense.date),
+        description: expense.description,
+        category: expense.category as ExpenseCategory,
+        amount: Number(expense.amount),
+        status: expense.status as ApprovalStatus,
+        createdBy: expense.created_by || '',
+        createdAt: new Date(expense.created_at),
+        siteId: expense.site_id || '',
+        supervisorId: expense.supervisor_id
+      }));
+      setExpenses(formattedExpenses);
     }
 
     // Fetch advances
@@ -171,8 +185,23 @@ const ExpensesPage = () => {
 
     if (advancesError) {
       console.error('Error fetching advances:', advancesError);
-    } else {
-      setAdvances(advancesData || []);
+    } else if (advancesData) {
+      // Transform the data to match the Advance type
+      const formattedAdvances: Advance[] = advancesData.map(advance => ({
+        id: advance.id,
+        date: advance.date,
+        recipientId: advance.recipient_id || undefined,
+        recipientName: advance.recipient_name,
+        recipientType: advance.recipient_type,
+        purpose: advance.purpose,
+        amount: Number(advance.amount),
+        remarks: advance.remarks || undefined,
+        status: advance.status as ApprovalStatus,
+        createdBy: advance.created_by || '',
+        createdAt: advance.created_at,
+        siteId: advance.site_id || ''
+      }));
+      setAdvances(formattedAdvances);
     }
 
     // Fetch funds received
@@ -184,8 +213,18 @@ const ExpensesPage = () => {
 
     if (fundsError) {
       console.error('Error fetching funds:', fundsError);
-    } else {
-      setFundsReceived(fundsData || []);
+    } else if (fundsData) {
+      // Transform the data to match the FundsReceived type
+      const formattedFunds: FundsReceived[] = fundsData.map(fund => ({
+        id: fund.id,
+        date: new Date(fund.date),
+        amount: Number(fund.amount),
+        siteId: fund.site_id,
+        createdAt: new Date(fund.created_at),
+        reference: fund.reference || undefined,
+        method: fund.method || undefined
+      }));
+      setFundsReceived(formattedFunds);
     }
 
     // Fetch invoices
@@ -197,17 +236,53 @@ const ExpensesPage = () => {
 
     if (invoicesError) {
       console.error('Error fetching invoices:', invoicesError);
-    } else {
-      setInvoices(invoicesData || []);
+    } else if (invoicesData) {
+      // Transform the data to match the Invoice type
+      const formattedInvoices: Invoice[] = invoicesData.map(invoice => ({
+        id: invoice.id,
+        date: new Date(invoice.date),
+        partyId: invoice.party_id,
+        partyName: invoice.party_name,
+        material: invoice.material,
+        quantity: Number(invoice.quantity),
+        rate: Number(invoice.rate),
+        gstPercentage: Number(invoice.gst_percentage),
+        grossAmount: Number(invoice.gross_amount),
+        netAmount: Number(invoice.net_amount),
+        bankDetails: invoice.bank_details as any,
+        billUrl: invoice.bill_url || undefined,
+        invoiceImageUrl: invoice.invoice_image_url || undefined,
+        paymentStatus: invoice.payment_status,
+        createdBy: invoice.created_by || '',
+        createdAt: new Date(invoice.created_at),
+        approverType: invoice.approver_type as "ho" | "supervisor" || undefined,
+        siteId: invoice.site_id || undefined,
+        vendorName: invoice.vendor_name || undefined,
+        invoiceNumber: invoice.invoice_number || undefined,
+        amount: Number(invoice.amount) || undefined
+      }));
+      setInvoices(formattedInvoices);
     }
   };
 
   const handleAddExpense = async (expenseData: Partial<Expense>) => {
     if (!siteId) return;
 
+    // Convert the frontend Expense type to the Supabase table format
+    const supabaseExpense = {
+      site_id: siteId,
+      date: expenseData.date ? format(expenseData.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      description: expenseData.description,
+      category: expenseData.category,
+      amount: expenseData.amount,
+      status: expenseData.status || 'pending',
+      created_by: expenseData.createdBy || 'Current User',
+      supervisor_id: expenseData.supervisorId || 'default-supervisor'
+    };
+
     const { data, error } = await supabase
       .from('expenses')
-      .insert([{ ...expenseData, site_id: siteId }])
+      .insert([supabaseExpense])
       .select()
       .single();
 
@@ -231,9 +306,23 @@ const ExpensesPage = () => {
   const handleAddAdvance = async (advanceData: Partial<Advance>) => {
     if (!siteId) return;
 
+    // Convert the frontend Advance type to the Supabase table format
+    const supabaseAdvance = {
+      site_id: siteId,
+      date: advanceData.date ? format(new Date(advanceData.date), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      recipient_id: advanceData.recipientId,
+      recipient_name: advanceData.recipientName,
+      recipient_type: advanceData.recipientType,
+      purpose: advanceData.purpose,
+      amount: advanceData.amount,
+      remarks: advanceData.remarks,
+      status: advanceData.status || 'pending',
+      created_by: advanceData.createdBy || 'Current User'
+    };
+
     const { data, error } = await supabase
       .from('advances')
-      .insert([{ ...advanceData, site_id: siteId }])
+      .insert([supabaseAdvance])
       .select()
       .single();
 
@@ -257,9 +346,18 @@ const ExpensesPage = () => {
   const handleAddFunds = async (fundsData: Partial<FundsReceived>) => {
     if (!siteId) return;
 
+    // Convert the frontend FundsReceived type to the Supabase table format
+    const supabaseFunds = {
+      site_id: siteId,
+      date: fundsData.date ? format(fundsData.date, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+      amount: fundsData.amount,
+      reference: fundsData.reference,
+      method: fundsData.method
+    };
+
     const { data, error } = await supabase
       .from('funds_received')
-      .insert([{ ...fundsData, site_id: siteId }])
+      .insert([supabaseFunds])
       .select()
       .single();
 
@@ -283,9 +381,32 @@ const ExpensesPage = () => {
   const handleAddInvoice = async (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => {
     if (!siteId) return;
 
+    // Convert the frontend Invoice type to the Supabase table format
+    const supabaseInvoice = {
+      site_id: siteId,
+      date: format(invoiceData.date, 'yyyy-MM-dd'),
+      party_id: invoiceData.partyId,
+      party_name: invoiceData.partyName,
+      material: invoiceData.material,
+      quantity: invoiceData.quantity,
+      rate: invoiceData.rate,
+      gst_percentage: invoiceData.gstPercentage,
+      gross_amount: invoiceData.grossAmount,
+      net_amount: invoiceData.netAmount,
+      bank_details: invoiceData.bankDetails,
+      bill_url: invoiceData.billUrl,
+      invoice_image_url: invoiceData.invoiceImageUrl,
+      payment_status: invoiceData.paymentStatus,
+      created_by: invoiceData.createdBy || 'Current User',
+      approver_type: invoiceData.approverType,
+      vendor_name: invoiceData.vendorName,
+      invoice_number: invoiceData.invoiceNumber,
+      amount: invoiceData.amount
+    };
+
     const { data, error } = await supabase
       .from('invoices')
-      .insert([{ ...invoiceData, site_id: siteId }])
+      .insert([supabaseInvoice])
       .select()
       .single();
 
@@ -306,13 +427,39 @@ const ExpensesPage = () => {
     }
   };
 
+  const handleBack = () => {
+    navigate(-1);
+  };
+
+  const handleCompleteSite = async (siteId: string, completionDate: Date) => {
+    const { error } = await supabase
+      .from('sites')
+      .update({ is_completed: true, completion_date: format(completionDate, 'yyyy-MM-dd') })
+      .eq('id', siteId);
+
+    if (error) {
+      console.error('Error completing site:', error);
+      toast({
+        title: "Error",
+        description: "Failed to mark site as complete.",
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Site marked as complete"
+      });
+      fetchSiteData();
+    }
+  };
+
   if (!site) {
     return <div>Loading...</div>;
   }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <PageTitle>{site.name}</PageTitle>
+      <PageTitle title={site.name}>{site.name}</PageTitle>
       
       <SiteDetail 
         site={site}
@@ -324,7 +471,17 @@ const ExpensesPage = () => {
         onAddAdvance={handleAddAdvance}
         onAddFunds={handleAddFunds}
         onAddInvoice={handleAddInvoice}
-        balanceSummary={balanceSummary}
+        balanceSummary={balanceSummary || {
+          fundsReceived: 0,
+          totalExpenditure: 0,
+          totalAdvances: 0,
+          debitsToWorker: 0,
+          invoicesPaid: 0,
+          pendingInvoices: 0,
+          totalBalance: 0
+        }}
+        onBack={handleBack}
+        onCompleteSite={handleCompleteSite}
       />
 
       <ExpenseForm 
