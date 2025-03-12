@@ -64,13 +64,19 @@ export const useCurrentUser = () => {
           .eq('id', session.user.id)
           .single();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching user data:', error);
+          throw error;
+        }
 
         console.log("User data fetched:", data);
 
         // Store supervisor ID in localStorage
         if (data.supervisor_id) {
+          console.log("Setting supervisor_id in localStorage:", data.supervisor_id);
           localStorage.setItem('supervisorId', data.supervisor_id);
+        } else {
+          console.warn("No supervisor_id found for user");
         }
 
         setUser({

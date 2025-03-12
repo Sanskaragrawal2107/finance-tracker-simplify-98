@@ -54,6 +54,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         console.log("Setting supervisorId in localStorage:", userData.supervisor_id);
         localStorage.setItem('supervisorId', userData.supervisor_id);
       } else {
+        // If no supervisor ID exists, we'll check if we need to assign one later in SupervisorSites
         console.warn("No supervisor_id found for user");
       }
       
@@ -61,6 +62,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       if (userRole === UserRole.ADMIN) {
         navigate('/admin');
       } else if (userRole === UserRole.SUPERVISOR) {
+        // Redirect supervisor directly to sites page
         navigate('/supervisor/sites');
       } else {
         navigate('/dashboard');
