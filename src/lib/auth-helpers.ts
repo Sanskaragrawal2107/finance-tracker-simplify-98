@@ -7,11 +7,11 @@ import { UserRole } from './types';
 export type UserData = {
   id: string;
   email: string;
-  role: "admin" | "supervisor" | "viewer";
+  role: UserRole;
   supervisorId?: string;
 };
 
-export const fetchUserRole = async (): Promise<{ role: string, supervisorId: string } | null> => {
+export const fetchUserRole = async (): Promise<{ role: UserRole, supervisorId?: string } | null> => {
   try {
     // Get the current user session
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -29,8 +29,10 @@ export const fetchUserRole = async (): Promise<{ role: string, supervisorId: str
     if (error) throw error;
     if (!data) return null;
 
+    console.log("Fetched user role data:", data);
+
     return {
-      role: data.role,
+      role: data.role as UserRole,
       supervisorId: data.supervisor_id
     };
   } catch (error) {
@@ -64,10 +66,17 @@ export const useCurrentUser = () => {
 
         if (error) throw error;
 
+        console.log("User data fetched:", data);
+
+        // Store supervisor ID in localStorage
+        if (data.supervisor_id) {
+          localStorage.setItem('supervisorId', data.supervisor_id);
+        }
+
         setUser({
           id: session.user.id,
           email: session.user.email || '',
-          role: data.role as "admin" | "supervisor" | "viewer",  // Cast to the string literal type
+          role: data.role as UserRole,
           supervisorId: data.supervisor_id
         });
       } catch (error) {
@@ -86,6 +95,7 @@ export const useCurrentUser = () => {
           fetchUser();
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          localStorage.removeItem('supervisorId');
           navigate('/');
         }
       }
@@ -99,10 +109,10 @@ export const useCurrentUser = () => {
   return { user, loading };
 };
 
-export const isAdminUser = (role: string): boolean => {
-  return role === 'admin';
+export const isAdminUser = (role: UserRole): boolean => {
+  return role === UserRole.ADMIN;
 };
 
-export const isSupervisorUser = (role: string): boolean => {
-  return role === 'supervisor';
+export const isSupervisorUser = (role: UserRole): boolean => {
+  return role === UserRole.SUPERVISOR;
 };

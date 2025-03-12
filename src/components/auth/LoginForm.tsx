@@ -43,13 +43,18 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
 
       if (userError) throw userError;
       
+      console.log("Login successful, user data:", userData);
+      
       // Store user info in localStorage
       const userRole = userData.role as UserRole;
       localStorage.setItem('userRole', userRole);
       localStorage.setItem('userName', email.split('@')[0] || 'User');
       
       if (userData.supervisor_id) {
+        console.log("Setting supervisorId in localStorage:", userData.supervisor_id);
         localStorage.setItem('supervisorId', userData.supervisor_id);
+      } else {
+        console.warn("No supervisor_id found for user");
       }
       
       // Redirect based on role

@@ -43,6 +43,7 @@ const Index: React.FC = () => {
             localStorage.setItem('userRole', userRole);
             localStorage.setItem('userName', data.session.user.email?.split('@')[0] || 'User');
             
+            console.log("Setting supervisor ID from initial auth check:", userData.supervisor_id);
             if (userData.supervisor_id) {
               localStorage.setItem('supervisorId', userData.supervisor_id);
             }
