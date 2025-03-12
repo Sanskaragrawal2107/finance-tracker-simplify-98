@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { IndianRupee } from 'lucide-react';
 import CustomCard from '../ui/CustomCard';

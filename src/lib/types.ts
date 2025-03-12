@@ -58,16 +58,16 @@ export interface HeadOfficeTransaction {
 }
 
 export enum ExpenseCategory {
-  TRAVEL = "travel",
-  MATERIAL = "material",
-  LABOR = "labor",
-  OFFICE = "office",
-  MISC = "misc",
-  TRANSPORT = "transport",
-  FOOD = "food",
-  ACCOMMODATION = "accommodation",
-  EQUIPMENT = "equipment",
-  MAINTENANCE = "maintenance",
+  MATERIAL = "Material",
+  LABOR = "Labor",
+  TRAVEL = "Travel",
+  OFFICE = "Office",
+  MISC = "Miscellaneous",
+  TRANSPORT = "Transport",
+  FOOD = "Food",
+  ACCOMMODATION = "Accommodation",
+  EQUIPMENT = "Equipment",
+  MAINTENANCE = "Maintenance",
   STAFF_TRAVELLING_CHARGES = "STAFF TRAVELLING CHARGES",
   STATIONARY_PRINTING = "STATIONARY & PRINTING",
   DIESEL_FUEL_CHARGES = "DIESEL & FUEL CHARGES",
@@ -121,17 +121,17 @@ export interface Expense {
 
 export interface Advance {
   id: string;
-  date: Date;
+  date: string | Date;
   recipientId?: string;
   recipientName: string;
-  recipientType: RecipientType;
-  purpose: AdvancePurpose;
+  recipientType: RecipientType | string;
+  purpose: AdvancePurpose | string;
   amount: number;
   remarks?: string;
-  status: ApprovalStatus;
+  status: ApprovalStatus | string;
   createdBy: string;
-  createdAt: Date;
-  siteId?: string;
+  createdAt: Date | string;
+  siteId: string;
 }
 
 export interface FundsReceived {
@@ -141,7 +141,7 @@ export interface FundsReceived {
   siteId: string;
   createdAt: Date;
   reference?: string;
-  method?: PaymentMethod;
+  method?: PaymentMethod | string;
 }
 
 export interface BankDetails {
@@ -176,7 +176,7 @@ export interface Invoice {
   bankDetails: BankDetails;
   billUrl?: string;
   invoiceImageUrl?: string;
-  paymentStatus: PaymentStatus;
+  paymentStatus: PaymentStatus | string;
   createdBy: string;
   createdAt: Date;
   approverType?: "ho" | "supervisor";

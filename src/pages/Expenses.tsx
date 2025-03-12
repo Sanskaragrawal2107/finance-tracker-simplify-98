@@ -109,6 +109,113 @@ const Expenses: React.FC = () => {
     }
   };
 
+  // This function fetches all transaction data for a specific site
+  const fetchSiteTransactions = async (siteId: string) => {
+    try {
+      // Fetch expenses
+      const { data: expenseData, error: expenseError } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('site_id', siteId);
+      
+      if (expenseError) throw expenseError;
+      
+      // Fetch advances
+      const { data: advanceData, error: advanceError } = await supabase
+        .from('advances')
+        .select('*')
+        .eq('site_id', siteId);
+      
+      if (advanceError) throw advanceError;
+      
+      // Fetch funds received
+      const { data: fundsData, error: fundsError } = await supabase
+        .from('funds_received')
+        .select('*')
+        .eq('site_id', siteId);
+      
+      if (fundsError) throw fundsError;
+      
+      // Fetch invoices
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('site_id', siteId);
+      
+      if (invoiceError) throw invoiceError;
+      
+      // Format and set the data
+      const expenses: Expense[] = expenseData?.map(exp => ({
+        id: exp.id,
+        date: new Date(exp.date),
+        description: exp.description,
+        category: exp.category,
+        amount: exp.amount,
+        status: exp.status as ApprovalStatus,
+        createdBy: exp.created_by || '',
+        createdAt: new Date(exp.created_at),
+        siteId: exp.site_id,
+        supervisorId: exp.supervisor_id
+      })) || [];
+      
+      const advances: Advance[] = advanceData?.map(adv => ({
+        id: adv.id,
+        date: new Date(adv.date),
+        recipientId: adv.recipient_id || '',
+        recipientName: adv.recipient_name,
+        recipientType: adv.recipient_type,
+        purpose: adv.purpose,
+        amount: adv.amount,
+        remarks: adv.remarks || '',
+        status: adv.status as ApprovalStatus,
+        createdBy: adv.created_by || '',
+        createdAt: new Date(adv.created_at),
+        siteId: adv.site_id
+      })) || [];
+      
+      const fundsReceived: FundsReceived[] = fundsData?.map(fund => ({
+        id: fund.id,
+        date: new Date(fund.date),
+        amount: fund.amount,
+        siteId: fund.site_id,
+        createdAt: new Date(fund.created_at),
+        reference: fund.reference || '',
+        method: fund.method
+      })) || [];
+      
+      const invoices: Invoice[] = invoiceData?.map(inv => ({
+        id: inv.id,
+        date: new Date(inv.date),
+        partyId: inv.party_id,
+        partyName: inv.party_name,
+        material: inv.material,
+        quantity: inv.quantity,
+        rate: inv.rate,
+        gstPercentage: inv.gst_percentage,
+        grossAmount: inv.gross_amount,
+        netAmount: inv.net_amount,
+        bankDetails: inv.bank_details as any,
+        billUrl: inv.bill_url,
+        invoiceImageUrl: inv.invoice_image_url,
+        paymentStatus: inv.payment_status,
+        createdBy: inv.created_by || '',
+        createdAt: new Date(inv.created_at),
+        approverType: inv.approver_type,
+        siteId: inv.site_id,
+        amount: inv.net_amount
+      })) || [];
+      
+      setExpenses(expenses);
+      setAdvances(advances);
+      setFundsReceived(fundsReceived);
+      setInvoices(invoices);
+      
+    } catch (err: any) {
+      console.error('Error fetching site transactions:', err);
+      toast.error('Failed to load transaction data: ' + err.message);
+    }
+  };
+
   const ensureDateObjects = (site: Site): Site => {
     return {
       ...site,
@@ -127,67 +234,157 @@ const Expenses: React.FC = () => {
     fetchSites();
   };
 
-  const handleAddExpense = (newExpense: Partial<Expense>) => {
-    const expenseWithId: Expense = {
-      ...newExpense as Expense,
-      id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED,
-      createdAt: new Date(),
-      supervisorId: selectedSupervisorId || '',
-    };
-    
-    setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
-    toast.success("Expense added successfully");
-  };
-
-  const handleAddAdvance = (newAdvance: Partial<Advance>) => {
-    const advanceWithId: Advance = {
-      ...newAdvance as Advance,
-      id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED,
-      createdAt: new Date(),
-    };
-    
-    setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
-    toast.success("Advance added successfully");
-  };
-
-  const handleAddFunds = (newFund: Partial<FundsReceived>) => {
-    const fundWithId: FundsReceived = {
-      ...newFund as FundsReceived,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    
-    setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
-    
-    if (fundWithId.siteId) {
-      setSites(prevSites =>
-        prevSites.map(site =>
-          site.id === fundWithId.siteId
-            ? { ...site, funds: (site.funds || 0) + fundWithId.amount }
-            : site
-        )
-      );
+  const handleAddExpense = async (newExpense: Partial<Expense>) => {
+    try {
+      const expenseWithId: Expense = {
+        ...newExpense as Expense,
+        id: Date.now().toString(),
+        status: ApprovalStatus.APPROVED,
+        createdAt: new Date(),
+        supervisorId: selectedSupervisorId || '',
+      };
+      
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert({
+          date: expenseWithId.date.toISOString(),
+          description: expenseWithId.description,
+          category: expenseWithId.category,
+          amount: expenseWithId.amount,
+          status: expenseWithId.status,
+          created_by: expenseWithId.createdBy,
+          supervisor_id: expenseWithId.supervisorId,
+          site_id: expenseWithId.siteId
+        });
+      
+      if (error) throw error;
+      
+      setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
+      toast.success("Expense added successfully");
+    } catch (err: any) {
+      console.error('Error adding expense:', err);
+      toast.error('Failed to add expense: ' + err.message);
     }
-    
-    toast.success("Funds received recorded successfully");
   };
 
-  const handleAddInvoice = (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    console.log("Adding new invoice with data:", newInvoice);
-    
-    const invoiceWithId: Invoice = {
-      ...newInvoice,
-      id: Date.now().toString(),
-      createdAt: new Date(),
-    };
-    
-    console.log("Created invoice with ID:", invoiceWithId.id);
-    console.log("Invoice image URL:", invoiceWithId.invoiceImageUrl);
-    
-    setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
-    toast.success("Invoice added successfully");
+  const handleAddAdvance = async (newAdvance: Partial<Advance>) => {
+    try {
+      const advanceWithId: Advance = {
+        ...newAdvance as Advance,
+        id: Date.now().toString(),
+        status: ApprovalStatus.APPROVED,
+        createdAt: new Date(),
+      };
+      
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('advances')
+        .insert({
+          date: typeof advanceWithId.date === 'string' ? advanceWithId.date : advanceWithId.date.toISOString(),
+          recipient_id: advanceWithId.recipientId,
+          recipient_name: advanceWithId.recipientName,
+          recipient_type: advanceWithId.recipientType,
+          purpose: advanceWithId.purpose,
+          amount: advanceWithId.amount,
+          remarks: advanceWithId.remarks,
+          status: advanceWithId.status,
+          created_by: advanceWithId.createdBy,
+          site_id: advanceWithId.siteId
+        });
+      
+      if (error) throw error;
+      
+      setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
+      toast.success("Advance added successfully");
+    } catch (err: any) {
+      console.error('Error adding advance:', err);
+      toast.error('Failed to add advance: ' + err.message);
+    }
+  };
+
+  const handleAddFunds = async (newFund: Partial<FundsReceived>) => {
+    try {
+      const fundWithId: FundsReceived = {
+        ...newFund as FundsReceived,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+      };
+      
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('funds_received')
+        .insert({
+          date: fundWithId.date.toISOString(),
+          amount: fundWithId.amount,
+          site_id: fundWithId.siteId,
+          reference: fundWithId.reference,
+          method: fundWithId.method
+        });
+      
+      if (error) throw error;
+      
+      setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
+      
+      if (fundWithId.siteId) {
+        setSites(prevSites =>
+          prevSites.map(site =>
+            site.id === fundWithId.siteId
+              ? { ...site, funds: (site.funds || 0) + fundWithId.amount }
+              : site
+          )
+        );
+      }
+      
+      toast.success("Funds received recorded successfully");
+    } catch (err: any) {
+      console.error('Error adding funds:', err);
+      toast.error('Failed to add funds: ' + err.message);
+    }
+  };
+
+  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    try {
+      console.log("Adding new invoice with data:", newInvoice);
+      
+      const invoiceWithId: Invoice = {
+        ...newInvoice,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+      };
+      
+      console.log("Created invoice with ID:", invoiceWithId.id);
+      
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert({
+          date: invoiceWithId.date.toISOString(),
+          party_id: invoiceWithId.partyId,
+          party_name: invoiceWithId.partyName,
+          material: invoiceWithId.material,
+          quantity: invoiceWithId.quantity,
+          rate: invoiceWithId.rate,
+          gst_percentage: invoiceWithId.gstPercentage,
+          gross_amount: invoiceWithId.grossAmount,
+          net_amount: invoiceWithId.netAmount,
+          bank_details: invoiceWithId.bankDetails,
+          bill_url: invoiceWithId.billUrl,
+          invoice_image_url: invoiceWithId.invoiceImageUrl,
+          payment_status: invoiceWithId.paymentStatus,
+          created_by: invoiceWithId.createdBy,
+          approver_type: invoiceWithId.approverType,
+          site_id: invoiceWithId.siteId
+        });
+      
+      if (error) throw error;
+      
+      setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
+      toast.success("Invoice added successfully");
+    } catch (err: any) {
+      console.error('Error adding invoice:', err);
+      toast.error('Failed to add invoice: ' + err.message);
+    }
   };
 
   const handleCompleteSite = async (siteId: string, completionDate: Date) => {
@@ -252,53 +449,90 @@ const Expenses: React.FC = () => {
     invoice.approverType === "supervisor" || !invoice.approverType
   );
 
-  const calculateSiteFinancials = (siteId: string) => {
-    const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
-    
-    const siteExpenses = expenses.filter(expense => 
-      expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
-    );
-    
-    const siteAdvances = advances.filter(advance => 
-      advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
-    );
-    
-    const siteInvoices = invoices.filter(invoice => 
-      invoice.siteId === siteId && invoice.paymentStatus === 'paid'
-    );
+  const calculateSiteFinancials = async (siteId: string) => {
+    try {
+      // First try to get the financial summary from the view
+      const { data: summaryData, error: summaryError } = await supabase
+        .from('site_financial_summaries')
+        .select('*')
+        .eq('site_id', siteId)
+        .single();
+        
+      if (summaryData) {
+        return {
+          fundsReceived: summaryData.total_funds_received || 0,
+          totalExpenditure: summaryData.total_expenses || 0,
+          totalAdvances: summaryData.total_advances || 0,
+          debitsToWorker: summaryData.total_debits_to_worker || 0,
+          invoicesPaid: summaryData.invoices_paid || 0,
+          pendingInvoices: summaryData.pending_invoices || 0,
+          totalBalance: (summaryData.total_funds_received || 0) - 
+                        (summaryData.total_expenses || 0) - 
+                        (summaryData.total_advances || 0) - 
+                        (summaryData.invoices_paid || 0)
+        };
+      }
+      
+      // Fallback to calculating from local data
+      const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
+      
+      const siteExpenses = expenses.filter(expense => 
+        expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
+      );
+      
+      const siteAdvances = advances.filter(advance => 
+        advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
+      );
+      
+      const siteInvoices = invoices.filter(invoice => 
+        invoice.siteId === siteId && invoice.paymentStatus === 'paid'
+      );
 
-    const regularAdvances = siteAdvances.filter(advance => 
-      !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
-    );
+      const regularAdvances = siteAdvances.filter(advance => 
+        !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+      );
 
-    const debitAdvances = siteAdvances.filter(advance => 
-      DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
-    );
+      const debitAdvances = siteAdvances.filter(advance => 
+        DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+      );
 
-    const supervisorInvoices = siteInvoices.filter(invoice => 
-      invoice.approverType === "supervisor" || !invoice.approverType
-    );
+      const supervisorInvoices = siteInvoices.filter(invoice => 
+        invoice.approverType === "supervisor" || !invoice.approverType
+      );
 
-    const totalFunds = siteFunds.reduce((sum, fund) => sum + fund.amount, 0);
-    const totalExpenses = siteExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-    const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-    const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
-    const pendingInvoicesTotal = siteInvoices
-      .filter(invoice => invoice.paymentStatus === 'pending')
-      .reduce((sum, invoice) => sum + invoice.netAmount, 0);
+      const totalFunds = siteFunds.reduce((sum, fund) => sum + fund.amount, 0);
+      const totalExpenses = siteExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+      const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+      const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+      const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+      const pendingInvoicesTotal = invoices
+        .filter(invoice => invoice.siteId === siteId && invoice.paymentStatus === 'pending')
+        .reduce((sum, invoice) => sum + invoice.netAmount, 0);
 
-    const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
+      const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
 
-    return {
-      fundsReceived: totalFunds,
-      totalExpenditure: totalExpenses,
-      totalAdvances: totalRegularAdvances,
-      debitsToWorker: totalDebitToWorker,
-      invoicesPaid: supervisorInvoiceTotal,
-      pendingInvoices: pendingInvoicesTotal,
-      totalBalance: totalBalance
-    };
+      return {
+        fundsReceived: totalFunds,
+        totalExpenditure: totalExpenses,
+        totalAdvances: totalRegularAdvances,
+        debitsToWorker: totalDebitToWorker,
+        invoicesPaid: supervisorInvoiceTotal,
+        pendingInvoices: pendingInvoicesTotal,
+        totalBalance: totalBalance
+      };
+    } catch (err) {
+      console.error('Error calculating financials:', err);
+      // Return defaults if there's an error
+      return {
+        fundsReceived: 0,
+        totalExpenditure: 0,
+        totalAdvances: 0,
+        debitsToWorker: 0,
+        invoicesPaid: 0,
+        pendingInvoices: 0,
+        totalBalance: 0
+      };
+    }
   };
 
   const getSelectedSupervisorName = () => {
@@ -309,6 +543,12 @@ const Expenses: React.FC = () => {
 
   const siteSupervisor = selectedSite && selectedSite.supervisorId ? 
     supervisors.find(s => s.id === selectedSite.supervisorId) : null;
+
+  useEffect(() => {
+    if (selectedSiteId) {
+      fetchSiteTransactions(selectedSiteId);
+    }
+  }, [selectedSiteId]);
 
   if (isLoading) {
     return (
@@ -335,7 +575,7 @@ const Expenses: React.FC = () => {
             onAddFunds={handleAddFunds}
             onAddInvoice={handleAddInvoice}
             onCompleteSite={handleCompleteSite}
-            balanceSummary={calculateSiteFinancials(selectedSite.id)}
+            balanceSummary={await calculateSiteFinancials(selectedSite.id)}
             siteSupervisor={siteSupervisor}
           />
         </div>
