@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -8,6 +7,7 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
+import SupervisorSites from "./pages/SupervisorSites";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
@@ -17,7 +17,6 @@ import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
-// Redirect component based on user role
 const RoleBasedRedirect = () => {
   const userRole = localStorage.getItem('userRole') as UserRole;
   
@@ -32,7 +31,6 @@ const RoleBasedRedirect = () => {
   return <Navigate to="/dashboard" replace />;
 };
 
-// Auth wrapper to protect routes
 const ProtectedRoute = ({ 
   children, 
   allowedRoles = [] 
@@ -77,7 +75,6 @@ const ProtectedRoute = ({
   }
 
   if (allowedRoles.length > 0 && userRole && !allowedRoles.includes(userRole)) {
-    // Redirect based on role
     if (userRole === UserRole.ADMIN) {
       return <Navigate to="/admin" replace />;
     } else if (userRole === UserRole.SUPERVISOR) {
@@ -90,14 +87,12 @@ const ProtectedRoute = ({
   return <>{children}</>;
 };
 
-// Layout component for authenticated pages
 const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode, allowedRoles?: UserRole[] }) => {
   const [userRole, setUserRole] = useState<UserRole>(UserRole.VIEWER);
   const [userName, setUserName] = useState<string>('User');
   const location = useLocation();
   const isMobile = useIsMobile();
   
-  // Check if user is authenticated
   useEffect(() => {
     const storedUserRole = localStorage.getItem('userRole') as UserRole;
     const storedUserName = localStorage.getItem('userName');
@@ -111,7 +106,6 @@ const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode,
     }
   }, []);
   
-  // Get page title based on current route
   const getPageTitle = () => {
     const path = location.pathname;
     
@@ -154,11 +148,9 @@ const App = () => {
   const [session, setSession] = useState(null);
 
   useEffect(() => {
-    // Setup auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_OUT') {
-          // Clear local storage on sign out
           localStorage.removeItem('userRole');
           localStorage.removeItem('userName');
           localStorage.removeItem('supervisorId');
