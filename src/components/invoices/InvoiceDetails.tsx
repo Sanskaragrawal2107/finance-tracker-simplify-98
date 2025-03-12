@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import {
@@ -30,9 +31,15 @@ interface InvoiceDetailsProps {
   invoice: Invoice | null;
   isOpen: boolean;
   onClose: () => void;
+  onUpdateStatus?: (id: string, status: PaymentStatus) => Promise<void>;
 }
 
-const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClose }) => {
+const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ 
+  invoice, 
+  isOpen, 
+  onClose,
+  onUpdateStatus 
+}) => {
   if (!invoice) {
     return null;
   }
@@ -74,7 +81,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                <span>Date: {format(invoice.date, 'PPP')}</span>
+                <span>Date: {format(new Date(invoice.date), 'PPP')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <User className="h-5 w-5" />
@@ -177,7 +184,15 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
           </div>
         </div>
 
-        <div className="mt-6 flex justify-end">
+        <div className="mt-6 flex justify-end space-x-2">
+          {onUpdateStatus && invoice.paymentStatus === PaymentStatus.PENDING && (
+            <Button 
+              variant="default" 
+              onClick={() => onUpdateStatus(invoice.id, PaymentStatus.PAID)}
+            >
+              Mark as Paid
+            </Button>
+          )}
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>
