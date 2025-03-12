@@ -132,10 +132,16 @@ const SupervisorSites: React.FC = () => {
         )}
       </div>
       
-      <SitesList 
-        sites={sites} 
-        onSiteClick={handleSiteClick}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <SitesList 
+          sites={sites}
+          onSiteClick={handleSiteClick}
+        />
+      )}
       
       <SiteForm 
         isOpen={isSiteFormOpen}
