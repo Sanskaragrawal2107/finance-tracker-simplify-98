@@ -7,48 +7,13 @@ import CustomCard from '@/components/ui/CustomCard';
 import { Button } from '@/components/ui/button';
 
 interface SitesListProps {
-  sites: any[]; // Accept Supabase sites format
+  sites: Site[];
   onSelectSite: (siteId: string) => void;
-  isLoading?: boolean;
 }
 
-const SitesList: React.FC<SitesListProps> = ({ sites, onSelectSite, isLoading = false }) => {
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center p-8">
-          <p className="text-muted-foreground">Loading sites...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!sites.length) {
-    return (
-      <div className="space-y-6">
-        <div className="text-center p-8 border rounded-lg bg-muted/30">
-          <p className="text-muted-foreground">No sites found.</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Transform data to match our Site type
-  const formattedSites = sites.map(site => ({
-    id: site.id,
-    name: site.name,
-    jobName: site.job_name,
-    posNo: site.pos_no,
-    startDate: new Date(site.start_date),
-    completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
-    supervisorId: site.supervisor_id,
-    isCompleted: site.is_completed,
-    createdAt: new Date(site.created_at),
-    funds: site.funds
-  }));
-
-  const activeSites = formattedSites.filter(site => !site.isCompleted);
-  const completedSites = formattedSites.filter(site => site.isCompleted);
+const SitesList: React.FC<SitesListProps> = ({ sites, onSelectSite }) => {
+  const activeSites = sites.filter(site => !site.isCompleted);
+  const completedSites = sites.filter(site => site.isCompleted);
 
   return (
     <div className="space-y-6">

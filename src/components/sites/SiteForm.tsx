@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -32,7 +33,6 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Site } from "@/lib/types";
-import { createSite } from "@/integrations/supabase/client";
 
 interface SiteFormProps {
   isOpen: boolean;
@@ -62,7 +62,6 @@ type FormValues = z.infer<typeof formSchema>;
 const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervisorId }) => {
   const [startDateOpen, setStartDateOpen] = React.useState(false);
   const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -75,57 +74,26 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
     },
   });
 
-  const handleSubmit = async (values: FormValues) => {
-    try {
-      setIsSubmitting(true);
-      
-      // Transform values to uppercase
-      const uppercaseValues = {
-        ...values,
-        name: values.name.toUpperCase(),
-        jobName: values.jobName.toUpperCase(),
-        posNo: values.posNo.toUpperCase(),
-      };
-      
-      const newSite: Partial<Site> = {
-        ...uppercaseValues,
-        supervisorId,
-        isCompleted: false,
-        createdAt: new Date(),
-      };
-      
-      console.log('Submitting site data:', newSite);
-      
-      // First create the site in the database
-      const createdSite = await createSite({
-        name: newSite.name,
-        jobName: newSite.jobName,
-        posNo: newSite.posNo, 
-        startDate: newSite.startDate,
-        completionDate: newSite.completionDate,
-        supervisorId: newSite.supervisorId,
-        isCompleted: newSite.isCompleted
-      });
-      
-      if (createdSite) {
-        // Then call the onSubmit callback with the created site data
-        onSubmit({
-          ...newSite,
-          id: createdSite.id,
-        });
-        
-        form.reset();
-        onClose();
-        toast.success("Site created successfully");
-      } else {
-        toast.error("Failed to create site");
-      }
-    } catch (error) {
-      console.error("Error creating site:", error);
-      toast.error("An error occurred while creating the site");
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSubmit = (values: FormValues) => {
+    // Transform values to uppercase
+    const uppercaseValues = {
+      ...values,
+      name: values.name.toUpperCase(),
+      jobName: values.jobName.toUpperCase(),
+      posNo: values.posNo.toUpperCase(),
+    };
+    
+    const newSite: Partial<Site> = {
+      ...uppercaseValues,
+      supervisorId,
+      isCompleted: false,
+      createdAt: new Date(),
+    };
+    
+    onSubmit(newSite);
+    form.reset();
+    onClose();
+    toast.success("Site created successfully");
   };
 
   return (
@@ -147,7 +115,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                 <FormItem>
                   <FormLabel>Site Name</FormLabel>
                   <FormControl>
-                    <Input transformToUppercase placeholder="Enter site name" {...field} />
+                    <Input placeholder="Enter site name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -161,7 +129,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                 <FormItem>
                   <FormLabel>Job Name</FormLabel>
                   <FormControl>
-                    <Input transformToUppercase placeholder="Enter job name" {...field} />
+                    <Input placeholder="Enter job name" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +143,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                 <FormItem>
                   <FormLabel>P.O. Number</FormLabel>
                   <FormControl>
-                    <Input transformToUppercase placeholder="Enter P.O. number" {...field} />
+                    <Input placeholder="Enter P.O. number" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -270,13 +238,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
               <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                className="w-full sm:w-auto"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Creating...' : 'Create Site'}
-              </Button>
+              <Button type="submit" className="w-full sm:w-auto">Create Site</Button>
             </DialogFooter>
           </form>
         </Form>

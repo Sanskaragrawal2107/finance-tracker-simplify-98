@@ -6,7 +6,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Home, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/lib/types';
-import { useAuth } from '@/contexts/AuthContext';
 
 interface NavbarProps {
   onMenuClick?: () => void;
@@ -23,7 +22,12 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { signOut } = useAuth();
+  
+  const handleLogout = () => {
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    navigate('/');
+  };
   
   return (
     <header className={cn("h-14 sm:h-16 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10", className)}>
@@ -79,7 +83,7 @@ const Navbar: React.FC<NavbarProps> = ({
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={signOut}
+            onClick={handleLogout}
             className="p-1 md:p-2"
             title="Logout"
             aria-label="Logout"

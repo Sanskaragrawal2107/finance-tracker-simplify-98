@@ -1,62 +1,56 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
-import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { UserRole } from "./lib/types";
+import { useIsMobile } from "./hooks/use-mobile";
 
 const queryClient = new QueryClient();
 
-// Protected route component
-const ProtectedRoute = ({ 
-  children, 
-  allowedRoles = [] 
-}: { 
-  children: React.ReactNode, 
-  allowedRoles?: UserRole[] 
-}) => {
-  const { user, role, loading } = useAuth();
-  const location = useLocation();
+// Redirect component based on user role
+const RoleBasedRedirect = () => {
+  const userRole = localStorage.getItem('userRole') as UserRole;
   
-  // Show loading state
-  if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (userRole === UserRole.ADMIN) {
+    return <Navigate to="/admin" replace />;
   }
   
-  // Check if user is authenticated
-  if (!user) {
-    return <Navigate to="/auth" state={{ from: location }} replace />;
+  if (userRole === UserRole.SUPERVISOR) {
+    return <Navigate to="/expenses" replace />;
   }
   
-  // Check if user has required role (if roles are specified)
-  if (allowedRoles.length > 0 && role && !allowedRoles.includes(role as UserRole)) {
-    // Redirect based on user role
-    if (role === UserRole.ADMIN) {
-      return <Navigate to="/admin" replace />;
-    } else if (role === UserRole.SUPERVISOR) {
-      return <Navigate to="/expenses" replace />;
-    } else {
-      return <Navigate to="/dashboard" replace />;
-    }
-  }
-  
-  return <>{children}</>;
+  return <Navigate to="/dashboard" replace />;
 };
 
 // Layout component for authenticated pages
-const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode, allowedRoles?: UserRole[] }) => {
-  const { role } = useAuth();
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
+  const [userRole, setUserRole] = useState<UserRole>(UserRole.VIEWER);
+  const [userName, setUserName] = useState<string>('User');
   const location = useLocation();
+  const isMobile = useIsMobile();
+  
+  // Check if user is authenticated
+  useEffect(() => {
+    const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    const storedUserName = localStorage.getItem('userName');
+    
+    if (storedUserRole) {
+      setUserRole(storedUserRole);
+    }
+    
+    if (storedUserName) {
+      setUserName(storedUserName);
+    }
+  }, []);
   
   // Get page title based on current route
   const getPageTitle = () => {
@@ -73,13 +67,20 @@ const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode,
         return '';
     }
   };
+
+  // Check if user is supervisor and redirect from dashboard to expenses
+  useEffect(() => {
+    if ((userRole === UserRole.SUPERVISOR) && location.pathname === "/dashboard") {
+      window.location.href = "/expenses";
+    }
+  }, [userRole, location.pathname]);
   
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar 
         onMenuClick={() => {}} // Empty function since we don't have a sidebar
         pageTitle={getPageTitle()}
-        userRole={role as UserRole}
+        userRole={userRole}
       />
       
       <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
@@ -91,56 +92,27 @@ const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode,
   );
 };
 
-// App Routes with Auth Provider
-const AppRoutes = () => {
-  return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/expenses" 
-          element={
-            <ProtectedRoute allowedRoles={[UserRole.ADMIN, UserRole.SUPERVISOR]}>
-              <AppLayout allowedRoles={[UserRole.ADMIN, UserRole.SUPERVISOR]}>
-                <Expenses />
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/admin" 
-          element={
-            <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
-              <AppLayout allowedRoles={[UserRole.ADMIN]}>
-                <AdminDashboard />
-              </AppLayout>
-            </ProtectedRoute>
-          } 
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AuthProvider>
-  );
-};
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AppRoutes />
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route 
+            path="/dashboard" 
+            element={
+              <AppLayout>
+                <Dashboard />
+              </AppLayout>
+            } 
+          />
+          <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
+          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
+          <Route path="/authenticated" element={<RoleBasedRedirect />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
