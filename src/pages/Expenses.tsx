@@ -13,16 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 import { supervisors } from '@/data/supervisors';
 
 const initialExpenses: Expense[] = [];
-const initialSites: Site[] = [];
 const initialAdvances: Advance[] = [];
 const initialFunds: FundsReceived[] = [];
 const initialInvoices: Invoice[] = [];
-
-const SUPERVISOR_ID = "sup123";
 
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
@@ -33,7 +31,7 @@ const DEBIT_ADVANCE_PURPOSES = [
 const Expenses: React.FC = () => {
   const location = useLocation();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [sites, setSites] = useState<Site[]>(initialSites);
+  const [sites, setSites] = useState<Site[]>([]);
   const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
   const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
@@ -43,14 +41,17 @@ const Expenses: React.FC = () => {
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    const storedSupervisorId = localStorage.getItem('supervisorId');
+    
     if (storedUserRole) {
       setUserRole(storedUserRole);
       
-      if (storedUserRole === UserRole.SUPERVISOR) {
-        setSelectedSupervisorId(SUPERVISOR_ID);
+      if (storedUserRole === UserRole.SUPERVISOR && storedSupervisorId) {
+        setSelectedSupervisorId(storedSupervisorId);
       }
     }
     
@@ -62,7 +63,51 @@ const Expenses: React.FC = () => {
     if (locationState?.newSite && storedUserRole === UserRole.ADMIN) {
       setIsSiteFormOpen(true);
     }
+    
+    fetchSites();
   }, [location]);
+
+  const fetchSites = async () => {
+    try {
+      setIsLoading(true);
+      
+      let query = supabase.from('sites').select('*');
+      
+      if (userRole === UserRole.SUPERVISOR && selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
+      } else if (userRole === UserRole.ADMIN && selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedSites: Site[] = data.map(site => ({
+          id: site.id,
+          name: site.name,
+          jobName: site.job_name,
+          posNo: site.pos_no,
+          startDate: new Date(site.start_date),
+          completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+          supervisorId: site.supervisor_id,
+          isCompleted: site.is_completed,
+          createdAt: new Date(site.created_at),
+          funds: site.funds || 0
+        }));
+        
+        setSites(formattedSites);
+      }
+    } catch (err: any) {
+      console.error('Error fetching sites:', err);
+      toast.error('Failed to load sites: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const ensureDateObjects = (site: Site): Site => {
     return {
@@ -74,22 +119,12 @@ const Expenses: React.FC = () => {
     };
   };
 
-  const handleAddSite = (newSite: Partial<Site>) => {
-    const currentSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
-      ? selectedSupervisorId 
-      : SUPERVISOR_ID;
-      
-    const siteWithId: Site = {
-      ...newSite as Site,
-      id: Date.now().toString(),
-      supervisorId: currentSupervisorId,
-      createdAt: new Date(),
-      isCompleted: false,
-      funds: 0
-    };
+  const handleAddSite = async (newSite: Partial<Site>) => {
+    if (newSite.id) {
+      setSites(prevSites => [...prevSites, newSite as Site]);
+    }
     
-    setSites(prevSites => [...prevSites, siteWithId]);
-    toast.success(`Site "${siteWithId.name}" created successfully`);
+    fetchSites();
   };
 
   const handleAddExpense = (newExpense: Partial<Expense>) => {
@@ -98,7 +133,7 @@ const Expenses: React.FC = () => {
       id: Date.now().toString(),
       status: ApprovalStatus.APPROVED,
       createdAt: new Date(),
-      supervisorId: SUPERVISOR_ID,
+      supervisorId: selectedSupervisorId || '',
     };
     
     setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
@@ -155,16 +190,33 @@ const Expenses: React.FC = () => {
     toast.success("Invoice added successfully");
   };
 
-  const handleCompleteSite = (siteId: string, completionDate: Date) => {
-    setSites(prevSites => 
-      prevSites.map(site => 
-        site.id === siteId 
-          ? { ...site, isCompleted: true, completionDate } 
-          : site
-      )
-    );
-    
-    toast.success("Site marked as completed");
+  const handleCompleteSite = async (siteId: string, completionDate: Date) => {
+    try {
+      const { error } = await supabase
+        .from('sites')
+        .update({ 
+          is_completed: true, 
+          completion_date: completionDate.toISOString() 
+        })
+        .eq('id', siteId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setSites(prevSites => 
+        prevSites.map(site => 
+          site.id === siteId 
+            ? { ...site, isCompleted: true, completionDate } 
+            : site
+        )
+      );
+      
+      toast.success("Site marked as completed");
+    } catch (err: any) {
+      console.error('Error completing site:', err);
+      toast.error('Failed to complete site: ' + err.message);
+    }
   };
 
   const filteredSites = sites.filter(site => {
@@ -257,6 +309,14 @@ const Expenses: React.FC = () => {
 
   const siteSupervisor = selectedSite && selectedSite.supervisorId ? 
     supervisors.find(s => s.id === selectedSite.supervisorId) : null;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-16rem)]">
+        <div className="animate-pulse text-xl text-primary">Loading sites...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
@@ -442,7 +502,7 @@ const Expenses: React.FC = () => {
         onSubmit={handleAddSite}
         supervisorId={userRole === UserRole.ADMIN && selectedSupervisorId 
           ? selectedSupervisorId 
-          : SUPERVISOR_ID}
+          : selectedSupervisorId || ''}
       />
     </div>
   );
