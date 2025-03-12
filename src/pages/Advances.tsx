@@ -1,214 +1,252 @@
-import React from 'react';
-import PageTitle from '@/components/common/PageTitle';
-import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, FileText, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
-import { Advance, AdvancePurpose, ApprovalStatus, RecipientType } from '@/lib/types';
 
-// Mock data for demonstration
-const advances: Advance[] = [
+import React, { useState, useEffect } from 'react';
+import { Advance, RecipientType, AdvancePurpose, ApprovalStatus, UserRole } from '@/lib/types';
+import PageTitle from '@/components/common/PageTitle';
+import AdvanceFilter from '@/components/advances/AdvanceFilter';
+import AdvancesList from '@/components/advances/AdvancesList';
+import AdvanceForm from '@/components/advances/AdvanceForm';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+
+// Sample advances data for initial development
+const initialAdvances: Advance[] = [
   {
-    id: '1',
-    date: new Date('2023-07-05'),
-    recipientId: '101',
-    recipientName: 'Raj Construction',
+    id: "1",
+    date: new Date('2023-01-05'),
+    recipientId: "sub1",
+    recipientName: "Devnath Contractors",
     recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.MATERIAL,
-    amount: 150000,
+    amount: 25000,
     status: ApprovalStatus.APPROVED,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-07-05'),
+    createdBy: "Supervisor A",
+    createdAt: new Date('2023-01-05'),
+    siteId: "site1"
   },
   {
-    id: '2',
-    date: new Date('2023-07-04'),
-    recipientId: '102',
-    recipientName: 'Suresh Electrical',
+    id: "2",
+    date: new Date('2023-01-10'),
+    recipientId: "sub2",
+    recipientName: "Kailash & Company",
     recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.MATERIAL,
-    amount: 75000,
+    amount: 15000,
     status: ApprovalStatus.APPROVED,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-04'),
+    createdBy: "Supervisor B",
+    createdAt: new Date('2023-01-10'),
+    siteId: "site2"
   },
   {
-    id: '3',
-    date: new Date('2023-07-03'),
-    recipientId: '201',
-    recipientName: 'Labor Group A',
+    id: "3",
+    date: new Date('2023-01-15'),
+    recipientId: "w1",
+    recipientName: "Mahendra Singh",
     recipientType: RecipientType.WORKER,
     purpose: AdvancePurpose.WAGES,
-    amount: 45000,
+    amount: 5000,
     status: ApprovalStatus.APPROVED,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-07-03'),
+    createdBy: "Supervisor C",
+    createdAt: new Date('2023-01-15'),
+    siteId: "site3"
   },
   {
-    id: '4',
-    date: new Date('2023-07-02'),
-    recipientId: '103',
-    recipientName: 'Premium Transport',
+    id: "4",
+    date: new Date('2023-01-20'),
+    recipientId: "sub3",
+    recipientName: "Transport Services",
     recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.TRANSPORT,
-    amount: 35000,
+    amount: 8000,
     status: ApprovalStatus.PENDING,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-02'),
+    createdBy: "Supervisor A",
+    createdAt: new Date('2023-01-20'),
+    siteId: "site1"
   },
   {
-    id: '5',
-    date: new Date('2023-07-01'),
-    recipientId: '202',
-    recipientName: 'Labor Group B',
+    id: "5",
+    date: new Date('2023-01-25'),
+    recipientId: "w2",
+    recipientName: "Rajesh Kumar",
     recipientType: RecipientType.WORKER,
     purpose: AdvancePurpose.WAGES,
-    amount: 30000,
+    amount: 3000,
     status: ApprovalStatus.PENDING,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-01'),
-  },
+    createdBy: "Supervisor B",
+    createdAt: new Date('2023-01-25'),
+    siteId: "site2"
+  }
 ];
 
-const getPurposeColor = (purpose: AdvancePurpose) => {
-  switch (purpose) {
-    case AdvancePurpose.MATERIAL:
-      return 'bg-blue-100 text-blue-800';
-    case AdvancePurpose.WAGES:
-      return 'bg-green-100 text-green-800';
-    case AdvancePurpose.TRANSPORT:
-      return 'bg-orange-100 text-orange-800';
-    case AdvancePurpose.MISC:
-      return 'bg-gray-100 text-gray-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
+const purposeOptions = [
+  { label: "Material", value: AdvancePurpose.MATERIAL },
+  { label: "Wages", value: AdvancePurpose.WAGES },
+  { label: "Transport", value: AdvancePurpose.TRANSPORT },
+  { label: "Miscellaneous", value: AdvancePurpose.MISC },
+  { label: "Advance", value: AdvancePurpose.ADVANCE },
+  { label: "Safety Shoes", value: AdvancePurpose.SAFETY_SHOES },
+  { label: "Tools", value: AdvancePurpose.TOOLS },
+  { label: "Other", value: AdvancePurpose.OTHER }
+];
 
-const getStatusColor = (status: ApprovalStatus) => {
-  switch (status) {
-    case ApprovalStatus.APPROVED:
-      return 'bg-green-100 text-green-800';
-    case ApprovalStatus.PENDING:
-      return 'bg-yellow-100 text-yellow-800';
-    case ApprovalStatus.REJECTED:
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
+const recipientTypeOptions = [
+  { label: "Worker", value: RecipientType.WORKER },
+  { label: "Subcontractor", value: RecipientType.SUBCONTRACTOR },
+  { label: "Supervisor", value: RecipientType.SUPERVISOR }
+];
 
-const getRecipientTypeColor = (type: RecipientType) => {
-  switch (type) {
-    case RecipientType.SUBCONTRACTOR:
-      return 'bg-purple-100 text-purple-800';
-    case RecipientType.WORKER:
-      return 'bg-indigo-100 text-indigo-800';
-    case RecipientType.SUPERVISOR:
-      return 'bg-blue-100 text-blue-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
+const Advances = () => {
+  const [advances, setAdvances] = useState<Advance[]>([]);
+  const [filteredAdvances, setFilteredAdvances] = useState<Advance[]>([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [supervisorId, setSupervisorId] = useState<string | null>(null);
 
-const Advances: React.FC = () => {
+  useEffect(() => {
+    const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    const storedSupervisorId = localStorage.getItem('supervisorId');
+    
+    if (storedUserRole) {
+      setUserRole(storedUserRole);
+      
+      if (storedUserRole === UserRole.SUPERVISOR && storedSupervisorId) {
+        setSupervisorId(storedSupervisorId);
+      }
+    }
+    
+    fetchAdvances();
+  }, []);
+
+  const fetchAdvances = async () => {
+    try {
+      setIsLoading(true);
+      let query = supabase.from('advances').select('*');
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      if (data) {
+        const formattedAdvances: Advance[] = data.map(adv => ({
+          id: adv.id,
+          date: new Date(adv.date),
+          recipientId: adv.recipient_id || '',
+          recipientName: adv.recipient_name,
+          recipientType: adv.recipient_type as RecipientType,
+          purpose: adv.purpose as AdvancePurpose,
+          amount: adv.amount,
+          remarks: adv.remarks || '',
+          status: adv.status as ApprovalStatus,
+          createdBy: adv.created_by || '',
+          createdAt: new Date(adv.created_at),
+          siteId: adv.site_id
+        }));
+        
+        setAdvances(formattedAdvances);
+        setFilteredAdvances(formattedAdvances);
+      } else {
+        // If no data from Supabase, use the initial data
+        setAdvances(initialAdvances);
+        setFilteredAdvances(initialAdvances);
+      }
+    } catch (err: any) {
+      console.error('Error fetching advances:', err);
+      toast.error('Failed to load advances: ' + err.message);
+      // Fallback to initial data if API fails
+      setAdvances(initialAdvances);
+      setFilteredAdvances(initialAdvances);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddAdvance = async (newAdvance: Partial<Advance>) => {
+    try {
+      // Create a complete advance object
+      const advanceWithId: Advance = {
+        ...newAdvance as Advance,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+        siteId: newAdvance.siteId || "default-site", // Ensure siteId is present
+      };
+      
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('advances')
+        .insert({
+          date: advanceWithId.date instanceof Date ? advanceWithId.date.toISOString() : advanceWithId.date,
+          recipient_id: advanceWithId.recipientId,
+          recipient_name: advanceWithId.recipientName,
+          recipient_type: advanceWithId.recipientType,
+          purpose: advanceWithId.purpose,
+          amount: advanceWithId.amount,
+          remarks: advanceWithId.remarks,
+          status: advanceWithId.status,
+          created_by: advanceWithId.createdBy,
+          site_id: advanceWithId.siteId
+        });
+      
+      if (error) throw error;
+      
+      // Add to state
+      setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
+      setFilteredAdvances(prevFiltered => [advanceWithId, ...prevFiltered]);
+      
+      setIsFormOpen(false);
+      toast.success('Advance added successfully');
+    } catch (err: any) {
+      console.error('Error adding advance:', err);
+      toast.error('Failed to add advance: ' + err.message);
+    }
+  };
+
+  const handleFilter = (filtered: Advance[]) => {
+    setFilteredAdvances(filtered);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-16rem)]">
+        <div className="animate-pulse text-xl text-primary">Loading advances...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <PageTitle 
-        title="Advances" 
-        subtitle="Manage advances given to contractors and workers"
+        title="Advances Management" 
+        subtitle="Manage and track all advances to workers and subcontractors"
       />
       
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="relative max-w-md">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Search advances..." 
-            className="py-2 pl-10 pr-4 border rounded-md w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
-        </div>
+      <div className="flex justify-between items-center">
+        <AdvanceFilter 
+          advances={advances} 
+          onFilter={handleFilter}
+          purposeOptions={purposeOptions}
+          recipientTypeOptions={recipientTypeOptions}
+        />
         
-        <div className="flex flex-wrap gap-2">
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-            <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-            Filter
-          </button>
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
-            Import
-          </button>
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-            <Download className="h-4 w-4 mr-2 text-muted-foreground" />
-            Export
-          </button>
-          <button className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:bg-primary/90 transition-colors">
-            <Plus className="h-4 w-4 mr-2" />
-            New Advance
-          </button>
-        </div>
+        <Button onClick={() => setIsFormOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Advance
+        </Button>
       </div>
       
-      <CustomCard>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
-                <th className="pb-3 font-medium text-muted-foreground">Type</th>
-                <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
-                <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                <th className="pb-3 font-medium text-muted-foreground">Created By</th>
-                <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {advances.map((advance) => (
-                <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                  <td className="py-4 pl-4 text-sm">{format(advance.date, 'MMM dd, yyyy')}</td>
-                  <td className="py-4 text-sm">{advance.recipientName}</td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getRecipientTypeColor(advance.recipientType)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {advance.recipientType}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getPurposeColor(advance.purpose)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {advance.purpose}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {advance.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm">{advance.createdBy}</td>
-                  <td className="py-4 pr-4 text-right">
-                    <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="flex items-center justify-between mt-4 border-t pt-4">
-          <p className="text-sm text-muted-foreground">Showing 1-5 of 5 entries</p>
-          <div className="flex items-center space-x-2">
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </button>
-            <button className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm">1</button>
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
-          </div>
-        </div>
-      </CustomCard>
+      <AdvancesList 
+        advances={filteredAdvances} 
+        purposeOptions={purposeOptions}
+      />
+      
+      <AdvanceForm 
+        isOpen={isFormOpen} 
+        onClose={() => setIsFormOpen(false)} 
+        onSubmit={handleAddAdvance}
+        purposeOptions={purposeOptions}
+        recipientTypeOptions={recipientTypeOptions}
+      />
     </div>
   );
 };

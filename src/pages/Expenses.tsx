@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -149,7 +150,7 @@ const Expenses: React.FC = () => {
         id: exp.id,
         date: new Date(exp.date),
         description: exp.description,
-        category: exp.category,
+        category: exp.category as ExpenseCategory,
         amount: exp.amount,
         status: exp.status as ApprovalStatus,
         createdBy: exp.created_by || '',
@@ -163,8 +164,8 @@ const Expenses: React.FC = () => {
         date: new Date(adv.date),
         recipientId: adv.recipient_id || '',
         recipientName: adv.recipient_name,
-        recipientType: adv.recipient_type,
-        purpose: adv.purpose,
+        recipientType: adv.recipient_type as any,
+        purpose: adv.purpose as any,
         amount: adv.amount,
         remarks: adv.remarks || '',
         status: adv.status as ApprovalStatus,
@@ -180,7 +181,7 @@ const Expenses: React.FC = () => {
         siteId: fund.site_id,
         createdAt: new Date(fund.created_at),
         reference: fund.reference || '',
-        method: fund.method
+        method: fund.method as any
       })) || [];
       
       const invoices: Invoice[] = invoiceData?.map(inv => ({
@@ -197,7 +198,7 @@ const Expenses: React.FC = () => {
         bankDetails: inv.bank_details as any,
         billUrl: inv.bill_url,
         invoiceImageUrl: inv.invoice_image_url,
-        paymentStatus: inv.payment_status,
+        paymentStatus: inv.payment_status as any,
         createdBy: inv.created_by || '',
         createdAt: new Date(inv.created_at),
         approverType: inv.approver_type,
@@ -456,7 +457,7 @@ const Expenses: React.FC = () => {
         .from('site_financial_summaries')
         .select('*')
         .eq('site_id', siteId)
-        .single();
+        .maybeSingle();
         
       if (summaryData) {
         return {
@@ -575,7 +576,7 @@ const Expenses: React.FC = () => {
             onAddFunds={handleAddFunds}
             onAddInvoice={handleAddInvoice}
             onCompleteSite={handleCompleteSite}
-            balanceSummary={await calculateSiteFinancials(selectedSite.id)}
+            balanceSummary={calculateSiteFinancials(selectedSite.id)}
             siteSupervisor={siteSupervisor}
           />
         </div>

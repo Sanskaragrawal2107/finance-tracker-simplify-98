@@ -57,6 +57,13 @@ export type Database = {
             foreignKeyName: "advances_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
+            referencedRelation: "site_financial_summaries"
+            referencedColumns: ["site_id"]
+          },
+          {
+            foreignKeyName: "advances_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
@@ -104,6 +111,13 @@ export type Database = {
             foreignKeyName: "expenses_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
+            referencedRelation: "site_financial_summaries"
+            referencedColumns: ["site_id"]
+          },
+          {
+            foreignKeyName: "expenses_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
@@ -138,6 +152,13 @@ export type Database = {
           site_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "funds_received_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "site_financial_summaries"
+            referencedColumns: ["site_id"]
+          },
           {
             foreignKeyName: "funds_received_site_id_fkey"
             columns: ["site_id"]
@@ -222,6 +243,13 @@ export type Database = {
             foreignKeyName: "invoices_site_id_fkey"
             columns: ["site_id"]
             isOneToOne: false
+            referencedRelation: "site_financial_summaries"
+            referencedColumns: ["site_id"]
+          },
+          {
+            foreignKeyName: "invoices_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
             referencedRelation: "sites"
             referencedColumns: ["id"]
           },
@@ -295,7 +323,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      site_financial_summaries: {
+        Row: {
+          invoices_paid: number | null
+          pending_invoices: number | null
+          site_id: string | null
+          site_name: string | null
+          supervisor_id: string | null
+          total_advances: number | null
+          total_debits_to_worker: number | null
+          total_expenses: number | null
+          total_funds_received: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_site_supervisor_id: {

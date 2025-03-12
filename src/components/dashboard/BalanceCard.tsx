@@ -6,7 +6,7 @@ import CustomCard from '../ui/CustomCard';
 import { BalanceSummary } from '@/lib/types';
 
 interface BalanceCardProps {
-  balanceData: BalanceSummary;
+  balanceData: BalanceSummary | Promise<BalanceSummary>;
   className?: string;
 }
 
@@ -14,15 +14,38 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
   balanceData,
   className 
 }) => {
+  const [summary, setSummary] = useState<BalanceSummary>({
+    fundsReceived: 0,
+    totalExpenditure: 0,
+    totalAdvances: 0,
+    debitsToWorker: 0,
+    invoicesPaid: 0,
+    pendingInvoices: 0,
+    totalBalance: 0
+  });
+
+  useEffect(() => {
+    const loadData = async () => {
+      if (balanceData instanceof Promise) {
+        const resolvedData = await balanceData;
+        setSummary(resolvedData);
+      } else {
+        setSummary(balanceData);
+      }
+    };
+    
+    loadData();
+  }, [balanceData]);
+
   // Ensure all properties have default values to prevent TypeScript errors
   const safeBalanceData = {
-    fundsReceived: balanceData.fundsReceived || 0,
-    totalExpenditure: balanceData.totalExpenditure || 0,
-    totalAdvances: balanceData.totalAdvances || 0,
-    debitsToWorker: balanceData.debitsToWorker || 0,
-    invoicesPaid: balanceData.invoicesPaid || 0,
-    pendingInvoices: balanceData.pendingInvoices || 0,
-    totalBalance: balanceData.totalBalance || 0
+    fundsReceived: summary.fundsReceived || 0,
+    totalExpenditure: summary.totalExpenditure || 0,
+    totalAdvances: summary.totalAdvances || 0,
+    debitsToWorker: summary.debitsToWorker || 0,
+    invoicesPaid: summary.invoicesPaid || 0,
+    pendingInvoices: summary.pendingInvoices || 0,
+    totalBalance: summary.totalBalance || 0
   };
 
   return (
