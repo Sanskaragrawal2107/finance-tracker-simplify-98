@@ -10,10 +10,10 @@ interface ExpensesPageContentProps {
   fundsReceived: FundsReceived[];
   invoices: Invoice[];
   balanceSummary: BalanceSummary;
-  onAddExpense: () => void;
-  onAddAdvance: () => void;
-  onAddFunds: () => void;
-  onAddInvoice: () => void;
+  onAddExpense: (expenseData: Partial<Expense>) => Promise<void>;
+  onAddAdvance: (advanceData: Partial<Advance>) => Promise<void>;
+  onAddFunds: (fundsData: Partial<FundsReceived>) => Promise<void>;
+  onAddInvoice: (invoiceData: Partial<Invoice>) => Promise<void>;
   onBack: () => void;
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }

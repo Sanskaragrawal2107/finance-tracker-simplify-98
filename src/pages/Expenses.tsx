@@ -84,6 +84,7 @@ const Expenses: React.FC = () => {
   }
   
   // Pass individual props to ExpensesPageContent instead of the siteData object
+  // Fix TypeScript errors by properly typing the handler functions
   return (
     <ExpensesPageContent 
       site={siteData.site}
