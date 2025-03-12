@@ -1,17 +1,8 @@
-
 // User related types
 export enum UserRole {
   ADMIN = "admin",
   SUPERVISOR = "supervisor",
   VIEWER = "viewer"
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  createdAt: Date;
 }
 
 // Site related types
@@ -112,7 +103,7 @@ export interface Expense {
   description: string;
   category: ExpenseCategory | string;
   amount: number;
-  status: ApprovalStatus;
+  status: ApprovalStatus | string;
   createdBy: string;
   createdAt: Date;
   siteId?: string; // Reference to the site
@@ -150,6 +141,7 @@ export interface BankDetails {
   ifscCode: string;
   email?: string;
   mobile?: string;
+  [key: string]: any; // Add index signature to make compatible with Json type
 }
 
 export interface MaterialItem {
