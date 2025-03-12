@@ -1,419 +1,512 @@
-import React, { useState } from 'react';
-import PageTitle from '@/components/common/PageTitle';
-import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle, ArrowLeft, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  PageTitle,
+  CustomCard,
+  Button,
+  Search,
+  Plus,
+  Filter,
+  Building,
+  Download,
+  CheckCircle2,
+  Clock,
+  IndianRupee,
+  Users,
+  User,
+  Package,
+  Tag,
+  Percent,
+  CreditCard,
+  Receipt,
+  Landmark,
+  Calendar
+} from '@/components/ui';
+import {
+  Invoice,
+  PaymentStatus,
+  BankDetails,
+  UserRole,
+  Site
+} from '@/lib/types';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Form, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormControl, 
-  FormDescription, 
-  FormMessage 
-} from "@/components/ui/form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Label } from "@/components/ui/label";
-import { BankRadioGroup, BankRadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { supervisors } from '@/data/supervisors';
 
-const getStatusColor = (status: PaymentStatus) => {
-  switch (status) {
-    case PaymentStatus.PAID:
-      return 'bg-green-100 text-green-800';
-    case PaymentStatus.PENDING:
-      return 'bg-yellow-100 text-yellow-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const paymentFormSchema = z.object({
-  bankOption: z.enum(["sbi", "hdfc", "icici", "axis"]),
-  rememberChoice: z.boolean().optional()
-});
-
-const initialInvoices: Invoice[] = [
-  {
-    id: '1',
-    date: new Date('2023-07-05'),
-    partyId: '101',
-    partyName: 'Steel Suppliers Ltd',
-    material: 'TMT Steel Bars',
-    quantity: 5,
-    rate: 50000,
-    gstPercentage: 18,
-    grossAmount: 250000,
-    netAmount: 295000,
-    materialItems: [
-      {
-        material: 'TMT Steel Bars',
-        quantity: 5,
-        rate: 50000,
-        gstPercentage: 18,
-        amount: 250000
-      }
-    ],
-    bankDetails: {
-      accountNumber: '12345678901',
-      bankName: 'State Bank of India',
-      ifscCode: 'SBIN0001234',
-      email: 'accounts@steelsuppliers.com',
-      mobile: '9876543210',
-    },
-    billUrl: 'https://sample-files.com/pdf/sample.pdf',
-    paymentStatus: PaymentStatus.PAID,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-07-05'),
-    approverType: 'ho',
-  },
-  {
-    id: '2',
-    date: new Date('2023-07-04'),
-    partyId: '102',
-    partyName: 'Cement Corporation',
-    material: 'Portland Cement, White Cement',
-    quantity: 100,
-    rate: 350,
-    gstPercentage: 18,
-    grossAmount: 45000,
-    netAmount: 53100,
-    materialItems: [
-      {
-        material: 'Portland Cement',
-        quantity: 100,
-        rate: 350,
-        gstPercentage: 18,
-        amount: 35000
-      },
-      {
-        material: 'White Cement',
-        quantity: 20,
-        rate: 500,
-        gstPercentage: 18,
-        amount: 10000
-      }
-    ],
-    bankDetails: {
-      accountNumber: '98765432101',
-      bankName: 'HDFC Bank',
-      ifscCode: 'HDFC0001234',
-      email: 'accounts@cementcorp.com',
-      mobile: '8765432109',
-    },
-    billUrl: 'https://sample-files.com/pdf/sample.pdf',
-    paymentStatus: PaymentStatus.PAID,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-04'),
-    approverType: 'supervisor',
-  },
-  {
-    id: '3',
-    date: new Date('2023-07-03'),
-    partyId: '103',
-    partyName: 'Brick Manufacturers',
-    material: 'Red Bricks',
-    quantity: 10000,
-    rate: 8,
-    gstPercentage: 12,
-    grossAmount: 80000,
-    netAmount: 89600,
-    materialItems: [
-      {
-        material: 'Red Bricks',
-        quantity: 10000,
-        rate: 8,
-        gstPercentage: 12,
-        amount: 80000
-      }
-    ],
-    bankDetails: {
-      accountNumber: '45678901234',
-      bankName: 'ICICI Bank',
-      ifscCode: 'ICIC0001234',
-      email: 'accounts@brickmanufacturers.com',
-      mobile: '7654321098',
-    },
-    billUrl: 'https://sample-files.com/pdf/sample.pdf',
-    paymentStatus: PaymentStatus.PENDING,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-03'),
-    approverType: 'supervisor',
-  },
-  {
-    id: '4',
-    date: new Date('2023-07-02'),
-    partyId: '104',
-    partyName: 'Electrical Solutions',
-    material: 'Wiring & Fixtures',
-    quantity: 1,
-    rate: 125000,
-    gstPercentage: 18,
-    grossAmount: 125000,
-    netAmount: 147500,
-    bankDetails: {
-      accountNumber: '56789012345',
-      bankName: 'Axis Bank',
-      ifscCode: 'UTIB0001234',
-      email: 'accounts@electricalsolutions.com',
-      mobile: '6543210987',
-    },
-    billUrl: '#',
-    paymentStatus: PaymentStatus.PENDING,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-07-02'),
-    approverType: 'ho',
-  },
-];
-
-const bankDetails = {
-  sbi: {
-    name: "State Bank of India",
-    logo: "SBI",
-    color: "#2d76b7",
-    website: "https://www.onlinesbi.sbi/",
-  },
-  hdfc: {
-    name: "HDFC Bank",
-    logo: "HDFC",
-    color: "#004c8f",
-    website: "https://www.hdfcbank.com/",
-  },
-  icici: {
-    name: "ICICI Bank",
-    logo: "ICICI",
-    color: "#F58220",
-    website: "https://www.icicibank.com/",
-  },
-  axis: {
-    name: "Axis Bank",
-    logo: "AXIS",
-    color: "#97144d",
-    website: "https://www.axisbank.com/",
-  }
-};
+const initialInvoices: Invoice[] = [];
 
 const Invoices: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [isBankPageOpen, setIsBankPageOpen] = useState(false);
-  const [selectedBank, setSelectedBank] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const { toast } = useToast();
-  const [paymentProcessing, setPaymentProcessing] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-  const [bankPageStep, setBankPageStep] = useState(1);
-  
-  const paymentForm = useForm<z.infer<typeof paymentFormSchema>>({
-    resolver: zodResolver(paymentFormSchema),
-    defaultValues: {
-      bankOption: "sbi",
-      rememberChoice: false
-    },
-  });
+  const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
+  const [isInvoiceDetailsOpen, setIsInvoiceDetailsOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'paid'>('all');
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filteredInvoices = invoices.filter(invoice => 
-    invoice.partyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.material.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.id.includes(searchTerm)
-  );
+  useEffect(() => {
+    const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    const storedSupervisorId = localStorage.getItem('supervisorId');
 
-  const handleCreateInvoice = (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    const newInvoice: Invoice = {
-      ...invoice,
-      id: (invoices.length + 1).toString(),
-      createdAt: new Date(),
-    };
-    
-    setInvoices([newInvoice, ...invoices]);
-    
-    toast({
-      title: "Invoice Created",
-      description: `Invoice for ${invoice.partyName} has been created successfully.`,
-    });
-    
-    setIsCreateDialogOpen(false);
-  };
+    if (storedUserRole) {
+      setUserRole(storedUserRole);
 
-  const handleViewInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setIsViewDialogOpen(true);
-  };
+      if (storedUserRole === UserRole.SUPERVISOR && storedSupervisorId) {
+        setSelectedSupervisorId(storedSupervisorId);
+      }
+    }
 
-  const handleDownloadInvoice = (invoice: Invoice) => {
-    if (invoice.billUrl) {
-      window.open(invoice.billUrl, '_blank');
-      toast({
-        title: "Download Initiated",
-        description: "The invoice download has been initiated.",
-      });
-    } else {
-      toast({
-        title: "No Bill Available",
-        description: "There is no bill attachment available for this invoice.",
-        variant: "destructive"
-      });
+    fetchInvoices();
+    fetchSites();
+  }, []);
+
+  const fetchInvoices = async () => {
+    try {
+      setIsLoading(true);
+
+      let query = supabase.from('invoices').select('*');
+
+      if (userRole === UserRole.SUPERVISOR && selectedSupervisorId) {
+        // Fetch site IDs for the supervisor
+        const { data: sitesData, error: sitesError } = await supabase
+          .from('sites')
+          .select('id')
+          .eq('supervisor_id', selectedSupervisorId);
+
+        if (sitesError) throw sitesError;
+
+        if (sitesData && sitesData.length > 0) {
+          const siteIds = sitesData.map(site => site.id);
+          query = query.in('site_id', siteIds);
+        } else {
+          // If no sites are found for the supervisor, return an empty array
+          setInvoices([]);
+          return;
+        }
+      } else if (userRole === UserRole.ADMIN && selectedSupervisorId) {
+        // Fetch site IDs for the supervisor
+        const { data: sitesData, error: sitesError } = await supabase
+          .from('sites')
+          .select('id')
+          .eq('supervisor_id', selectedSupervisorId);
+
+        if (sitesError) throw sitesError;
+
+        if (sitesData && sitesData.length > 0) {
+          const siteIds = sitesData.map(site => site.id);
+          query = query.in('site_id', siteIds);
+        } else {
+          // If no sites are found for the supervisor, return an empty array
+          setInvoices([]);
+          return;
+        }
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const formattedInvoices: Invoice[] = data.map(invoice => ({
+          id: invoice.id,
+          date: new Date(invoice.date),
+          partyId: invoice.party_id,
+          partyName: invoice.party_name,
+          material: invoice.material,
+          quantity: invoice.quantity,
+          rate: invoice.rate,
+          gstPercentage: invoice.gst_percentage,
+          grossAmount: invoice.gross_amount,
+          netAmount: invoice.net_amount,
+          bankDetails: invoice.bank_details as BankDetails,
+          billUrl: invoice.bill_url,
+          invoiceImageUrl: invoice.invoice_image_url,
+          paymentStatus: invoice.payment_status,
+          createdBy: invoice.created_by || '',
+          createdAt: new Date(invoice.created_at),
+          approverType: invoice.approver_type,
+          siteId: invoice.site_id,
+          amount: invoice.net_amount
+        }));
+
+        setInvoices(formattedInvoices);
+      }
+    } catch (err: any) {
+      console.error('Error fetching invoices:', err);
+      toast.error('Failed to load invoices: ' + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
-  
-  const handleMakePayment = (invoice: Invoice) => {
-    // Update the invoice payment status
-    const updatedInvoices = invoices.map(inv => {
-      if (inv.id === invoice.id) {
-        return {
-          ...inv,
-          paymentStatus: PaymentStatus.PAID
-        };
+
+  const fetchSites = async () => {
+    try {
+      setIsLoading(true);
+
+      let query = supabase.from('sites').select('*');
+
+      if (userRole === UserRole.SUPERVISOR && selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
+      } else if (userRole === UserRole.ADMIN && selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
       }
-      return inv;
-    });
-    
-    setInvoices(updatedInvoices);
-    setIsViewDialogOpen(false);
-    
-    toast({
-      title: "Payment Successful",
-      description: `Payment of ₹${invoice.netAmount.toLocaleString()} has been processed successfully.`,
-    });
+
+      const { data, error } = await query;
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        const formattedSites: Site[] = data.map(site => ({
+          id: site.id,
+          name: site.name,
+          jobName: site.job_name,
+          posNo: site.pos_no,
+          startDate: new Date(site.start_date),
+          completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+          supervisorId: site.supervisor_id,
+          isCompleted: site.is_completed,
+          createdAt: new Date(site.created_at),
+          funds: site.funds || 0
+        }));
+
+        setSites(formattedSites);
+      }
+    } catch (err: any) {
+      console.error('Error fetching sites:', err);
+      toast.error('Failed to load sites: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    try {
+      const invoiceWithId: Invoice = {
+        ...newInvoice,
+        id: Date.now().toString(),
+        createdAt: new Date(),
+      };
+
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('invoices')
+        .insert({
+          date: invoiceWithId.date.toISOString(),
+          party_id: invoiceWithId.partyId,
+          party_name: invoiceWithId.partyName,
+          material: invoiceWithId.material,
+          quantity: invoiceWithId.quantity,
+          rate: invoiceWithId.rate,
+          gst_percentage: invoiceWithId.gstPercentage,
+          gross_amount: invoiceWithId.grossAmount,
+          net_amount: invoiceWithId.netAmount,
+          bank_details: invoiceWithId.bankDetails,
+          bill_url: invoiceWithId.billUrl,
+          invoice_image_url: invoiceWithId.invoiceImageUrl,
+          payment_status: invoiceWithId.paymentStatus,
+          created_by: invoiceWithId.createdBy,
+          approver_type: invoiceWithId.approverType,
+          site_id: invoiceWithId.siteId
+        });
+
+      if (error) throw error;
+
+      setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
+      toast.success("Invoice added successfully");
+    } catch (err: any) {
+      console.error('Error adding invoice:', err);
+      toast.error('Failed to add invoice: ' + err.message);
+    }
+  };
+
+  const handleMakePayment = async (invoiceId: string) => {
+    try {
+      // Optimistically update the local state
+      setInvoices(prevInvoices =>
+        prevInvoices.map(invoice =>
+          invoice.id === invoiceId ? { ...invoice, paymentStatus: PaymentStatus.PAID } : invoice
+        )
+      );
+
+      // Update the payment status in Supabase
+      const { error } = await supabase
+        .from('invoices')
+        .update({ payment_status: PaymentStatus.PAID })
+        .eq('id', invoiceId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success("Payment status updated successfully");
+    } catch (err: any) {
+      console.error('Error updating payment status:', err);
+      toast.error('Failed to update payment status: ' + err.message);
+
+      // Revert the local state in case of an error
+      setInvoices(prevInvoices =>
+        prevInvoices.map(invoice =>
+          invoice.id === invoiceId ? { ...invoice, paymentStatus: PaymentStatus.PENDING } : invoice
+        )
+      );
+    }
+  };
+
+  const getSelectedSupervisorName = () => {
+    if (!selectedSupervisorId) return null;
+    const supervisor = supervisors.find(s => s.id === selectedSupervisorId);
+    return supervisor ? supervisor.name : "Unknown Supervisor";
+  };
+
+  const filteredInvoices = invoices.filter(invoice => {
+    const matchesSearch =
+      invoice.partyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.material.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      filterStatus === 'all' ? true : invoice.paymentStatus === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-16rem)]">
+        <div className="animate-pulse text-xl text-primary">Loading invoices...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <PageTitle 
-        title="Invoices" 
-        subtitle="Manage invoices from vendors and suppliers"
+    <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+      <PageTitle
+        title="Invoices"
+        subtitle="Manage and track invoices from vendors and suppliers"
+        className="mb-4"
       />
-      
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="relative max-w-md">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Search invoices..." 
-            className="py-2 pl-10 pr-4 border rounded-md w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto">
+          <div className="relative max-w-md w-full">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search invoices..."
+              className="py-2 pl-10 pr-4 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {userRole === UserRole.ADMIN && (
+            <div className="w-full md:w-64">
+              <Select
+                value={selectedSupervisorId || ''}
+                onValueChange={(value) => setSelectedSupervisorId(value || null)}
+              >
+                <SelectTrigger className="w-full">
+                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="All Supervisors" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Supervisors</SelectItem>
+                  {supervisors.map((supervisor) => (
+                    <SelectItem key={supervisor.id} value={supervisor.id}>
+                      {supervisor.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {userRole === UserRole.ADMIN && (
+            <div className="w-full md:w-64">
+              <Select
+                value={filterStatus}
+                onValueChange={(value: 'all' | 'pending' | 'paid') => setFilterStatus(value)}
+              >
+                <SelectTrigger className="w-full">
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="All Payment Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Payment Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
-        
+
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm" className="gap-1.5">
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-10">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                Filter
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <h4 className="font-medium">Filter Invoices</h4>
+                <div className="space-y-2">
+                  <h5 className="text-sm font-medium">Payment Status</h5>
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-all"
+                        checked={filterStatus === 'all'}
+                        onCheckedChange={() => setFilterStatus('all')}
+                      />
+                      <Label htmlFor="filter-all">All Statuses</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-pending"
+                        checked={filterStatus === 'pending'}
+                        onCheckedChange={() => setFilterStatus('pending')}
+                      />
+                      <Label htmlFor="filter-pending">Pending</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="filter-paid"
+                        checked={filterStatus === 'paid'}
+                        onCheckedChange={() => setFilterStatus('paid')}
+                      />
+                      <Label htmlFor="filter-paid">Paid</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            size="sm"
+            className="h-10"
+            onClick={() => setIsInvoiceFormOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
             New Invoice
           </Button>
         </div>
       </div>
-      
-      <CustomCard>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                <th className="pb-3 font-medium text-muted-foreground">Party Name</th>
-                <th className="pb-3 font-medium text-muted-foreground">Material</th>
-                <th className="pb-3 font-medium text-muted-foreground">Net Taxable Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground">GST</th>
-                <th className="pb-3 font-medium text-muted-foreground">Grand Net Total</th>
-                <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                  <td className="py-4 pl-4 text-sm">{format(invoice.date, 'MMM dd, yyyy')}</td>
-                  <td className="py-4 text-sm">{invoice.partyName}</td>
-                  <td className="py-4 text-sm">{invoice.material}</td>
-                  <td className="py-4 text-sm">₹{invoice.grossAmount.toLocaleString()}</td>
-                  <td className="py-4 text-sm">{invoice.gstPercentage}%</td>
-                  <td className="py-4 text-sm font-medium">₹{invoice.netAmount.toLocaleString()}</td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getStatusColor(invoice.paymentStatus)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {invoice.paymentStatus}
+
+      {userRole === UserRole.ADMIN && selectedSupervisorId && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md flex items-center">
+          <Users className="h-5 w-5 mr-2 text-blue-500" />
+          <span className="font-medium">
+            Viewing invoices for: {getSelectedSupervisorName()}
+          </span>
+        </div>
+      )}
+
+      <div className="overflow-y-auto flex-1 pr-2">
+        {invoices.length > 0 ? (
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredInvoices.map((invoice) => (
+              <CustomCard
+                key={invoice.id}
+                className="p-0 overflow-hidden"
+              >
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-medium">{invoice.partyName}</h3>
+                    <span className="text-sm text-muted-foreground">
+                      {format(invoice.date, 'MMM dd, yyyy')}
                     </span>
-                  </td>
-                  <td className="py-4 pr-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadInvoice(invoice)}>
-                      <Download className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    {invoice.paymentStatus === PaymentStatus.PENDING && invoice.approverType === "ho" && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={() => handleViewInvoice(invoice)}
-                      >
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="flex items-center justify-between mt-4 border-t pt-4">
-          <p className="text-sm text-muted-foreground">Showing 1-{filteredInvoices.length} of {filteredInvoices.length} entries</p>
-          <div className="flex items-center space-x-2">
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </button>
-            <button className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm">1</button>
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {invoice.material}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        {invoice.netAmount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {invoice.paymentStatus === PaymentStatus.PAID ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                          <span className="text-sm text-green-500">Paid</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="h-4 w-4 mr-2 text-yellow-500" />
+                          <span className="text-sm text-yellow-500">Pending</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-end p-4 border-t">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedInvoice(invoice);
+                      setIsInvoiceDetailsOpen(true);
+                    }}
+                  >
+                    View Details
+                  </Button>
+                </div>
+              </CustomCard>
+            ))}
           </div>
-        </div>
-      </CustomCard>
+        ) : (
+          <CustomCard>
+            <div className="p-12 text-center">
+              <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No Invoices Added Yet</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Add your first invoice to start tracking payments.
+              </p>
+              <Button
+                onClick={() => setIsInvoiceFormOpen(true)}
+                className="mx-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create First Invoice
+              </Button>
+            </div>
+          </CustomCard>
+        )}
+      </div>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle>Create New Invoice</DialogTitle>
-          <DialogDescription>
-            Fill out the form below to create a new invoice
-          </DialogDescription>
-          <InvoiceForm onSubmit={handleCreateInvoice} />
-        </DialogContent>
-      </Dialog>
+      <InvoiceForm
+        isOpen={isInvoiceFormOpen}
+        onClose={() => setIsInvoiceFormOpen(false)}
+        onSubmit={(invoice) => handleAddInvoice(invoice)}
+      />
 
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle>Invoice Details</DialogTitle>
-          {selectedInvoice && (
-            <InvoiceDetails
-              invoice={selectedInvoice}
-              isOpen={!!selectedInvoice}
-              onClose={() => setSelectedInvoice(null)}
-              onMakePayment={handleMakePayment}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {selectedInvoice && (
+        <InvoiceDetails
+          invoice={selectedInvoice}
+          isOpen={isInvoiceDetailsOpen}
+          onClose={() => setIsInvoiceDetailsOpen(false)}
+        />
+      )}
     </div>
   );
 };

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { IndianRupee } from 'lucide-react';
@@ -27,26 +26,36 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
   useEffect(() => {
     const loadData = async () => {
       if (balanceData instanceof Promise) {
-        const resolvedData = await balanceData;
-        setSummary(resolvedData);
+        try {
+          const resolvedData = await balanceData;
+          setSummary({
+            fundsReceived: resolvedData.fundsReceived || 0,
+            totalExpenditure: resolvedData.totalExpenditure || 0,
+            totalAdvances: resolvedData.totalAdvances || 0,
+            debitsToWorker: resolvedData.debitsToWorker || 0,
+            invoicesPaid: resolvedData.invoicesPaid || 0,
+            pendingInvoices: resolvedData.pendingInvoices || 0,
+            totalBalance: resolvedData.totalBalance || 0
+          });
+        } catch (error) {
+          console.error("Error resolving balance data:", error);
+          // Keep default values in case of error
+        }
       } else {
-        setSummary(balanceData);
+        setSummary({
+          fundsReceived: balanceData.fundsReceived || 0,
+          totalExpenditure: balanceData.totalExpenditure || 0,
+          totalAdvances: balanceData.totalAdvances || 0,
+          debitsToWorker: balanceData.debitsToWorker || 0,
+          invoicesPaid: balanceData.invoicesPaid || 0,
+          pendingInvoices: balanceData.pendingInvoices || 0,
+          totalBalance: balanceData.totalBalance || 0
+        });
       }
     };
     
     loadData();
   }, [balanceData]);
-
-  // Ensure all properties have default values to prevent TypeScript errors
-  const safeBalanceData = {
-    fundsReceived: summary.fundsReceived || 0,
-    totalExpenditure: summary.totalExpenditure || 0,
-    totalAdvances: summary.totalAdvances || 0,
-    debitsToWorker: summary.debitsToWorker || 0,
-    invoicesPaid: summary.invoicesPaid || 0,
-    pendingInvoices: summary.pendingInvoices || 0,
-    totalBalance: summary.totalBalance || 0
-  };
 
   return (
     <CustomCard 
@@ -63,33 +72,33 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Funds Received from HO:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.fundsReceived.toLocaleString()}</p>
+          <p className="text-lg font-semibold">₹{summary.fundsReceived.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Total Expenses paid by supervisor:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.totalExpenditure.toLocaleString()}</p>
+          <p className="text-lg font-semibold">₹{summary.totalExpenditure.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Total Advances paid by supervisor:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.totalAdvances.toLocaleString()}</p>
+          <p className="text-lg font-semibold">₹{summary.totalAdvances.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Debits TO worker:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.debitsToWorker.toLocaleString()}</p>
+          <p className="text-lg font-semibold">₹{summary.debitsToWorker.toLocaleString()}</p>
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Invoices paid by supervisor:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.invoicesPaid.toLocaleString()}</p>
+          <p className="text-lg font-semibold">₹{summary.invoicesPaid.toLocaleString()}</p>
         </div>
         
         <div className="pt-3 border-t border-white/20">
           <div className="flex justify-between items-center">
             <p className="text-sm opacity-80 uppercase">Current Balance:</p>
-            <p className="text-xl font-bold">₹{safeBalanceData.totalBalance.toLocaleString()}</p>
+            <p className="text-xl font-bold">₹{summary.totalBalance.toLocaleString()}</p>
           </div>
         </div>
       </div>

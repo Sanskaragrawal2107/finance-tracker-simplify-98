@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -22,12 +21,6 @@ const initialExpenses: Expense[] = [];
 const initialAdvances: Advance[] = [];
 const initialFunds: FundsReceived[] = [];
 const initialInvoices: Invoice[] = [];
-
-const DEBIT_ADVANCE_PURPOSES = [
-  AdvancePurpose.SAFETY_SHOES,
-  AdvancePurpose.TOOLS,
-  AdvancePurpose.OTHER
-];
 
 const Expenses: React.FC = () => {
   const location = useLocation();
@@ -110,7 +103,123 @@ const Expenses: React.FC = () => {
     }
   };
 
-  // This function fetches all transaction data for a specific site
+  const calculateSiteFinancials = async (siteId: string) => {
+    try {
+      // First try to get the financial summary from the view
+      const { data: summaryData, error: summaryError } = await supabase
+        .from('site_financial_summaries')
+        .select('*')
+        .eq('site_id', siteId)
+        .maybeSingle();
+      
+      if (summaryData) {
+        return {
+          fundsReceived: summaryData.total_funds_received || 0,
+          totalExpenditure: summaryData.total_expenses || 0,
+          totalAdvances: summaryData.total_advances || 0,
+          debitsToWorker: summaryData.total_debits_to_worker || 0,
+          invoicesPaid: summaryData.invoices_paid || 0,
+          pendingInvoices: summaryData.pending_invoices || 0,
+          totalBalance: (summaryData.total_funds_received || 0) - 
+                        (summaryData.total_expenses || 0) - 
+                        (summaryData.total_advances || 0) - 
+                        (summaryData.invoices_paid || 0)
+        };
+      }
+      
+      // Fallback to calculating from local data
+      const { data: fundsData } = await supabase
+        .from('funds_received')
+        .select('amount')
+        .eq('site_id', siteId);
+      
+      const { data: expensesData } = await supabase
+        .from('expenses')
+        .select('amount, status')
+        .eq('site_id', siteId)
+        .eq('status', ApprovalStatus.APPROVED);
+      
+      const { data: advancesData } = await supabase
+        .from('advances')
+        .select('amount, purpose, status')
+        .eq('site_id', siteId)
+        .eq('status', ApprovalStatus.APPROVED);
+      
+      const { data: invoicesData } = await supabase
+        .from('invoices')
+        .select('net_amount, approver_type, payment_status')
+        .eq('site_id', siteId);
+
+      const totalFunds = fundsData 
+        ? fundsData.reduce((sum, fund) => sum + fund.amount, 0) 
+        : 0;
+      
+      const totalExpenses = expensesData 
+        ? expensesData.reduce((sum, expense) => sum + expense.amount, 0) 
+        : 0;
+
+      const DEBIT_ADVANCE_PURPOSES = [
+        AdvancePurpose.SAFETY_SHOES,
+        AdvancePurpose.TOOLS,
+        AdvancePurpose.OTHER
+      ];
+
+      const regularAdvances = advancesData 
+        ? advancesData.filter(advance => 
+            !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+          )
+        : [];
+
+      const debitAdvances = advancesData 
+        ? advancesData.filter(advance => 
+            DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+          )
+        : [];
+
+      const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+      const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
+
+      const supervisorInvoices = invoicesData 
+        ? invoicesData.filter(invoice => 
+            (invoice.approver_type === "supervisor" || !invoice.approver_type) && 
+            invoice.payment_status === 'paid'
+          )
+        : [];
+
+      const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.net_amount, 0);
+
+      const pendingInvoicesTotal = invoicesData 
+        ? invoicesData
+            .filter(invoice => invoice.payment_status === 'pending')
+            .reduce((sum, invoice) => sum + invoice.net_amount, 0)
+        : 0;
+
+      const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
+
+      return {
+        fundsReceived: totalFunds,
+        totalExpenditure: totalExpenses,
+        totalAdvances: totalRegularAdvances,
+        debitsToWorker: totalDebitToWorker,
+        invoicesPaid: supervisorInvoiceTotal,
+        pendingInvoices: pendingInvoicesTotal,
+        totalBalance: totalBalance
+      };
+    } catch (err) {
+      console.error('Error calculating financials:', err);
+      // Return defaults if there's an error
+      return {
+        fundsReceived: 0,
+        totalExpenditure: 0,
+        totalAdvances: 0,
+        debitsToWorker: 0,
+        invoicesPaid: 0,
+        pendingInvoices: 0,
+        totalBalance: 0
+      };
+    }
+  };
+
   const fetchSiteTransactions = async (siteId: string) => {
     try {
       // Fetch expenses
@@ -449,92 +558,6 @@ const Expenses: React.FC = () => {
   const supervisorInvoices = siteInvoices.filter(invoice => 
     invoice.approverType === "supervisor" || !invoice.approverType
   );
-
-  const calculateSiteFinancials = async (siteId: string) => {
-    try {
-      // First try to get the financial summary from the view
-      const { data: summaryData, error: summaryError } = await supabase
-        .from('site_financial_summaries')
-        .select('*')
-        .eq('site_id', siteId)
-        .maybeSingle();
-        
-      if (summaryData) {
-        return {
-          fundsReceived: summaryData.total_funds_received || 0,
-          totalExpenditure: summaryData.total_expenses || 0,
-          totalAdvances: summaryData.total_advances || 0,
-          debitsToWorker: summaryData.total_debits_to_worker || 0,
-          invoicesPaid: summaryData.invoices_paid || 0,
-          pendingInvoices: summaryData.pending_invoices || 0,
-          totalBalance: (summaryData.total_funds_received || 0) - 
-                        (summaryData.total_expenses || 0) - 
-                        (summaryData.total_advances || 0) - 
-                        (summaryData.invoices_paid || 0)
-        };
-      }
-      
-      // Fallback to calculating from local data
-      const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
-      
-      const siteExpenses = expenses.filter(expense => 
-        expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
-      );
-      
-      const siteAdvances = advances.filter(advance => 
-        advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
-      );
-      
-      const siteInvoices = invoices.filter(invoice => 
-        invoice.siteId === siteId && invoice.paymentStatus === 'paid'
-      );
-
-      const regularAdvances = siteAdvances.filter(advance => 
-        !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
-      );
-
-      const debitAdvances = siteAdvances.filter(advance => 
-        DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
-      );
-
-      const supervisorInvoices = siteInvoices.filter(invoice => 
-        invoice.approverType === "supervisor" || !invoice.approverType
-      );
-
-      const totalFunds = siteFunds.reduce((sum, fund) => sum + fund.amount, 0);
-      const totalExpenses = siteExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-      const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-      const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-      const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
-      const pendingInvoicesTotal = invoices
-        .filter(invoice => invoice.siteId === siteId && invoice.paymentStatus === 'pending')
-        .reduce((sum, invoice) => sum + invoice.netAmount, 0);
-
-      const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
-
-      return {
-        fundsReceived: totalFunds,
-        totalExpenditure: totalExpenses,
-        totalAdvances: totalRegularAdvances,
-        debitsToWorker: totalDebitToWorker,
-        invoicesPaid: supervisorInvoiceTotal,
-        pendingInvoices: pendingInvoicesTotal,
-        totalBalance: totalBalance
-      };
-    } catch (err) {
-      console.error('Error calculating financials:', err);
-      // Return defaults if there's an error
-      return {
-        fundsReceived: 0,
-        totalExpenditure: 0,
-        totalAdvances: 0,
-        debitsToWorker: 0,
-        invoicesPaid: 0,
-        pendingInvoices: 0,
-        totalBalance: 0
-      };
-    }
-  };
 
   const getSelectedSupervisorName = () => {
     if (!selectedSupervisorId) return null;

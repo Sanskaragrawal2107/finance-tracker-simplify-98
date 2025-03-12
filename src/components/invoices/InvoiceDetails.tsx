@@ -1,181 +1,187 @@
-
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format } from 'date-fns';
-import { PaymentStatus, Invoice, BankDetails } from '@/lib/types';
-import { Button } from '@/components/ui/button';
-import { CalendarDays, Truck, File, FileText, Users, IndianRupee, CheckCircle, Clock, Bank, Phone, Mail } from 'lucide-react';
+import {
+  Calendar,
+  IndianRupee,
+  User,
+  Package,
+  Tag,
+  Percent,
+  CreditCard,
+  Receipt,
+  Download,
+  Building,
+  Landmark,
+  CheckCircle2,
+  Clock
+} from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Invoice, BankDetails, PaymentStatus } from '@/lib/types';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 
 interface InvoiceDetailsProps {
-  invoice: Invoice;
+  invoice: Invoice | null;
   isOpen: boolean;
   onClose: () => void;
-  onUpdateStatus?: (invoiceId: string, newStatus: PaymentStatus) => void;
 }
 
-const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ 
-  invoice, 
-  isOpen, 
-  onClose,
-  onUpdateStatus
-}) => {
-  const handleMarkAsPaid = () => {
-    if (onUpdateStatus) {
-      onUpdateStatus(invoice.id, PaymentStatus.PAID);
+const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClose }) => {
+  if (!invoice) {
+    return null;
+  }
+
+  const getPaymentStatusBadge = (status: PaymentStatus | string) => {
+    switch (status) {
+      case PaymentStatus.PAID:
+        return (
+          <Badge variant="outline" className="space-x-2">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Paid</span>
+          </Badge>
+        );
+      case PaymentStatus.PENDING:
+      default:
+        return (
+          <Badge variant="secondary" className="space-x-2">
+            <Clock className="h-4 w-4" />
+            <span>Pending</span>
+          </Badge>
+        );
     }
-    onClose();
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Invoice Details</DialogTitle>
+          <DialogTitle>Invoice Details</DialogTitle>
+          <DialogDescription>
+            View all the information about this invoice.
+          </DialogDescription>
         </DialogHeader>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <FileText className="h-5 w-5 text-primary mr-2" />
-                <h3 className="font-semibold text-lg">Invoice Information</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Basic Information */}
+          <div>
+            <h4 className="text-md font-semibold mb-2">Invoice Information</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                <span>Date: {format(invoice.date, 'PPP')}</span>
               </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Invoice ID</p>
-                  <p className="font-medium">{invoice.partyId}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-muted-foreground">Date</p>
-                  <div className="flex items-center">
-                    <CalendarDays className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <p>{format(new Date(invoice.date), 'PPP')}</p>
-                  </div>
-                </div>
-                
-                <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <div className="flex items-center">
-                    {invoice.paymentStatus === 'paid' ? (
-                      <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                    ) : (
-                      <Clock className="h-4 w-4 mr-1 text-amber-600" />
-                    )}
-                    <p className={`font-medium ${invoice.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-                      {invoice.paymentStatus === 'paid' ? 'Paid' : 'Pending Payment'}
-                    </p>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                <span>Party Name: {invoice.partyName}</span>
               </div>
-            </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <Truck className="h-5 w-5 text-primary mr-2" />
-                <h3 className="font-semibold text-lg">Vendor Information</h3>
+              <div className="flex items-center gap-2">
+                <Building className="h-5 w-5" />
+                <span>Party ID: {invoice.partyId}</span>
               </div>
-              
-              <div className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Vendor Name</p>
-                  <p className="font-medium">{invoice.partyName}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-muted-foreground">Material</p>
-                  <p className="font-medium">{invoice.material}</p>
-                </div>
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5" />
+                <span>Material: {invoice.material}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Tag className="h-5 w-5" />
+                <span>Quantity: {invoice.quantity}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <IndianRupee className="h-5 w-5" />
+                <span>Rate: ₹{invoice.rate.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Percent className="h-5 w-5" />
+                <span>GST Percentage: {invoice.gstPercentage}%</span>
               </div>
             </div>
           </div>
-          
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <IndianRupee className="h-5 w-5 text-primary mr-2" />
-                <h3 className="font-semibold text-lg">Payment Details</h3>
+
+          {/* Financial Information */}
+          <div>
+            <h4 className="text-md font-semibold mb-2">Financial Details</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <IndianRupee className="h-5 w-5" />
+                <span>Gross Amount: ₹{invoice.grossAmount.toLocaleString()}</span>
               </div>
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-sm text-muted-foreground">Quantity</p>
-                  <p className="font-medium">{invoice.quantity}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-muted-foreground">Rate</p>
-                  <p className="font-medium">₹{invoice.rate.toLocaleString()}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-muted-foreground">GST (%)</p>
-                  <p className="font-medium">{invoice.gstPercentage}%</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm text-muted-foreground">Gross Amount</p>
-                  <p className="font-medium">₹{invoice.grossAmount.toLocaleString()}</p>
-                </div>
-                
-                <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">Net Amount (with GST)</p>
-                  <p className="font-semibold text-lg text-primary">₹{invoice.netAmount.toLocaleString()}</p>
-                </div>
+              <div className="flex items-center gap-2">
+                <IndianRupee className="h-5 w-5" />
+                <span>Net Amount: ₹{invoice.netAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                <span>Payment Status: {getPaymentStatusBadge(invoice.paymentStatus)}</span>
               </div>
             </div>
-            
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center mb-3">
-                <Bank className="h-5 w-5 text-primary mr-2" />
-                <h3 className="font-semibold text-lg">Bank Details</h3>
+          </div>
+
+          {/* Bank Details */}
+          <div>
+            <h4 className="text-md font-semibold mb-2">Bank Details</h4>
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Landmark className="h-5 w-5" />
+                <span>Bank Name: {invoice.bankDetails.bankName}</span>
               </div>
-              
-              {invoice.bankDetails && (
-                <div className="space-y-2">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Bank Name</p>
-                    <p className="font-medium">{invoice.bankDetails.bankName}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground">Account Number</p>
-                    <p className="font-medium">{invoice.bankDetails.accountNumber}</p>
-                  </div>
-                  
-                  <div>
-                    <p className="text-sm text-muted-foreground">IFSC Code</p>
-                    <p className="font-medium">{invoice.bankDetails.ifscCode}</p>
-                  </div>
-                  
-                  {invoice.bankDetails.email && (
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <p className="font-medium">{invoice.bankDetails.email}</p>
-                    </div>
-                  )}
-                  
-                  {invoice.bankDetails.mobile && (
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 mr-1 text-muted-foreground" />
-                      <p className="font-medium">{invoice.bankDetails.mobile}</p>
-                    </div>
-                  )}
+              <div className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                <span>Account Number: {invoice.bankDetails.accountNumber}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span>IFSC Code: {invoice.bankDetails.ifscCode}</span>
+              </div>
+              {invoice.bankDetails.email && (
+                <div className="flex items-center gap-2">
+                  <span>Email: {invoice.bankDetails.email}</span>
+                </div>
+              )}
+              {invoice.bankDetails.mobile && (
+                <div className="flex items-center gap-2">
+                  <span>Mobile: {invoice.bankDetails.mobile}</span>
                 </div>
               )}
             </div>
           </div>
-        </div>
-        
-        {invoice.paymentStatus !== 'paid' && onUpdateStatus && (
-          <div className="flex justify-end mt-6">
-            <Button onClick={handleMarkAsPaid} className="bg-green-600 hover:bg-green-700">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Mark as Paid
-            </Button>
+
+          {/* Attachments */}
+          <div>
+            <h4 className="text-md font-semibold mb-2">Attachments</h4>
+            <div className="space-y-3">
+              {invoice.billUrl && (
+                <div className="flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  <a href={invoice.billUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                    View Bill
+                  </a>
+                </div>
+              )}
+              {invoice.invoiceImageUrl && (
+                <div className="flex items-center gap-2">
+                  <Download className="h-5 w-5" />
+                  <a href={invoice.invoiceImageUrl} target="_blank" rel="noopener noreferrer" className="underline">
+                    View Invoice Image
+                  </a>
+                </div>
+              )}
+              {!invoice.billUrl && !invoice.invoiceImageUrl && (
+                <div className="text-muted-foreground">No attachments available.</div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+
+        <div className="mt-6 flex justify-end">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
