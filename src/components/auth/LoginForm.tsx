@@ -65,6 +65,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to login. Please check your credentials.');
+      toast.error('Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }

@@ -4,45 +4,77 @@ import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 import { UserRole } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
     // Check if user is already authenticated
     const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      
-      if (data.session) {
-        setIsAuthenticated(true);
+      try {
+        setIsLoading(true);
+        const { data, error } = await supabase.auth.getSession();
         
-        // Get user role from Supabase
-        const { data: userData, error } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', data.session.user.id)
-          .single();
+        if (error) {
+          throw error;
+        }
         
-        if (!error && userData) {
-          const userRole = userData.role as UserRole;
-          localStorage.setItem('userRole', userRole);
-          localStorage.setItem('userName', data.session.user.email?.split('@')[0] || 'User');
+        if (data.session) {
+          setIsAuthenticated(true);
           
-          // Redirect based on user role
-          if (userRole === UserRole.ADMIN) {
-            navigate('/admin');
-          } else if (userRole === UserRole.SUPERVISOR) {
-            navigate('/expenses');
-          } else {
-            navigate('/dashboard');
+          // Get user role from Supabase
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role, supervisor_id')
+            .eq('id', data.session.user.id)
+            .single();
+          
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+            toast.error('Error loading user profile');
+            return;
+          }
+          
+          if (userData) {
+            const userRole = userData.role as UserRole;
+            localStorage.setItem('userRole', userRole);
+            localStorage.setItem('userName', data.session.user.email?.split('@')[0] || 'User');
+            
+            if (userData.supervisor_id) {
+              localStorage.setItem('supervisorId', userData.supervisor_id);
+            }
+            
+            // Redirect based on user role
+            if (userRole === UserRole.ADMIN) {
+              navigate('/admin');
+            } else if (userRole === UserRole.SUPERVISOR) {
+              navigate('/expenses');
+            } else {
+              navigate('/dashboard');
+            }
           }
         }
+      } catch (err: any) {
+        console.error('Auth check error:', err);
+        toast.error('Authentication error. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
     };
     
     checkAuth();
   }, [navigate]);
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-50 to-indigo-50">
+        <div className="animate-pulse text-xl text-primary">Loading...</div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-50 to-indigo-50 p-4">
