@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash, Loader2 } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, BankDetails, PaymentStatus } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -96,17 +96,9 @@ const Expenses: React.FC = () => {
           startDate: new Date(site.start_date),
           completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
           supervisorId: site.supervisor_id,
-          supervisorName: "Supervisor Name", // Default value
           isCompleted: site.is_completed,
           createdAt: new Date(site.created_at),
-          funds: site.funds || 0,
-          location: "Location", // Default value
-          status: "active", // Default value
-          clientName: "Client", // Default value
-          contactPerson: "Contact Person", // Default value
-          contactNumber: "Contact Number", // Default value
-          budget: 0, // Default value
-          endDate: undefined
+          funds: site.funds || 0
         }));
         
         setSites(formattedSites);
@@ -159,8 +151,7 @@ const Expenses: React.FC = () => {
           createdBy: expense.created_by,
           createdAt: new Date(expense.created_at),
           siteId: expense.site_id,
-          supervisorId: expense.supervisor_id,
-          siteName: "Site Name" // Default value since it's required
+          supervisorId: expense.supervisor_id
         }));
         
         setExpenses(formattedExpenses);
@@ -195,8 +186,7 @@ const Expenses: React.FC = () => {
           status: advance.status as ApprovalStatus,
           createdBy: advance.created_by,
           createdAt: new Date(advance.created_at),
-          siteId: advance.site_id,
-          siteName: "Site Name" // Default value
+          siteId: advance.site_id
         }));
         
         setAdvances(formattedAdvances);
@@ -226,9 +216,7 @@ const Expenses: React.FC = () => {
           siteId: fund.site_id,
           createdAt: new Date(fund.created_at),
           reference: fund.reference,
-          method: fund.method as any,
-          source: "Source", // Default value since it's required
-          createdBy: "Current User" // Default value since it's required
+          method: fund.method as any
         }));
         
         setFundsReceived(formattedFunds);
@@ -251,60 +239,29 @@ const Expenses: React.FC = () => {
       }
       
       if (data) {
-        const formattedInvoices: Invoice[] = data.map(invoice => {
-          // Parse bank_details if it's a string, or use as is if it's already an object
-          let parsedBankDetails: BankDetails;
-          
-          if (typeof invoice.bank_details === 'string') {
-            try {
-              parsedBankDetails = JSON.parse(invoice.bank_details);
-            } catch (e) {
-              // If parsing fails, create a default BankDetails object
-              parsedBankDetails = {
-                accountNumber: '',
-                bankName: '',
-                ifscCode: ''
-              };
-            }
-          } else if (invoice.bank_details && typeof invoice.bank_details === 'object') {
-            // If it's already an object, cast it
-            parsedBankDetails = invoice.bank_details as unknown as BankDetails;
-          } else {
-            // Default empty object
-            parsedBankDetails = {
-              accountNumber: '',
-              bankName: '',
-              ifscCode: ''
-            };
-          }
-          
-          return {
-            id: invoice.id,
-            date: new Date(invoice.date),
-            partyId: invoice.party_id,
-            partyName: invoice.party_name,
-            material: invoice.material,
-            quantity: invoice.quantity,
-            rate: invoice.rate,
-            gstPercentage: invoice.gst_percentage,
-            grossAmount: invoice.gross_amount,
-            netAmount: invoice.net_amount,
-            bankDetails: parsedBankDetails,
-            billUrl: invoice.bill_url,
-            invoiceImageUrl: invoice.invoice_image_url,
-            paymentStatus: invoice.payment_status as any,
-            createdBy: invoice.created_by,
-            createdAt: new Date(invoice.created_at),
-            approverType: invoice.approver_type as any,
-            siteId: invoice.site_id,
-            vendorName: invoice.vendor_name,
-            invoiceNumber: invoice.invoice_number,
-            amount: invoice.amount,
-            status: "pending", // Default value
-            siteName: "Site Name", // Default value
-            remarks: "" // Default value
-          };
-        });
+        const formattedInvoices: Invoice[] = data.map(invoice => ({
+          id: invoice.id,
+          date: new Date(invoice.date),
+          partyId: invoice.party_id,
+          partyName: invoice.party_name,
+          material: invoice.material,
+          quantity: invoice.quantity,
+          rate: invoice.rate,
+          gstPercentage: invoice.gst_percentage,
+          grossAmount: invoice.gross_amount,
+          netAmount: invoice.net_amount,
+          bankDetails: invoice.bank_details,
+          billUrl: invoice.bill_url,
+          invoiceImageUrl: invoice.invoice_image_url,
+          paymentStatus: invoice.payment_status as any,
+          createdBy: invoice.created_by,
+          createdAt: new Date(invoice.created_at),
+          approverType: invoice.approver_type as any,
+          siteId: invoice.site_id,
+          vendorName: invoice.vendor_name,
+          invoiceNumber: invoice.invoice_number,
+          amount: invoice.amount
+        }));
         
         setInvoices(formattedInvoices);
       }
@@ -344,7 +301,6 @@ const Expenses: React.FC = () => {
           status: ApprovalStatus.APPROVED,
           createdAt: new Date(),
           supervisorId: selectedSupervisorId || '',
-          siteName: "Site Name"
         };
         
         await fetchExpenses(expenseWithId.siteId || '');
@@ -367,7 +323,6 @@ const Expenses: React.FC = () => {
           id: Date.now().toString(),
           status: ApprovalStatus.APPROVED,
           createdAt: new Date(),
-          siteName: "Site Name"
         };
         
         await fetchAdvances(advanceWithId.siteId || '');
@@ -400,8 +355,6 @@ const Expenses: React.FC = () => {
           ...newFund as FundsReceived,
           id: Date.now().toString(),
           createdAt: new Date(),
-          source: "Source",
-          createdBy: "Current User"
         };
         
         await Promise.all([
@@ -421,8 +374,13 @@ const Expenses: React.FC = () => {
     console.log("Adding new invoice with data:", newInvoice);
     
     try {
-      await fetchInvoices(newInvoice.siteId || '');
-      toast.success("Invoice added successfully");
+      if (newInvoice.id) {
+        setInvoices(prevInvoices => [newInvoice as Invoice, ...prevInvoices]);
+        toast.success("Invoice added successfully");
+      } else {
+        await fetchInvoices(newInvoice.siteId || '');
+        toast.success("Invoice added successfully");
+      }
     } catch (error: any) {
       console.error('Error adding invoice:', error);
       toast.error('Failed to add invoice: ' + error.message);
@@ -493,17 +451,17 @@ const Expenses: React.FC = () => {
 
   const calculateSiteFinancials = (siteId: string) => {
     const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
-  
+    
     const siteExpenses = expenses.filter(expense => 
       expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
     );
-  
+    
     const siteAdvances = advances.filter(advance => 
       advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
     );
-  
+    
     const siteInvoices = invoices.filter(invoice => 
-      invoice.siteId === siteId && invoice.paymentStatus === PaymentStatus.PAID
+      invoice.siteId === siteId && invoice.paymentStatus === 'paid'
     );
 
     const regularAdvances = siteAdvances.filter(advance => 
@@ -523,8 +481,8 @@ const Expenses: React.FC = () => {
     const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
-    const pendingInvoicesTotal = invoices
-      .filter(invoice => invoice.siteId === siteId && invoice.paymentStatus === PaymentStatus.PENDING)
+    const pendingInvoicesTotal = siteInvoices
+      .filter(invoice => invoice.paymentStatus === 'pending')
       .reduce((sum, invoice) => sum + invoice.netAmount, 0);
 
     const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;

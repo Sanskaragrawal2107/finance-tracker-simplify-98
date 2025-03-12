@@ -1,98 +1,73 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { UserRole } from '@/lib/types';
+import { UserRole } from './types';
 
-interface UserData {
-  id: string;
-  email: string;
-  role: string;
-  supervisor_id?: string;
-}
-
-interface LocalStorageData {
-  userId: string;
-  email: string;
-  role: UserRole;
-  supervisorId?: string;
-}
-
-export const signInWithEmail = async (email: string, password: string): Promise<boolean> => {
+export const registerUser = async (
+  email: string, 
+  password: string, 
+  role: UserRole = UserRole.SUPERVISOR, 
+  supervisorId?: string
+) => {
   try {
-    const { error } = await supabase.auth.signInWithPassword({
+    // Register user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
     });
-
-    if (error) {
-      console.error('Error signing in:', error.message);
-      return false;
+    
+    if (authError) throw authError;
+    
+    // If it's a supervisor, update the supervisorId in the users table
+    if (authData.user && (role === UserRole.SUPERVISOR) && supervisorId) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          role,
+          supervisor_id: supervisorId
+        })
+        .eq('id', authData.user.id);
+      
+      if (updateError) throw updateError;
     }
+    
+    return { success: true, user: authData.user };
+  } catch (error) {
+    console.error('Registration error:', error);
+    return { success: false, error };
+  }
+};
 
-    // Fetch user data from the users table
-    const { data: userData, error: userError } = await supabase
+export const updateUserRole = async (userId: string, role: UserRole, supervisorId?: string) => {
+  try {
+    const { error } = await supabase
       .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (userError) {
-      console.error('Error fetching user data:', userError.message);
-      return false;
-    }
-
-    // Store user data in localStorage
-    const localStorageData: LocalStorageData = {
-      userId: userData.id,
-      email: userData.email,
-      role: userData.role as UserRole,
-      supervisorId: userData.supervisor_id,
-    };
-
-    localStorage.setItem('userData', JSON.stringify(localStorageData));
-    localStorage.setItem('userRole', localStorageData.role);
-    if (localStorageData.supervisorId) {
-      localStorage.setItem('supervisorId', localStorageData.supervisorId);
-    }
-
-    return true;
-  } catch (error: any) {
-    console.error('Error during sign in:', error.message);
-    return false;
+      .update({ 
+        role,
+        supervisor_id: supervisorId
+      })
+      .eq('id', userId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Update user role error:', error);
+    return { success: false, error };
   }
 };
 
-export const signOut = async (): Promise<void> => {
+export const signOut = async () => {
   try {
-    await supabase.auth.signOut();
-    localStorage.removeItem('userData');
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    
     localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
     localStorage.removeItem('supervisorId');
-    localStorage.removeItem('selectedSiteId');
-  } catch (error: any) {
-    console.error('Error signing out:', error.message);
-  }
-};
-
-export const isAuthenticated = async (): Promise<boolean> => {
-  try {
-    const { data } = await supabase.auth.getSession();
-    return !!data.session;
+    
+    return { success: true };
   } catch (error) {
-    return false;
+    console.error('Sign out error:', error);
+    return { success: false, error };
   }
-};
-
-export const getUserRole = (): UserRole | null => {
-  const userDataString = localStorage.getItem('userData');
-  if (!userDataString) return null;
-  
-  try {
-    const userData = JSON.parse(userDataString) as LocalStorageData;
-    return userData.role;
-  } catch (error) {
-    return null;
-  }
-};
-
-export const getSupervisorId = (): string | null => {
-  return localStorage.getItem('supervisorId');
 };

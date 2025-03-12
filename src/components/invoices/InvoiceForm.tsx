@@ -169,15 +169,13 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
           gst_percentage: invoiceData.gstPercentage,
           gross_amount: invoiceData.grossAmount,
           net_amount: invoiceData.netAmount,
-          bank_details: invoiceData.bankDetails as any,
+          bank_details: invoiceData.bankDetails,
           bill_url: invoiceData.billUrl,
           invoice_image_url: invoiceData.invoiceImageUrl,
           payment_status: invoiceData.paymentStatus,
           created_by: 'Current User',
           site_id: invoiceData.siteId,
-          approver_type: 'supervisor',
-          status: 'pending',
-          remarks: ''
+          approver_type: 'supervisor'
         })
         .select('id')
         .single();
@@ -236,8 +234,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
       const netAmount = calculateNetAmount(grossAmount, values.gstPercentage);
       
       const bankDetails: BankDetails = {
-        bankName: values.bankName,
         accountNumber: values.accountNumber,
+        bankName: values.bankName,
         ifscCode: values.ifscCode,
         email: values.email || undefined,
         mobile: values.mobile || undefined,
@@ -259,17 +257,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
         paymentStatus: PaymentStatus.PENDING,
         createdBy: "Current User",
         siteId: selectedSiteId,
-        siteName: "",  // This will be filled in by the backend
-        status: "pending",
-        remarks: "",
-        amount: netAmount,
         approverType: "supervisor"
       };
 
       const invoiceId = await saveInvoiceToDatabase(newInvoice);
       
       if (invoiceId) {
-        onSubmit(newInvoice);
+        onSubmit({
+          ...newInvoice,
+          id: invoiceId,
+          createdAt: new Date()
+        });
         form.reset();
         setInvoiceImage(null);
         setBillImage(null);

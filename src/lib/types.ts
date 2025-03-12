@@ -1,82 +1,165 @@
 
-import { Json } from '../integrations/supabase/types';
-
+// User related types
 export enum UserRole {
-  ADMIN = 'admin',
-  SUPERVISOR = 'supervisor',
-  VIEWER = 'viewer'
+  ADMIN = "admin",
+  SUPERVISOR = "supervisor",
+  VIEWER = "viewer"
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: Date;
+}
+
+// Site related types
+export interface Site {
+  id: string;
+  name: string;
+  jobName: string;
+  posNo: string;
+  startDate: Date;
+  completionDate?: Date;
+  supervisorId: string;
+  createdAt: Date;
+  isCompleted: boolean;
+  funds?: number;
+}
+
+// Financial data types
+export interface BalanceSummary {
+  fundsReceived: number;
+  totalExpenditure: number;
+  totalAdvances?: number;
+  debitsToWorker?: number;
+  invoicesPaid?: number;
+  pendingInvoices?: number;
+  totalBalance: number;
+}
+
+export enum PaymentMethod {
+  NEFT = "NEFT",
+  RTGS = "RTGS",
+  IMPS = "IMPS",
+  UPI = "UPI",
+  CASH = "Cash"
+}
+
+export interface HeadOfficeTransaction {
+  id: string;
+  date: Date;
+  supervisorId: string;
+  supervisorName: string;
+  amount: number;
+  description?: string;
+  createdAt: Date;
 }
 
 export enum ExpenseCategory {
-  STAFF_TRAVELLING_CHARGES = 'staff_travelling_charges',
-  STATIONARY_PRINTING = 'stationary_printing',
-  DIESEL_FUEL_CHARGES = 'diesel_fuel_charges',
-  LABOUR_TRAVELLING_EXP = 'labour_travelling_exp',
-  LOADGING_BOARDING_STAFF = 'loadging_boarding_staff',
-  FOOD_CHARGES_LABOUR = 'food_charges_labour',
-  SITE_EXPENSES = 'site_expenses',
-  ROOM_RENT_LABOUR = 'room_rent_labour',
-  TRAVEL = 'travel',
-  MATERIAL = 'material',
-  LABOR = 'labor',
-  OFFICE = 'office',
-  MISC = 'misc',
-  TRANSPORT = 'transport',
-  FOOD = 'food',
-  ACCOMMODATION = 'accommodation',
-  EQUIPMENT = 'equipment',
-  MAINTENANCE = 'maintenance',
-  WAGES = 'wages'
-}
-
-export enum RecipientType {
-  WORKER = 'worker',
-  SUBCONTRACTOR = 'subcontractor',
-  SUPERVISOR = 'supervisor'
+  TRAVEL = "travel",
+  MATERIAL = "material",
+  LABOR = "labor",
+  OFFICE = "office",
+  MISC = "misc",
+  TRANSPORT = "transport",
+  FOOD = "food",
+  ACCOMMODATION = "accommodation",
+  EQUIPMENT = "equipment",
+  MAINTENANCE = "maintenance",
+  STAFF_TRAVELLING_CHARGES = "STAFF TRAVELLING CHARGES",
+  STATIONARY_PRINTING = "STATIONARY & PRINTING",
+  DIESEL_FUEL_CHARGES = "DIESEL & FUEL CHARGES",
+  LABOUR_TRAVELLING_EXP = "LABOUR TRAVELLING EXP.",
+  LOADGING_BOARDING_STAFF = "LOADGING & BOARDING FOR STAFF",
+  FOOD_CHARGES_LABOUR = "FOOD CHARGES FOR LABOUR",
+  SITE_EXPENSES = "SITE EXPENSES",
+  ROOM_RENT_LABOUR = "ROOM RENT FOR LABOUR"
 }
 
 export enum AdvancePurpose {
-  ADVANCE = 'advance',
-  SAFETY_SHOES = 'safety_shoes',
-  TOOLS = 'tools',
-  OTHER = 'other',
-  MATERIAL = 'material',
-  WAGES = 'wages',
-  TRANSPORT = 'transport',
-  MISC = 'misc'
+  MATERIAL = "material",
+  WAGES = "wages",
+  TRANSPORT = "transport",
+  MISC = "misc",
+  ADVANCE = "advance",
+  SAFETY_SHOES = "safety_shoes",
+  TOOLS = "tools",
+  OTHER = "other"
 }
 
 export enum ApprovalStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  SETTLED = 'settled'
+  PENDING = "pending",
+  APPROVED = "approved",
+  REJECTED = "rejected"
 }
 
 export enum PaymentStatus {
-  PENDING = 'pending',
-  PAID = 'paid',
-  CANCELLED = 'cancelled'
+  PENDING = "pending",
+  PAID = "paid"
 }
 
-export enum ActivityType {
-  EXPENSE = 'expense',
-  ADVANCE = 'advance',
-  INVOICE = 'invoice',
-  FUNDS = 'funds',
-  PAYMENT = 'payment'
+export enum RecipientType {
+  WORKER = "worker",
+  SUBCONTRACTOR = "subcontractor",
+  SUPERVISOR = "supervisor"
+}
+
+export interface Expense {
+  id: string;
+  date: Date;
+  description: string;
+  category: ExpenseCategory | string;
+  amount: number;
+  status: ApprovalStatus;
+  createdBy: string;
+  createdAt: Date;
+  siteId?: string; // Reference to the site
+  supervisorId: string;
+}
+
+export interface Advance {
+  id: string;
+  date: Date;
+  recipientId?: string;
+  recipientName: string;
+  recipientType: RecipientType;
+  purpose: AdvancePurpose;
+  amount: number;
+  remarks?: string;
+  status: ApprovalStatus;
+  createdBy: string;
+  createdAt: Date;
+  siteId?: string;
+}
+
+export interface FundsReceived {
+  id: string;
+  date: Date;
+  amount: number;
+  siteId: string;
+  createdAt: Date;
+  reference?: string;
+  method?: PaymentMethod;
 }
 
 export interface BankDetails {
-  bankName: string;
   accountNumber: string;
+  bankName: string;
   ifscCode: string;
   email?: string;
   mobile?: string;
 }
 
-// Type for handling JSON bank details from Supabase
-export type SupabaseBankDetails = Json;
+export interface MaterialItem {
+  id?: string;
+  material: string;
+  quantity: number | null;
+  rate: number | null;
+  gstPercentage: number | null;
+  amount: number | null;
+}
 
 export interface Invoice {
   id: string;
@@ -89,170 +172,18 @@ export interface Invoice {
   gstPercentage: number;
   grossAmount: number;
   netAmount: number;
+  materialItems?: MaterialItem[];
   bankDetails: BankDetails;
-  siteId: string;
-  siteName: string;
-  status: 'pending' | 'paid' | 'cancelled';
-  remarks: string;
-  paymentDate?: Date;
-  paymentReference?: string;
-  createdAt: Date;
-  createdBy: string;
-  amount: number;
-  paymentStatus?: PaymentStatus;
-  approverType?: string;
-  vendorName?: string;
-  invoiceNumber?: string;
   billUrl?: string;
   invoiceImageUrl?: string;
-}
-
-export interface Site {
-  id: string;
-  name: string;
-  location: string;
-  status: 'active' | 'completed' | 'on-hold';
-  supervisorId: string;
-  supervisorName: string;
-  clientName: string;
-  contactPerson: string;
-  contactNumber: string;
-  startDate: Date;
-  endDate?: Date;
-  budget: number;
-  description?: string;
-  createdAt: Date;
-  jobName?: string;
-  posNo?: string;
-  isCompleted?: boolean;
-  completionDate?: Date;
-  funds?: number;
-}
-
-export interface Expense {
-  id: string;
-  date: Date;
-  amount: number;
-  category: ExpenseCategory | string;
-  description: string;
-  siteId: string;
-  siteName: string;
-  status: ApprovalStatus | string;
-  attachmentUrl?: string;
+  paymentStatus: PaymentStatus;
   createdBy: string;
   createdAt: Date;
-  approvedBy?: string;
-  approvedAt?: Date;
-  supervisorId?: string;
-}
-
-export interface Advance {
-  id: string;
-  date: string | Date;
-  amount: number;
-  purpose: AdvancePurpose | string;
-  recipientId: string;
-  recipientName: string;
-  recipientType: RecipientType | string;
-  siteId: string;
-  siteName?: string;
-  status: ApprovalStatus | string;
-  remarks?: string;
-  createdBy: string;
-  createdAt: string | Date;
-}
-
-export interface FundsReceived {
-  id: string;
-  date: Date;
-  amount: number;
-  source: string;
-  reference: string;
-  remarks?: string;
-  siteId?: string;
-  siteName?: string;
-  createdBy: string;
-  createdAt: Date;
-  method?: string;
-}
-
-export interface Transaction {
-  id: string;
-  date: Date;
-  type: 'expense' | 'invoice' | 'advance' | 'funds' | 'payment';
-  amount: number;
-  description: string;
-  siteId?: string;
-  siteName?: string;
-  status: string;
-  createdBy: string;
-  createdAt: Date;
-  reference?: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  contactNumber?: string;
-  profileUrl?: string;
-  createdAt: Date;
-}
-
-export interface Contractor {
-  id: string;
-  name: string;
-  contactPerson: string;
-  contactNumber: string;
-  email?: string;
-  address?: string;
-  bankDetails?: BankDetails;
-  specialty: string;
-  status: 'active' | 'inactive';
-  createdAt: Date;
-}
-
-export interface Supplier {
-  id: string;
-  name: string;
-  contactPerson: string;
-  contactNumber: string;
-  email?: string;
-  address?: string;
-  bankDetails?: BankDetails;
-  materials: string[];
-  status: 'active' | 'inactive';
-  createdAt: Date;
-}
-
-export interface SiteBalance {
-  siteId: string;
-  siteName: string;
-  totalFunds: number;
-  totalExpenses: number;
-  totalInvoices: number;
-  totalAdvances: number;
-  balance: number;
-}
-
-export interface BalanceSummary {
-  fundsReceived: number;
-  totalExpenditure: number;
-  totalAdvances: number;
-  debitsToWorker: number;
-  invoicesPaid: number;
-  pendingInvoices: number;
-  totalBalance: number;
-}
-
-export interface Activity {
-  id: string;
-  type: ActivityType;
-  date: Date;
-  description: string;
-  amount: number;
-  user: string;
+  approverType?: "ho" | "supervisor";
+  siteId?: string; // Reference to the site
+  vendorName?: string;  // Added for compatibility
+  invoiceNumber?: string; // Added for compatibility
+  amount?: number;       // Added for compatibility
 }
 
 export interface ChartDataPoint {
@@ -260,29 +191,32 @@ export interface ChartDataPoint {
   value: number;
 }
 
-export interface HeadOfficeTransaction {
-  id: string;
+export interface CategorySummary {
+  category: ExpenseCategory;
+  total: number;
+  percentage: number;
+}
+
+export interface DailyExpenseSummary {
   date: Date;
-  amount: number;
+  total: number;
+  categories: CategorySummary[];
+}
+
+// For recent activity feed
+export enum ActivityType {
+  EXPENSE = "expense",
+  ADVANCE = "advance",
+  INVOICE = "invoice",
+  FUNDS = "funds",
+  PAYMENT = "payment"
+}
+
+export interface Activity {
+  id: string;
+  type: ActivityType;
   description: string;
-  type: string;
-  status: string;
-  reference?: string;
-  createdAt: Date;
-  supervisorId?: string;
-  supervisorName?: string;
-}
-
-// Component Props Interfaces
-export interface InvoiceFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (invoice: Omit<Invoice, "id" | "createdAt">) => void;
-}
-
-export interface InvoiceDetailsProps {
-  invoice: Invoice;
-  isOpen: boolean;
-  onClose: () => void;
-  onMakePayment?: (invoice: Invoice) => void;
+  amount: number;
+  date: Date;
+  user: string;
 }

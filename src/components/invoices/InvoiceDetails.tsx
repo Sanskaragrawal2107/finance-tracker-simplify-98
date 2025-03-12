@@ -17,10 +17,9 @@ interface InvoiceDetailsProps {
   invoice: Invoice;
   isOpen: boolean;
   onClose: () => void;
-  onMakePayment?: (invoice: Invoice) => void;
 }
 
-const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClose, onMakePayment }) => {
+const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -175,15 +174,6 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
         </div>
 
         <DialogFooter>
-          {onMakePayment && (
-            <Button 
-              onClick={() => onMakePayment(invoice)}
-              variant="outline"
-              className="mr-auto"
-            >
-              Mark as Paid
-            </Button>
-          )}
           <Button onClick={onClose}>
             <X className="h-4 w-4 mr-2" />
             Close
