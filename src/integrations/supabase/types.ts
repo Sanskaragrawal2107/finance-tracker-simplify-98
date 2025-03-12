@@ -9,88 +9,16 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      sites: {
-        Row: {
-          completion_date: string | null
-          created_at: string
-          funds: number | null
-          id: string
-          is_completed: boolean
-          job_name: string
-          name: string
-          pos_no: string
-          start_date: string
-          supervisor_id: string
-        }
-        Insert: {
-          completion_date?: string | null
-          created_at?: string
-          funds?: number | null
-          id?: string
-          is_completed?: boolean
-          job_name: string
-          name: string
-          pos_no: string
-          start_date: string
-          supervisor_id: string
-        }
-        Update: {
-          completion_date?: string | null
-          created_at?: string
-          funds?: number | null
-          id?: string
-          is_completed?: boolean
-          job_name?: string
-          name?: string
-          pos_no?: string
-          start_date?: string
-          supervisor_id?: string
-        }
-        Relationships: []
-      }
-      users: {
-        Row: {
-          created_at: string
-          email: string
-          id: string
-          role: Database["public"]["Enums"]["user_role"]
-          supervisor_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          email: string
-          id: string
-          role?: Database["public"]["Enums"]["user_role"]
-          supervisor_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          email?: string
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          supervisor_id?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      get_supervisor_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      is_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      user_role: "admin" | "supervisor"
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
