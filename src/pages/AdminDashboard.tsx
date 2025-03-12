@@ -47,12 +47,12 @@ const AdminDashboard: React.FC = () => {
           const { data, error } = await supabase
             .from('sites')
             .select('id, is_completed')
-            .eq('supervisor_id', supervisor.id);
+            .eq('supervisor_id', supervisor.id) as any;
             
           if (!error && data) {
             const total = data.length;
-            const active = data.filter(site => !site.is_completed).length;
-            const completed = data.filter(site => site.is_completed).length;
+            const active = data.filter((site: any) => !site.is_completed).length;
+            const completed = data.filter((site: any) => site.is_completed).length;
             
             stats[supervisor.id] = {
               totalSites: total,

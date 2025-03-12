@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,12 +23,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      // Use type assertion to resolve TypeScript errors
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .single() as any;
 
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -43,7 +41,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Check active session and fetch user data on mount
   useEffect(() => {
     const checkSession = async () => {
       try {
@@ -64,7 +61,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     checkSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setLoading(true);
@@ -74,7 +70,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           if (profile) {
             setUser(profile);
             
-            // Redirect based on role
             if (profile.role === UserRole.ADMIN) {
               navigate('/admin');
             } else {
@@ -114,7 +109,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (profile) {
           setUser(profile);
 
-          // Redirect based on role
           if (profile.role === UserRole.ADMIN) {
             navigate('/admin');
           } else {

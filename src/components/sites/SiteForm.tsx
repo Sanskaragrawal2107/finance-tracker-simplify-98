@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -134,7 +135,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
             is_completed: false
           }
         ])
-        .select();
+        .select() as any;
       
       if (error) {
         throw error;

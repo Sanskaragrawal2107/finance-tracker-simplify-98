@@ -18,11 +18,10 @@ export const supervisors = [
 // Function to fetch supervisors from the database
 export const getSupervisors = async () => {
   try {
-    // Use proper type assertion to resolve TypeScript issues
     const { data, error } = await supabase
       .from('users')
       .select('id, name')
-      .eq('role', 'supervisor');
+      .eq('role', 'supervisor') as any;
     
     if (error) {
       console.error('Error fetching supervisors:', error);
