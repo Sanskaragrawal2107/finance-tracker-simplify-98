@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash, Loader2 } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, BankDetails } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, BankDetails, PaymentStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -493,17 +493,17 @@ const Expenses: React.FC = () => {
 
   const calculateSiteFinancials = (siteId: string) => {
     const siteFunds = fundsReceived.filter(fund => fund.siteId === siteId);
-    
+  
     const siteExpenses = expenses.filter(expense => 
       expense.siteId === siteId && expense.status === ApprovalStatus.APPROVED
     );
-    
+  
     const siteAdvances = advances.filter(advance => 
       advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
     );
-    
+  
     const siteInvoices = invoices.filter(invoice => 
-      invoice.siteId === siteId && invoice.paymentStatus === 'paid'
+      invoice.siteId === siteId && invoice.paymentStatus === PaymentStatus.PAID
     );
 
     const regularAdvances = siteAdvances.filter(advance => 
@@ -523,8 +523,8 @@ const Expenses: React.FC = () => {
     const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
-    const pendingInvoicesTotal = siteInvoices
-      .filter(invoice => invoice.paymentStatus === 'pending')
+    const pendingInvoicesTotal = invoices
+      .filter(invoice => invoice.siteId === siteId && invoice.paymentStatus === PaymentStatus.PENDING)
       .reduce((sum, invoice) => sum + invoice.netAmount, 0);
 
     const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;

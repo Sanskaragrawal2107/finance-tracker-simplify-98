@@ -1,262 +1,345 @@
-// Your import statements here
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { Advance, RecipientType, AdvancePurpose, ApprovalStatus } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Search, Filter, Plus, User, Users, CheckSquare, CircleSlash, Loader2 } from 'lucide-react';
+import { Advance, ApprovalStatus, Site, UserRole } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 import AdvanceForm from '@/components/advances/AdvanceForm';
 
-// Mock data adjustment to match the enum values
-const mockAdvances: Advance[] = [
-  {
-    id: '1',
-    date: new Date('2023-04-15'),
-    recipientId: 'C001',
-    recipientName: 'ABC Contractors',
-    recipientType: RecipientType.SUBCONTRACTOR,
-    purpose: AdvancePurpose.MATERIAL,
-    amount: 25000,
-    status: ApprovalStatus.APPROVED,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-04-15'),
-    siteId: 'S001',
-    siteName: 'Project Alpha'
-  },
-  {
-    id: '2',
-    date: new Date('2023-04-10'),
-    recipientId: 'C002',
-    recipientName: 'XYZ Builders',
-    recipientType: RecipientType.SUBCONTRACTOR,
-    purpose: AdvancePurpose.MATERIAL,
-    amount: 15000,
-    status: ApprovalStatus.APPROVED,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-04-10'),
-    siteId: 'S001',
-    siteName: 'Project Alpha'
-  },
-  {
-    id: '3',
-    date: new Date('2023-04-08'),
-    recipientId: 'W001',
-    recipientName: 'John Smith',
-    recipientType: RecipientType.WORKER,
-    purpose: AdvancePurpose.ADVANCE,
-    amount: 5000,
-    status: ApprovalStatus.APPROVED,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-04-08'),
-    siteId: 'S002',
-    siteName: 'Project Beta'
-  },
-  {
-    id: '4',
-    date: new Date('2023-04-05'),
-    recipientId: 'C003',
-    recipientName: 'Reliable Construction',
-    recipientType: RecipientType.SUBCONTRACTOR,
-    purpose: AdvancePurpose.TRANSPORT,
-    amount: 18000,
-    status: ApprovalStatus.PENDING,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-04-05'),
-    siteId: 'S001',
-    siteName: 'Project Alpha'
-  },
-  {
-    id: '5',
-    date: new Date('2023-04-03'),
-    recipientId: 'W002',
-    recipientName: 'Michael Johnson',
-    recipientType: RecipientType.WORKER,
-    purpose: AdvancePurpose.ADVANCE,
-    amount: 3000,
-    status: ApprovalStatus.PENDING,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-04-03'),
-    siteId: 'S002',
-    siteName: 'Project Beta'
-  }
-];
-
-const purposeColorMap: Record<string, string> = {
-  [AdvancePurpose.MATERIAL]: 'blue',
-  [AdvancePurpose.ADVANCE]: 'green',
-  [AdvancePurpose.TRANSPORT]: 'yellow',
-  [AdvancePurpose.MISC]: 'purple',
-  [AdvancePurpose.SAFETY_SHOES]: 'pink',
-  [AdvancePurpose.TOOLS]: 'orange',
-  [AdvancePurpose.OTHER]: 'gray'
-};
-
 const Advances: React.FC = () => {
-  const [advances, setAdvances] = useState<Advance[]>(mockAdvances);
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const location = useLocation();
+  const [advances, setAdvances] = useState<Advance[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
-  const siteId = localStorage.getItem('selectedSiteId') || '';
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved'>('all');
+  const [isLoading, setIsLoading] = useState(true);
 
-  const filterByType = (type: string) => {
-    setSelectedType(type);
-  };
-
-  const filterByPurposeType = (purposeType: string) => {
-    if (purposeType === 'all') {
-      return filteredAdvances;
+  useEffect(() => {
+    const storedUserRole = localStorage.getItem('userRole') as UserRole;
+    const storedSupervisorId = localStorage.getItem('supervisorId');
+    
+    if (storedUserRole) {
+      setUserRole(storedUserRole);
+      
+      if (storedUserRole === UserRole.SUPERVISOR && storedSupervisorId) {
+        setSelectedSupervisorId(storedSupervisorId);
+      }
     }
-    return filteredAdvances.filter(advance => 
-      advance.purpose === purposeType
-    );
-  };
-
-  const filterByApprovalStatus = (statusType: string) => {
-    if (statusType === 'all') {
-      return filteredAdvances;
+    
+    const locationState = location.state as { supervisorId?: string, newSite?: boolean } | null;
+    if (locationState?.supervisorId && storedUserRole === UserRole.ADMIN) {
+      setSelectedSupervisorId(locationState.supervisorId);
     }
-    return filteredAdvances.filter(advance => 
-      advance.status === statusType
-    );
-  };
+    
+    fetchSites();
+  }, [location]);
 
-  const handleAddAdvance = (newAdvance: Advance) => {
-    setAdvances([newAdvance, ...advances]);
-  };
-
-  const filteredAdvances = advances.filter(advance => {
-    if (selectedType === 'all') {
-      return true;
+  useEffect(() => {
+    if (selectedSiteId) {
+      localStorage.setItem('selectedSiteId', selectedSiteId);
+      fetchAdvances(selectedSiteId);
     }
-    return advance.recipientType === selectedType;
-  });
+  }, [selectedSiteId]);
 
-  const purposeFilteredAdvances = filterByPurposeType(selectedType);
-  const statusFilteredAdvances = filterByApprovalStatus(selectedStatus);
+  const fetchSites = async () => {
+    try {
+      setIsLoading(true);
+      
+      let query = supabase.from('sites').select('*');
+      
+      if (userRole === UserRole.SUPERVISOR && selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
+      } else if (userRole === UserRole.ADMIN && selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedSites: Site[] = data.map(site => ({
+          id: site.id,
+          name: site.name,
+          jobName: site.job_name,
+          posNo: site.pos_no,
+          startDate: new Date(site.start_date),
+          completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+          supervisorId: site.supervisor_id,
+          supervisorName: "Supervisor Name", // Default value
+          isCompleted: site.is_completed,
+          createdAt: new Date(site.created_at),
+          funds: site.funds || 0,
+          location: "Location", // Default value
+          status: "active", // Default value
+          clientName: "Client", // Default value
+          contactPerson: "Contact Person", // Default value
+          contactNumber: "Contact Number", // Default value
+          budget: 0, // Default value
+          endDate: undefined
+        }));
+        
+        setSites(formattedSites);
+      }
+    } catch (err: any) {
+      console.error('Error fetching sites:', err);
+      toast.error('Failed to load sites: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const getBadgeColor = (status: ApprovalStatus): string => {
-    switch (status) {
-      case ApprovalStatus.APPROVED:
-        return "green";
-      case ApprovalStatus.PENDING:
-        return "yellow";
-      case ApprovalStatus.REJECTED:
-        return "red";
+  const fetchAdvances = async (siteId: string) => {
+    try {
+      setIsLoading(true);
+      
+      let query = supabase.from('advances').select('*').eq('site_id', siteId);
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedAdvances: Advance[] = data.map(advance => ({
+          id: advance.id,
+          date: new Date(advance.date),
+          recipientId: advance.recipient_id,
+          recipientName: advance.recipient_name,
+          recipientType: advance.recipient_type as any,
+          purpose: advance.purpose as any,
+          amount: advance.amount,
+          remarks: advance.remarks,
+          status: advance.status as ApprovalStatus,
+          createdBy: advance.created_by,
+          createdAt: new Date(advance.created_at),
+          siteId: advance.site_id,
+          siteName: "Site Name" // Default value
+        }));
+        
+        setAdvances(formattedAdvances);
+      }
+    } catch (err: any) {
+      console.error('Error fetching advances:', err);
+      toast.error('Failed to load advances: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddAdvance = async (newAdvance: Partial<Advance>) => {
+    if (newAdvance.id) {
+      setAdvances(prevAdvances => [newAdvance as Advance, ...prevAdvances]);
+      toast.success("Advance added successfully");
+    } else {
+      try {
+        const advanceWithId: Advance = {
+          ...newAdvance as Advance,
+          id: Date.now().toString(),
+          status: ApprovalStatus.PENDING,
+          createdAt: new Date(),
+          siteName: "Site Name"
+        };
+        
+        setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
+        toast.success("Advance added successfully");
+      } catch (error: any) {
+        console.error('Error adding advance:', error);
+        toast.error('Failed to add advance: ' + error.message);
+      }
+    }
+  };
+
+  const filterAdvances = (advances: Advance[], filterStatus: string) => {
+    switch (filterStatus) {
+      case 'all':
+        return advances;
+      case 'pending':
+        return advances.filter(advance => advance.status === ApprovalStatus.PENDING);
+      case 'approved':
+        return advances.filter(advance => advance.status === ApprovalStatus.APPROVED);
       default:
-        return "gray";
+        return advances;
     }
   };
+
+  const filteredAdvances = filterAdvances(advances, filterStatus)
+    .filter(advance => {
+      const matchesSearch = 
+        advance.recipientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        advance.purpose.toLowerCase().includes(searchTerm.toLowerCase());
+        
+      return matchesSearch;
+    });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-16rem)]">
+        <div className="animate-pulse text-xl text-primary">Loading advances...</div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <PageTitle title="Advances" subtitle="Manage worker advances and payments" />
-
-      <div className="mb-4 flex items-center justify-between">
-        <div className="flex gap-4">
-          <Select value={selectedType} onValueChange={filterByType}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value={RecipientType.WORKER}>Worker</SelectItem>
-              <SelectItem value={RecipientType.SUBCONTRACTOR}>Subcontractor</SelectItem>
-              <SelectItem value={RecipientType.SUPERVISOR}>Supervisor</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Filter by Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value={ApprovalStatus.PENDING}>Pending</SelectItem>
-              <SelectItem value={ApprovalStatus.APPROVED}>Approved</SelectItem>
-              <SelectItem value={ApprovalStatus.REJECTED}>Rejected</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button onClick={() => setIsAdvanceFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Advance
-        </Button>
-      </div>
-
-      {advances.length > 0 ? (
-        <Table>
-          <TableCaption>A list of all recent advances.</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">Date</TableHead>
-              <TableHead>Recipient</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Purpose</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredAdvances.map((advance) => (
-              <TableRow key={advance.id}>
-                <TableCell>{advance.date instanceof Date ? advance.date.toLocaleDateString() : new Date(advance.date).toLocaleDateString()}</TableCell>
-                <TableCell>{advance.recipientName}</TableCell>
-                <TableCell>{advance.recipientType}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary" className="gap-x-2">
-                    {advance.purpose}
-                    <div
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: purposeColorMap[advance.purpose] }}
-                    />
-                  </Badge>
-                </TableCell>
-                <TableCell>{advance.amount}</TableCell>
-                <TableCell>
-                  <Badge className={`bg-${getBadgeColor(advance.status)}-100 text-${getBadgeColor(advance.status)}-800`}>
-                    {advance.status}
-                  </Badge>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      ) : (
-        <CustomCard>
-          <div className="p-12 text-center">
-            <h3 className="text-lg font-medium mb-2">No Advances Added Yet</h3>
-            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Record your first advance payment to start tracking.
-            </p>
-            <Button onClick={() => setIsAdvanceFormOpen(true)} className="mx-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Add First Advance
-            </Button>
+    <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+      <PageTitle 
+        title="Advances" 
+        subtitle="Manage worker advances and track their status"
+        className="mb-4"
+      />
+      
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <div className="flex flex-col md:flex-row md:items-center gap-4 w-full md:w-auto">
+          <div className="relative max-w-md w-full">
+            <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+            <input 
+              type="text" 
+              placeholder="Search advances..." 
+              className="py-2 pl-10 pr-4 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-        </CustomCard>
-      )}
+          
+          <div className="w-full md:w-64">
+            <Select 
+              value={filterStatus} 
+              onValueChange={(value: 'all' | 'pending' | 'approved') => setFilterStatus(value)}
+            >
+              <SelectTrigger className="w-full">
+                <CheckSquare className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="All Advances" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Advances</SelectItem>
+                <SelectItem value="pending">Pending Advances</SelectItem>
+                <SelectItem value="approved">Approved Advances</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        
+        <div className="flex flex-wrap gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-10">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                Filter
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <h4 className="font-medium">Filter Advances</h4>
+                <div className="space-y-2">
+                  <h5 className="text-sm font-medium">Status</h5>
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="filter-all" 
+                        checked={filterStatus === 'all'}
+                        onCheckedChange={() => setFilterStatus('all')}
+                      />
+                      <Label htmlFor="filter-all">All Advances</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="filter-pending" 
+                        checked={filterStatus === 'pending'}
+                        onCheckedChange={() => setFilterStatus('pending')}
+                      />
+                      <Label htmlFor="filter-pending">Pending Advances</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox 
+                        id="filter-approved" 
+                        checked={filterStatus === 'approved'}
+                        onCheckedChange={() => setFilterStatus('approved')}
+                      />
+                      <Label htmlFor="filter-approved">Approved Advances</Label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button 
+            size="sm" 
+            className="h-10"
+            onClick={() => setIsAdvanceFormOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Advance
+          </Button>
+        </div>
+      </div>
+      
+      <div className="overflow-y-auto flex-1 pr-2">
+        {advances.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredAdvances.map(advance => (
+              <CustomCard key={advance.id}>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-medium">{advance.recipientName}</h3>
+                    <p className="text-sm text-muted-foreground">Purpose: {advance.purpose}</p>
+                    <p className="text-sm text-muted-foreground">Site: {advance.siteName}</p>
+                    <p className="text-sm text-muted-foreground">Date: {advance.date.toLocaleDateString()}</p>
+                  </div>
+                  <div className="flex items-center">
+                    <span className="mr-2 text-sm text-muted-foreground">Status:</span>
+                    {advance.status === ApprovalStatus.PENDING && (
+                      <Badge variant="secondary">Pending</Badge>
+                    )}
+                    {advance.status === ApprovalStatus.APPROVED && (
+                      <Badge variant="success">Approved</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <p className="text-base font-semibold">Amount: ₹{advance.amount.toLocaleString()}</p>
+                </div>
+              </CustomCard>
+            ))}
+          </div>
+        ) : (
+          <CustomCard>
+            <div className="p-12 text-center">
+              <CircleSlash className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No Advances Added Yet</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                Record your first worker advance to keep track of payments.
+              </p>
+              <Button 
+                onClick={() => setIsAdvanceFormOpen(true)}
+                className="mx-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Record First Advance
+              </Button>
+            </div>
+          </CustomCard>
+        )}
+      </div>
 
       <AdvanceForm
         isOpen={isAdvanceFormOpen}
         onClose={() => setIsAdvanceFormOpen(false)}
         onSubmit={handleAddAdvance}
-        siteId={siteId}
+        sites={sites}
       />
     </div>
   );

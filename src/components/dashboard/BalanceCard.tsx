@@ -16,13 +16,13 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
 }) => {
   // Ensure all properties have default values to prevent TypeScript errors
   const safeBalanceData = {
-    fundsReceived: balanceData.fundsReceived || 0,
-    totalExpenditure: balanceData.totalExpenditure || 0,
-    totalAdvances: balanceData.totalAdvances || 0,
-    debitsToWorker: balanceData.debitsToWorker || 0,
-    invoicesPaid: balanceData.invoicesPaid || 0,
-    pendingInvoices: balanceData.pendingInvoices || 0,
-    totalBalance: balanceData.totalBalance || 0
+    fundsReceived: balanceData?.fundsReceived || 0,
+    totalExpenditure: balanceData?.totalExpenditure || 0,
+    totalAdvances: balanceData?.totalAdvances || 0,
+    debitsToWorker: balanceData?.debitsToWorker || 0,
+    invoicesPaid: balanceData?.invoicesPaid || 0,
+    pendingInvoices: balanceData?.pendingInvoices || 0,
+    totalBalance: balanceData?.totalBalance || 0
   };
 
   return (
