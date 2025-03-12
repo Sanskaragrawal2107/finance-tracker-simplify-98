@@ -4,11 +4,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
-import SupervisorSites from "./pages/SupervisorSites";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
@@ -18,6 +17,7 @@ import { supabase } from "./integrations/supabase/client";
 
 const queryClient = new QueryClient();
 
+// Redirect component based on user role
 const RoleBasedRedirect = () => {
   const userRole = localStorage.getItem('userRole') as UserRole;
   
@@ -26,12 +26,13 @@ const RoleBasedRedirect = () => {
   }
   
   if (userRole === UserRole.SUPERVISOR) {
-    return <Navigate to="/supervisor/sites" replace />;
+    return <Navigate to="/expenses" replace />;
   }
   
   return <Navigate to="/dashboard" replace />;
 };
 
+// Auth wrapper to protect routes
 const ProtectedRoute = ({ 
   children, 
   allowedRoles = [] 
@@ -76,24 +77,25 @@ const ProtectedRoute = ({
   }
 
   if (allowedRoles.length > 0 && userRole && !allowedRoles.includes(userRole)) {
+    // Redirect based on role
     if (userRole === UserRole.ADMIN) {
       return <Navigate to="/admin" replace />;
-    } else if (userRole === UserRole.SUPERVISOR) {
-      return <Navigate to="/supervisor/sites" replace />;
     } else {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/expenses" replace />;
     }
   }
 
   return <>{children}</>;
 };
 
+// Layout component for authenticated pages
 const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode, allowedRoles?: UserRole[] }) => {
   const [userRole, setUserRole] = useState<UserRole>(UserRole.VIEWER);
   const [userName, setUserName] = useState<string>('User');
   const location = useLocation();
   const isMobile = useIsMobile();
   
+  // Check if user is authenticated
   useEffect(() => {
     const storedUserRole = localStorage.getItem('userRole') as UserRole;
     const storedUserName = localStorage.getItem('userName');
@@ -107,18 +109,15 @@ const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode,
     }
   }, []);
   
+  // Get page title based on current route
   const getPageTitle = () => {
     const path = location.pathname;
-    
-    if (path.includes('/expenses/')) {
-      return 'Site Expenses';
-    }
     
     switch (path) {
       case '/dashboard':
         return 'Dashboard';
-      case '/supervisor/sites':
-        return 'Sites';
+      case '/expenses':
+        return 'Expenses';
       case '/admin':
         return 'Admin Dashboard';
       default:
@@ -149,9 +148,11 @@ const App = () => {
   const [session, setSession] = useState(null);
 
   useEffect(() => {
+    // Setup auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_OUT') {
+          // Clear local storage on sign out
           localStorage.removeItem('userRole');
           localStorage.removeItem('userName');
           localStorage.removeItem('supervisorId');
@@ -181,15 +182,7 @@ const App = () => {
               } 
             />
             <Route 
-              path="/supervisor/sites" 
-              element={
-                <AppLayout allowedRoles={[UserRole.ADMIN, UserRole.SUPERVISOR]}>
-                  <SupervisorSites />
-                </AppLayout>
-              } 
-            />
-            <Route 
-              path="/expenses/:siteId" 
+              path="/expenses" 
               element={
                 <AppLayout allowedRoles={[UserRole.ADMIN, UserRole.SUPERVISOR]}>
                   <Expenses />

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
@@ -42,27 +43,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
 
       if (userError) throw userError;
       
-      console.log("Login successful, user data:", userData);
-      
       // Store user info in localStorage
       const userRole = userData.role as UserRole;
       localStorage.setItem('userRole', userRole);
       localStorage.setItem('userName', email.split('@')[0] || 'User');
       
       if (userData.supervisor_id) {
-        console.log("Setting supervisorId in localStorage:", userData.supervisor_id);
         localStorage.setItem('supervisorId', userData.supervisor_id);
-      } else {
-        // If no supervisor ID exists, we'll check if we need to assign one later in SupervisorSites
-        console.warn("No supervisor_id found for user");
       }
       
       // Redirect based on role
       if (userRole === UserRole.ADMIN) {
         navigate('/admin');
       } else if (userRole === UserRole.SUPERVISOR) {
-        // Redirect supervisor directly to sites page
-        navigate('/supervisor/sites');
+        navigate('/expenses');
       } else {
         navigate('/dashboard');
       }

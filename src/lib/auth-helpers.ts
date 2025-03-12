@@ -1,124 +1,73 @@
 
-import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 import { UserRole } from './types';
 
-export type UserData = {
-  id: string;
-  email: string;
-  role: UserRole;
-  supervisorId?: string;
-};
-
-export const fetchUserRole = async (): Promise<{ role: UserRole, supervisorId?: string } | null> => {
+export const registerUser = async (
+  email: string, 
+  password: string, 
+  role: UserRole = UserRole.SUPERVISOR, 
+  supervisorId?: string
+) => {
   try {
-    // Get the current user session
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // Register user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
     
-    if (sessionError) throw sessionError;
-    if (!session) return null;
-
-    // Get the user's role from the users table
-    const { data, error } = await supabase
-      .from('users')
-      .select('role, supervisor_id')
-      .eq('id', session.user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!data) return null;
-
-    console.log("Fetched user role data:", data);
-
-    return {
-      role: data.role as UserRole,
-      supervisorId: data.supervisor_id
-    };
+    if (authError) throw authError;
+    
+    // If it's a supervisor, update the supervisorId in the users table
+    if (authData.user && (role === UserRole.SUPERVISOR) && supervisorId) {
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          role,
+          supervisor_id: supervisorId
+        })
+        .eq('id', authData.user.id);
+      
+      if (updateError) throw updateError;
+    }
+    
+    return { success: true, user: authData.user };
   } catch (error) {
-    console.error('Error fetching user role:', error);
-    return null;
+    console.error('Registration error:', error);
+    return { success: false, error };
   }
 };
 
-export const useCurrentUser = () => {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        // Get the current user session
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          setLoading(false);
-          return;
-        }
-
-        // Get the user's role from the users table
-        const { data, error } = await supabase
-          .from('users')
-          .select('role, supervisor_id')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching user data:', error);
-          throw error;
-        }
-
-        console.log("User data fetched:", data);
-
-        // Store supervisor ID in localStorage
-        if (data.supervisor_id) {
-          console.log("Setting supervisor_id in localStorage:", data.supervisor_id);
-          localStorage.setItem('supervisorId', data.supervisor_id);
-        } else {
-          console.warn("No supervisor_id found for user");
-        }
-
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          role: data.role as UserRole,
-          supervisorId: data.supervisor_id
-        });
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          fetchUser();
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          localStorage.removeItem('supervisorId');
-          navigate('/');
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
-
-  return { user, loading };
+export const updateUserRole = async (userId: string, role: UserRole, supervisorId?: string) => {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ 
+        role,
+        supervisor_id: supervisorId
+      })
+      .eq('id', userId);
+    
+    if (error) throw error;
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Update user role error:', error);
+    return { success: false, error };
+  }
 };
 
-export const isAdminUser = (role: UserRole): boolean => {
-  return role === UserRole.ADMIN;
-};
-
-export const isSupervisorUser = (role: UserRole): boolean => {
-  return role === UserRole.SUPERVISOR;
+export const signOut = async () => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('supervisorId');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Sign out error:', error);
+    return { success: false, error };
+  }
 };

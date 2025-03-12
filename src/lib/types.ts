@@ -1,8 +1,17 @@
+
 // User related types
 export enum UserRole {
   ADMIN = "admin",
   SUPERVISOR = "supervisor",
   VIEWER = "viewer"
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  createdAt: Date;
 }
 
 // Site related types
@@ -49,16 +58,16 @@ export interface HeadOfficeTransaction {
 }
 
 export enum ExpenseCategory {
-  MATERIAL = "Material",
-  LABOR = "Labor",
-  TRAVEL = "Travel",
-  OFFICE = "Office",
-  MISC = "Miscellaneous",
-  TRANSPORT = "Transport",
-  FOOD = "Food",
-  ACCOMMODATION = "Accommodation",
-  EQUIPMENT = "Equipment",
-  MAINTENANCE = "Maintenance",
+  TRAVEL = "travel",
+  MATERIAL = "material",
+  LABOR = "labor",
+  OFFICE = "office",
+  MISC = "misc",
+  TRANSPORT = "transport",
+  FOOD = "food",
+  ACCOMMODATION = "accommodation",
+  EQUIPMENT = "equipment",
+  MAINTENANCE = "maintenance",
   STAFF_TRAVELLING_CHARGES = "STAFF TRAVELLING CHARGES",
   STATIONARY_PRINTING = "STATIONARY & PRINTING",
   DIESEL_FUEL_CHARGES = "DIESEL & FUEL CHARGES",
@@ -103,7 +112,7 @@ export interface Expense {
   description: string;
   category: ExpenseCategory | string;
   amount: number;
-  status: ApprovalStatus | string;
+  status: ApprovalStatus;
   createdBy: string;
   createdAt: Date;
   siteId?: string; // Reference to the site
@@ -112,17 +121,17 @@ export interface Expense {
 
 export interface Advance {
   id: string;
-  date: string | Date;
+  date: Date;
   recipientId?: string;
   recipientName: string;
-  recipientType: RecipientType | string;
-  purpose: AdvancePurpose | string;
+  recipientType: RecipientType;
+  purpose: AdvancePurpose;
   amount: number;
   remarks?: string;
-  status: ApprovalStatus | string;
+  status: ApprovalStatus;
   createdBy: string;
-  createdAt: Date | string;
-  siteId: string;
+  createdAt: Date;
+  siteId?: string;
 }
 
 export interface FundsReceived {
@@ -132,7 +141,7 @@ export interface FundsReceived {
   siteId: string;
   createdAt: Date;
   reference?: string;
-  method?: PaymentMethod | string;
+  method?: PaymentMethod;
 }
 
 export interface BankDetails {
@@ -141,7 +150,6 @@ export interface BankDetails {
   ifscCode: string;
   email?: string;
   mobile?: string;
-  [key: string]: any; // Add index signature to make compatible with Json type
 }
 
 export interface MaterialItem {
@@ -168,7 +176,7 @@ export interface Invoice {
   bankDetails: BankDetails;
   billUrl?: string;
   invoiceImageUrl?: string;
-  paymentStatus: PaymentStatus | string;
+  paymentStatus: PaymentStatus;
   createdBy: string;
   createdAt: Date;
   approverType?: "ho" | "supervisor";

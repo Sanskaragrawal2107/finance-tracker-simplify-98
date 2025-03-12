@@ -1,869 +1,543 @@
-
 import React, { useState, useEffect } from 'react';
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, useFieldArray } from "react-hook-form";
-import * as z from "zod";
-import { format } from "date-fns";
-import { CalendarIcon, Plus, Trash2, Upload, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { PaymentStatus, Invoice, MaterialItem } from '@/lib/types';
+import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2, FileText, User, AlertTriangle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { cn } from "@/lib/utils";
-import { Invoice, BankDetails, PaymentStatus, MaterialItem } from "@/lib/types";
-import { InputWithLabel } from '../ui/InputWithLabel';
-import { Switch } from '../ui/switch';
-import { Label } from '../ui/label';
-import { useToast } from '../ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-interface InvoiceFormProps {
-  isOpen: boolean;
-  onClose: () => void;
+type InvoiceFormProps = {
+  isOpen?: boolean;
+  onClose?: () => void;
   onSubmit: (invoice: Omit<Invoice, 'id' | 'createdAt'>) => void;
+  initialData?: Partial<Invoice>;
   siteId?: string;
-}
+};
 
-const bankDetailsSchema = z.object({
-  accountNumber: z.string().min(5, {
-    message: "Account number must be at least 5 characters",
-  }),
-  bankName: z.string().min(2, {
-    message: "Bank name must be at least 2 characters",
-  }),
-  ifscCode: z.string().min(5, {
-    message: "IFSC code must be at least 5 characters",
-  }),
-  email: z.string().email("Invalid email address").optional(),
-  mobile: z.string().regex(/^[0-9]{10}$/, "Invalid mobile number").optional(),
-});
+const gstRates = [5, 12, 18, 28];
 
-const materialItemSchema = z.object({
-  material: z.string().min(2, {
-    message: "Material description must be at least 2 characters",
-  }),
-  quantity: z.number().nullable(),
-  rate: z.number().nullable(),
-  gstPercentage: z.number().nullable(),
-  amount: z.number().nullable(),
-});
-
-const formSchema = z.object({
-  date: z.date({
-    required_error: "Date is required",
-  }),
-  partyId: z.string().min(2, {
-    message: "Party ID must be at least 2 characters",
-  }),
-  partyName: z.string().min(2, {
-    message: "Party name must be at least 2 characters",
-  }),
-  material: z.string().min(2, {
-    message: "Material description must be at least 2 characters",
-  }),
-  quantity: z.number({
-    required_error: "Quantity is required",
-    invalid_type_error: "Quantity must be a number",
-  }).nullable(),
-  rate: z.number({
-    required_error: "Rate is required",
-    invalid_type_error: "Rate must be a number",
-  }).nullable(),
-  gstPercentage: z.number({
-    required_error: "GST Percentage is required",
-    invalid_type_error: "GST Percentage must be a number",
-  }).nullable(),
-  grossAmount: z.number({
-    required_error: "Gross Amount is required",
-    invalid_type_error: "Gross Amount must be a number",
-  }).nullable(),
-  netAmount: z.number({
-    required_error: "Net Amount is required",
-    invalid_type_error: "Net Amount must be a number",
-  }).nullable(),
-  bankDetails: bankDetailsSchema,
-  billUrl: z.string().optional(),
-  invoiceImageUrl: z.string().optional(),
-  paymentStatus: z.nativeEnum(PaymentStatus, {
-    required_error: "Payment Status is required",
-  }),
-  approverType: z.enum(["ho", "supervisor"]).optional(),
-  useMaterialItems: z.boolean().default(false),
-  materialItems: z.array(materialItemSchema).optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, siteId }) => {
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [billFile, setBillFile] = useState<File | null>(null);
-  const [invoiceImageFile, setInvoiceImageFile] = useState<File | null>(null);
-  const [isUploadingBill, setIsUploadingBill] = useState(false);
-  const [isUploadingInvoiceImage, setIsUploadingInvoiceImage] = useState(false);
-  const [showBankDetails, setShowBankDetails] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
+const InvoiceForm: React.FC<InvoiceFormProps> = ({
+  isOpen = true,
+  onClose,
+  onSubmit,
+  initialData,
+  siteId
+}) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [date, setDate] = useState<Date>(initialData?.date || new Date());
+  const [partyId, setPartyId] = useState<string>(initialData?.partyId || '');
+  const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
+  const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      date: new Date(),
-      partyId: "",
-      partyName: "",
-      material: "",
-      quantity: null,
-      rate: null,
-      gstPercentage: null,
-      grossAmount: null,
-      netAmount: null,
-      bankDetails: {
-        accountNumber: "",
-        bankName: "",
-        ifscCode: "",
-      },
-      paymentStatus: PaymentStatus.PENDING,
-      approverType: "supervisor",
-      useMaterialItems: false,
-      materialItems: [],
-    },
-  });
+  const [materialInput, setMaterialInput] = useState<string>('');
+  const [quantityInput, setQuantityInput] = useState<number>(0);
+  const [rateInput, setRateInput] = useState<number>(0);
+  const [gstPercentageInput, setGstPercentageInput] = useState<number>(18);
 
-  const { control, watch, setValue } = form;
-  const useMaterialItems = watch("useMaterialItems");
+  const [materialItems, setMaterialItems] = useState<MaterialItem[]>([]);
+  const [grandGrossAmount, setGrandGrossAmount] = useState<number>(0);
+  const [grandNetAmount, setGrandNetAmount] = useState<number>(0);
+  const [billFile, setBillFile] = useState<File | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>(initialData?.paymentStatus || PaymentStatus.PENDING);
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "materialItems",
-  });
+  const [accountNumber, setAccountNumber] = useState<string>(initialData?.bankDetails?.accountNumber || '');
+  const [bankName, setBankName] = useState<string>(initialData?.bankDetails?.bankName || '');
+  const [ifscCode, setIfscCode] = useState<string>(initialData?.bankDetails?.ifscCode || '');
+  const [email, setEmail] = useState<string>(initialData?.bankDetails?.email || '');
+  const [mobile, setMobile] = useState<string>(initialData?.bankDetails?.mobile || '');
+  const [ifscValidationMessage, setIfscValidationMessage] = useState<string>('');
+  const [isFetchingBankDetails, setIsFetchingBankDetails] = useState<boolean>(false);
+
+  const [approverType, setApproverType] = useState<"ho" | "supervisor">("ho");
+
+  const handlePartyNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!partyNameFixed) {
+      setPartyName(e.target.value);
+    }
+  };
+  const handlePartyNameBlur = () => {
+    if (partyName.trim() !== '') {
+      setPartyNameFixed(true);
+    }
+  };
 
   useEffect(() => {
-    setValue("date", selectedDate);
-  }, [selectedDate, setValue]);
-
-  const handleCalendarSelect = (date: Date | undefined) => {
-    if (date) {
-      setSelectedDate(date);
-      setValue("date", date);
-      setDatePickerOpen(false);
-    }
-  };
-
-  const handleBankDetailsToggle = () => {
-    setShowBankDetails(!showBankDetails);
-  };
-
-  const uploadFile = async (file: File, path: string): Promise<string | null> => {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `${path}/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('construction-app')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error("Error uploading file:", error);
-        toast({
-          title: "Upload failed",
-          description: "Failed to upload the file. Please try again.",
-          variant: "destructive",
-        });
-        return null;
+    let totalGross = 0;
+    let totalNet = 0;
+    materialItems.forEach(item => {
+      if (item.amount !== null) {
+        totalGross += item.amount;
+        if (item.gstPercentage !== null) {
+          totalNet += item.amount + item.amount * (item.gstPercentage / 100);
+        }
       }
-
-      const publicUrl = `https://judyphcrcqmggkndcxlj.supabase.co/storage/v1/object/public/construction-app/${filePath}`;
-      return publicUrl;
-    } catch (error) {
-      console.error("Upload error:", error);
-      toast({
-        title: "Upload error",
-        description: "An unexpected error occurred during upload.",
-        variant: "destructive",
-      });
-      return null;
-    }
-  };
-
-  const handleBillUpload = async (file: File | null) => {
-    if (!file) return;
-
-    setIsUploadingBill(true);
-    try {
-      const url = await uploadFile(file, 'bills');
-      if (url) {
-        form.setValue("billUrl", url);
-        toast({
-          title: "Bill uploaded",
-          description: "Bill uploaded successfully.",
-        });
-      }
-    } finally {
-      setIsUploadingBill(false);
-    }
-  };
-
-  const handleInvoiceImageUpload = async (file: File | null) => {
-    if (!file) return;
-
-    setIsUploadingInvoiceImage(true);
-    try {
-      const url = await uploadFile(file, 'invoice-images');
-      if (url) {
-        form.setValue("invoiceImageUrl", url);
-        toast({
-          title: "Invoice image uploaded",
-          description: "Invoice image uploaded successfully.",
-        });
-      }
-    } finally {
-      setIsUploadingInvoiceImage(false);
-    }
-  };
-
-  const handleSubmit = async (values: FormValues) => {
-    console.log("Submitting invoice with values:", values);
-
-    const newInvoice: Omit<Invoice, 'id' | 'createdAt'> = {
-      date: values.date,
-      partyId: values.partyId,
-      partyName: values.partyName,
-      material: values.material,
-      quantity: values.quantity || 0,
-      rate: values.rate || 0,
-      gstPercentage: values.gstPercentage || 0,
-      grossAmount: values.grossAmount || 0,
-      netAmount: values.netAmount || 0,
-      bankDetails: {
-        accountNumber: values.bankDetails.accountNumber,
-        bankName: values.bankDetails.bankName,
-        ifscCode: values.bankDetails.ifscCode,
-        email: values.bankDetails.email,
-        mobile: values.bankDetails.mobile,
-      },
-      billUrl: values.billUrl,
-      invoiceImageUrl: values.invoiceImageUrl,
-      paymentStatus: values.paymentStatus,
-      createdBy: "Current User",
-      approverType: values.approverType,
-      siteId: siteId,
-    };
-
-    onSubmit(newInvoice);
-    form.reset();
-    onClose();
-    toast({
-      title: "Invoice added",
-      description: "Invoice added successfully.",
     });
+    setGrandGrossAmount(totalGross);
+    setGrandNetAmount(totalNet);
+
+    if (totalNet > 5000) {
+      setApproverType("ho");
+    }
+  }, [materialItems]);
+
+  const addMaterialItem = () => {
+    if (!materialInput.trim()) {
+      toast({
+        title: "Material name is required",
+        description: "Please enter a material name",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (quantityInput <= 0) {
+      toast({
+        title: "Invalid quantity",
+        description: "Quantity must be greater than zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (rateInput <= 0) {
+      toast({
+        title: "Invalid rate",
+        description: "Rate must be greater than zero",
+        variant: "destructive"
+      });
+      return;
+    }
+    const grossAmount = quantityInput * rateInput;
+    const newItem: MaterialItem = {
+      id: Date.now().toString(),
+      material: materialInput,
+      quantity: quantityInput,
+      rate: rateInput,
+      gstPercentage: gstPercentageInput,
+      amount: grossAmount
+    };
+    setMaterialItems([...materialItems, newItem]);
+
+    setMaterialInput('');
+    setQuantityInput(0);
+    setRateInput(0);
   };
 
-  return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>New Invoice</DialogTitle>
-          <DialogDescription>
-            Enter the details for the new invoice.
-          </DialogDescription>
-        </DialogHeader>
+  const removeMaterialItem = (index: number) => {
+    const updatedItems = [...materialItems];
+    updatedItems.splice(index, 1);
+    setMaterialItems(updatedItems);
+  };
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
-                    <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Select a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={handleCalendarSelect}
-                          initialFocus
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+  const handleAccountNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 16) {
+      setAccountNumber(value);
+    }
+  };
 
-              <FormField
-                control={form.control}
-                name="paymentStatus"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Payment Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={PaymentStatus.PENDING}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payment status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value={PaymentStatus.PENDING}>Pending</SelectItem>
-                        <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+  const validateIfsc = (code: string) => {
+    if (code.length !== 11) {
+      return false;
+    }
+    return code[4] === '0';
+  };
+
+  const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase();
+    setIfscCode(value);
+
+    if (value.length < 11) {
+      setIfscValidationMessage('');
+    }
+  };
+
+  const handleIfscBlur = async () => {
+    if (ifscCode.length !== 11) {
+      setIfscValidationMessage('IFSC code must be 11 characters');
+      return;
+    }
+
+    if (ifscCode[4] !== '0') {
+      setIfscValidationMessage('5th digit of IFSC code must be 0');
+      setBankName('');
+      return;
+    }
+
+    setIfscValidationMessage('');
+
+    try {
+      setIsFetchingBankDetails(true);
+      const response = await fetch(`https://ifsc.razorpay.com/${ifscCode}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBankName(`${data.BANK}, ${data.BRANCH}, ${data.CITY}`);
+        toast({
+          title: "Bank details fetched",
+          description: "Bank details have been automatically filled"
+        });
+      } else {
+        setIfscValidationMessage('Invalid IFSC code');
+        setBankName('');
+      }
+    } catch (error) {
+      setIfscValidationMessage('Failed to fetch bank details');
+      console.error('Error fetching bank details:', error);
+    } finally {
+      setIsFetchingBankDetails(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setBillFile(e.target.files[0]);
+    }
+  };
+
+  const resetPartyName = () => {
+    setPartyNameFixed(false);
+    setPartyName('');
+  };
+
+  const handleCalendarSelect = (newDate: Date | undefined) => {
+    if (newDate) {
+      setDate(newDate);
+      setIsCalendarOpen(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!partyId.trim()) {
+      toast({
+        title: "Missing Invoice Number",
+        description: "Please provide an Invoice Number",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (materialItems.length === 0) {
+      toast({
+        title: "No materials added",
+        description: "Please add at least one material item",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (approverType === "ho" && !validateIfsc(ifscCode)) {
+      toast({
+        title: "Invalid IFSC code",
+        description: "Please provide a valid IFSC code with 5th digit as '0'",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const primaryMaterial = materialItems[0];
+
+    const invoiceData: Omit<Invoice, 'id' | 'createdAt'> = {
+      date,
+      partyId,
+      partyName,
+      material: materialItems.map(item => item.material).join(', '),
+      quantity: primaryMaterial.quantity || 0,
+      rate: primaryMaterial.rate || 0,
+      gstPercentage: primaryMaterial.gstPercentage || 18,
+      grossAmount: grandGrossAmount,
+      netAmount: grandNetAmount,
+      materialItems: materialItems,
+      bankDetails: {
+        accountNumber: approverType === "ho" ? accountNumber : "",
+        bankName: approverType === "ho" ? bankName : "",
+        ifscCode: approverType === "ho" ? ifscCode : "",
+        email: approverType === "ho" ? email : "",
+        mobile: approverType === "ho" ? mobile : "",
+      },
+      billUrl: billFile ? URL.createObjectURL(billFile) : undefined,
+      paymentStatus,
+      createdBy: 'Current User',
+      approverType: approverType,
+      siteId: siteId
+    };
+    onSubmit(invoiceData);
+    if (onClose) onClose();
+  };
+
+  const formContent = (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date">Invoice Date</Label>
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {date ? format(date, "PPP") : <span>Pick a date</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar 
+                mode="single" 
+                selected={date} 
+                onSelect={handleCalendarSelect} 
+                initialFocus 
+                className={cn("p-3 pointer-events-auto")} 
               />
+            </PopoverContent>
+          </Popover>
+        </div>
+
+        <div className="space-y-2 relative">
+          <Label htmlFor="party" className="flex items-center">
+            <User className="h-4 w-4 mr-1 text-muted-foreground" />
+            Party Name
+          </Label>
+          <div className="flex gap-2">
+            <Input id="party" value={partyName} onChange={handlePartyNameChange} onBlur={handlePartyNameBlur} placeholder="Enter party name" required disabled={partyNameFixed} className={partyNameFixed ? "bg-muted" : ""} />
+            {partyNameFixed && <Button type="button" variant="outline" size="icon" onClick={resetPartyName} className="flex-shrink-0">
+                <Trash2 className="h-4 w-4" />
+              </Button>}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="partyId" className="flex items-center">
+            <FileText className="h-4 w-4 mr-1 text-muted-foreground" />
+            Invoice Number
+          </Label>
+          <Input id="partyId" value={partyId} onChange={e => setPartyId(e.target.value)} placeholder="Enter invoice number" required />
+        </div>
+      </div>
+
+      <Separator />
+
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-medium">Materials</h3>
+        </div>
+        
+        <div className="p-3 sm:p-4 border rounded-md mb-4 bg-muted/30">
+          <h4 className="font-medium mb-3">Add New Material</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 mb-4">
+            <div className="space-y-2">
+              <Label htmlFor="material-input">Material Name</Label>
+              <Input id="material-input" value={materialInput} onChange={e => setMaterialInput(e.target.value)} placeholder="e.g., TMT Steel Bars" />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="partyId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Party ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter party ID" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="partyName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Party Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter party name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            
+            <div className="space-y-2">
+              <Label htmlFor="quantity-input">Quantity</Label>
+              <Input id="quantity-input" type="number" value={quantityInput || ''} onChange={e => setQuantityInput(Number(e.target.value))} min="0" step="0.01" />
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="rate-input">Rate (₹)</Label>
+              <Input id="rate-input" type="number" value={rateInput || ''} onChange={e => setRateInput(Number(e.target.value))} min="0" step="0.01" />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="gst-input">GST Percentage (%)</Label>
+              <Select value={gstPercentageInput.toString()} onValueChange={value => setGstPercentageInput(Number(value))}>
+                <SelectTrigger id="gst-input">
+                  <SelectValue placeholder="Select GST rate" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gstRates.map(rate => <SelectItem key={rate} value={rate.toString()}>
+                      {rate}%
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <Button type="button" onClick={addMaterialItem} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Add Material
+          </Button>
+        </div>
+        
+        {materialItems.length > 0 && <div className="mb-4">
+            <h4 className="font-medium mb-2">Material Items List</h4>
+            <div className="overflow-x-auto rounded-md border">
+              <table className="w-full">
+                <thead className="bg-muted text-left">
+                  <tr>
+                    <th className="py-2 px-2 sm:px-4 font-medium">#</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium">Material</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">Qty</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">Rate (₹)</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">GST %</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-right">Amount (₹)</th>
+                    <th className="py-2 px-2 sm:px-4 font-medium text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {materialItems.map((item, index) => <tr key={item.id} className="border-t">
+                      <td className="py-3 px-2 sm:px-4">{index + 1}</td>
+                      <td className="py-3 px-2 sm:px-4 max-w-[120px] sm:max-w-none truncate">{item.material}</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.quantity}</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.rate?.toLocaleString()}</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.gstPercentage}%</td>
+                      <td className="py-3 px-2 sm:px-4 text-right">{item.amount?.toLocaleString()}</td>
+                      <td className="py-3 px-2 sm:px-4 text-center">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeMaterialItem(index)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </td>
+                    </tr>)}
+                </tbody>
+              </table>
+            </div>
+          </div>}
+        
+        <div className="bg-muted p-3 sm:p-4 rounded-md mt-4">
+          <div className="flex flex-col md:flex-row md:justify-end md:items-center gap-4">
+            <div className="space-y-2 md:w-1/4">
+              <Label htmlFor="grandGross">Net Taxable Amount (₹)</Label>
+              <Input id="grandGross" value={grandGrossAmount.toLocaleString()} readOnly className="bg-muted font-medium" />
+            </div>
+            
+            <div className="space-y-2 md:w-1/4">
+              <Label htmlFor="grandNet" className="font-medium">Grand Net Total (₹)</Label>
+              <Input id="grandNet" value={grandNetAmount.toLocaleString()} readOnly className="bg-muted font-bold text-primary" />
+            </div>
+          </div>
+        </div>
+      </div>
 
-            <FormField
-              control={form.control}
-              name="approverType"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Approver Type</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value}
-                    defaultValue="supervisor"
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select approver type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                      <SelectItem value="ho">Head Office</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <Separator />
 
-            <FormField
-              control={control}
-              name="useMaterialItems"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <FormLabel>Use Material Items</FormLabel>
-                    <FormDescription>
-                      Enable this to add individual material items instead of a single
-                      description.
-                    </FormDescription>
-                  </div>
-                  <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-
-            {useMaterialItems ? (
-              <div className="space-y-2">
-                <FormLabel>Material Items</FormLabel>
-                {fields.map((field, index) => (
-                  <div key={field.id} className="flex items-center space-x-2">
-                    <FormField
-                      control={control}
-                      name={`materialItems.${index}.material` as const}
-                      render={({ field }) => (
-                        <FormItem className="w-1/4">
-                          <FormLabel>Material</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Material"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name={`materialItems.${index}.quantity` as const}
-                      render={({ field }) => (
-                        <FormItem className="w-1/6">
-                          <FormLabel>Quantity</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name={`materialItems.${index}.rate` as const}
-                      render={({ field }) => (
-                        <FormItem className="w-1/6">
-                          <FormLabel>Rate</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name={`materialItems.${index}.gstPercentage` as const}
-                      render={({ field }) => (
-                        <FormItem className="w-1/6">
-                          <FormLabel>GST (%)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={control}
-                      name={`materialItems.${index}.amount` as const}
-                      render={({ field }) => (
-                        <FormItem className="w-1/6">
-                          <FormLabel>Amount</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      variant="ghost"
-                      onClick={() => remove(index)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => append({ material: "", quantity: null, rate: null, gstPercentage: null, amount: null })}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Item
-                </Button>
-              </div>
-            ) : (
-              <FormField
-                control={form.control}
-                name="material"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Material Description</FormLabel>
-                    <FormControl>
-                      <Textarea placeholder="Enter material description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            {!useMaterialItems && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Quantity</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter quantity"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="rate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Rate</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter rate"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {!useMaterialItems && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="gstPercentage"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>GST Percentage</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter GST percentage"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="grossAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Gross Amount</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="Enter gross amount"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
-            {!useMaterialItems && (
-              <FormField
-                control={form.control}
-                name="netAmount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Net Amount</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="Enter net amount"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <div>
-              <Label
-                htmlFor="showBankDetails"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed"
-              >
-                Show Bank Details
+      <div>
+        <h3 className="text-lg font-medium mb-4">Payment made by</h3>
+        <div className="bg-muted/30 p-3 sm:p-4 rounded-md">
+          <RadioGroup value={approverType} onValueChange={value => setApproverType(value as "ho" | "supervisor")} className="flex flex-col md:flex-row gap-4">
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="ho" id="ho" />
+              <Label htmlFor="ho">Head Office</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="supervisor" id="supervisor" disabled={grandNetAmount > 5000} />
+              <Label htmlFor="supervisor" className={grandNetAmount > 5000 ? "text-muted-foreground" : ""}>
+                Supervisor
               </Label>
-              <Switch
-                id="showBankDetails"
-                checked={showBankDetails}
-                onCheckedChange={handleBankDetailsToggle}
-              />
+            </div>
+          </RadioGroup>
+          
+          {grandNetAmount > 5000 && <div className="mt-3 flex items-center text-amber-600 text-sm">
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              <span>Amounts over ₹5,000 must be approved by Head Office</span>
+            </div>}
+        </div>
+      </div>
+
+      <Separator />
+
+      {approverType === "ho" && (
+        <div>
+          <h3 className="text-lg font-medium mb-4">Bank Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="accountNumber">Account Number (max 16 digits)</Label>
+              <Input id="accountNumber" value={accountNumber} onChange={handleAccountNumberChange} placeholder="Enter Account Number (max 16 digits)" required maxLength={16} />
             </div>
 
-            {showBankDetails && (
-              <div className="space-y-4">
-                <h4 className="text-sm font-medium">Bank Details</h4>
-                <FormField
-                  control={form.control}
-                  name="bankDetails.accountNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter account number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="bankDetails.bankName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Bank Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter bank name" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="bankDetails.ifscCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>IFSC Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter IFSC code" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="bankDetails.email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email (Optional)</FormLabel>
-                        <FormControl>
-                          <Input type="email" placeholder="Enter email" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="bankDetails.mobile"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Mobile (Optional)</FormLabel>
-                        <FormControl>
-                          <Input type="tel" placeholder="Enter mobile number" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <FormLabel>Bill Upload (Optional)</FormLabel>
-                <Input
-                  type="file"
-                  id="billUpload"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      setBillFile(e.target.files[0]);
-                      handleBillUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-                <div className="relative">
-                  <Button asChild variant="outline">
-                    <Label htmlFor="billUpload" className="cursor-pointer">
-                      {isUploadingBill ? (
-                        <>
-                          Uploading <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Bill
-                        </>
-                      )}
-                    </Label>
-                  </Button>
-                  {billFile && (
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      {billFile.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <FormLabel>Invoice Image Upload (Optional)</FormLabel>
-                <Input
-                  type="file"
-                  id="invoiceImageUpload"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) {
-                      setInvoiceImageFile(e.target.files[0]);
-                      handleInvoiceImageUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-                <div className="relative">
-                  <Button asChild variant="outline">
-                    <Label htmlFor="invoiceImageUpload" className="cursor-pointer">
-                      {isUploadingInvoiceImage ? (
-                        <>
-                          Uploading <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload Invoice Image
-                        </>
-                      )}
-                    </Label>
-                  </Button>
-                  {invoiceImageFile && (
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      {invoiceImageFile.name}
-                    </span>
-                  )}
-                </div>
+            <div className="space-y-2">
+              <Label htmlFor="ifscCode">IFSC Code</Label>
+              <div className="relative">
+                <Input id="ifscCode" value={ifscCode} onChange={handleIfscChange} onBlur={handleIfscBlur} placeholder="Enter IFSC Code (11 characters)" maxLength={11} required className={ifscValidationMessage ? "border-red-500" : ""} />
+                {isFetchingBankDetails && <div className="absolute top-0 right-0 h-full flex items-center pr-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>}
+                {ifscValidationMessage && <p className="text-red-500 text-sm mt-1">{ifscValidationMessage}</p>}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Must be 11 characters and 5th digit must be '0'
+                </p>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Invoice
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+            <div className="space-y-2">
+              <Label htmlFor="bankName">Bank Name & Branch</Label>
+              <Input id="bankName" value={bankName} onChange={e => setBankName(e.target.value)} placeholder="Bank Name (auto-filled from IFSC)" required readOnly={bankName !== ''} className={bankName ? "bg-muted" : ""} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email (Optional)</Label>
+              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email Address" />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mobile">Mobile Number (Optional)</Label>
+              <Input id="mobile" value={mobile} onChange={e => setMobile(e.target.value.replace(/\D/g, ''))} placeholder="Mobile Number" maxLength={10} />
+            </div>
+          </div>
+          <Separator className="mt-6" />
+        </div>
+      )}
+
+      <Separator />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="bill">Upload Bill</Label>
+          <div className="border border-dashed rounded-md p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors">
+            <input type="file" id="bill" className="hidden" accept=".pdf,.jpg,.jpeg,.png,image/*" onChange={handleFileChange} capture="environment" />
+            <label htmlFor="bill" className="cursor-pointer flex flex-col items-center">
+              <div className="flex gap-2">
+                <Upload className="h-6 w-6 text-muted-foreground" />
+                <Camera className="h-6 w-6 text-muted-foreground" />
+              </div>
+              <span className="text-sm text-muted-foreground mt-2">
+                {billFile ? billFile.name : "Click to upload or take a photo"}
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="status">Payment Status</Label>
+          <Select value={paymentStatus} onValueChange={value => setPaymentStatus(value as PaymentStatus)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={PaymentStatus.PENDING}>Pending</SelectItem>
+              <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-4">
+        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+        <Button type="submit">Save Invoice</Button>
+      </div>
+    </form>
+  );
+
+  return isOpen ? (
+    <Dialog open={isOpen} onOpenChange={onClose ? () => onClose() : undefined}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4 md:p-6">
+        <DialogHeader>
+          <DialogTitle>
+            {siteId ? "Add Site Invoice" : "Add Invoice"}
+          </DialogTitle>
+        </DialogHeader>
+        {formContent}
       </DialogContent>
     </Dialog>
-  );
+  ) : null;
 };
 
 export default InvoiceForm;
-
-interface FormDescriptionProps {
-  children?: React.ReactNode;
-}
-
-function FormDescription({ children }: FormDescriptionProps) {
-  return (
-    <p className="text-sm text-muted-foreground">
-      {children}
-    </p>
-  )
-}

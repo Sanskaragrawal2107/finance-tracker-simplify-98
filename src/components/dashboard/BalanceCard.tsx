@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+
+import React from 'react';
 import { cn } from '@/lib/utils';
 import { IndianRupee } from 'lucide-react';
 import CustomCard from '../ui/CustomCard';
 import { BalanceSummary } from '@/lib/types';
 
 interface BalanceCardProps {
-  balanceData: BalanceSummary | Promise<BalanceSummary>;
+  balanceData: BalanceSummary;
   className?: string;
 }
 
@@ -13,37 +14,16 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
   balanceData,
   className 
 }) => {
-  const [summary, setSummary] = useState<BalanceSummary>({
-    fundsReceived: 0,
-    totalExpenditure: 0,
-    totalAdvances: 0,
-    debitsToWorker: 0,
-    invoicesPaid: 0,
-    pendingInvoices: 0,
-    totalBalance: 0
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        if (balanceData instanceof Promise) {
-          const resolvedData = await balanceData;
-          setSummary(resolvedData);
-        } else {
-          setSummary(balanceData);
-        }
-      } catch (error) {
-        console.error("Error resolving balance data:", error);
-        // Keep default values in case of error
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadData();
-  }, [balanceData]);
+  // Ensure all properties have default values to prevent TypeScript errors
+  const safeBalanceData = {
+    fundsReceived: balanceData.fundsReceived || 0,
+    totalExpenditure: balanceData.totalExpenditure || 0,
+    totalAdvances: balanceData.totalAdvances || 0,
+    debitsToWorker: balanceData.debitsToWorker || 0,
+    invoicesPaid: balanceData.invoicesPaid || 0,
+    pendingInvoices: balanceData.pendingInvoices || 0,
+    totalBalance: balanceData.totalBalance || 0
+  };
 
   return (
     <CustomCard 
@@ -57,50 +37,39 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
         </div>
       </div>
       
-      {isLoading ? (
-        <div className="space-y-3 animate-pulse">
-          <div className="h-6 bg-white/20 rounded"></div>
-          <div className="h-6 bg-white/20 rounded"></div>
-          <div className="h-6 bg-white/20 rounded"></div>
-          <div className="h-6 bg-white/20 rounded"></div>
-          <div className="h-6 bg-white/20 rounded"></div>
-          <div className="h-8 bg-white/20 rounded mt-4"></div>
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <p className="text-sm opacity-80 uppercase">Funds Received from HO:</p>
+          <p className="text-lg font-semibold">₹{safeBalanceData.fundsReceived.toLocaleString()}</p>
         </div>
-      ) : (
-        <div className="space-y-3">
+        
+        <div className="flex justify-between items-center">
+          <p className="text-sm opacity-80 uppercase">Total Expenses paid by supervisor:</p>
+          <p className="text-lg font-semibold">₹{safeBalanceData.totalExpenditure.toLocaleString()}</p>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <p className="text-sm opacity-80 uppercase">Total Advances paid by supervisor:</p>
+          <p className="text-lg font-semibold">₹{safeBalanceData.totalAdvances.toLocaleString()}</p>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <p className="text-sm opacity-80 uppercase">Debits TO worker:</p>
+          <p className="text-lg font-semibold">₹{safeBalanceData.debitsToWorker.toLocaleString()}</p>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <p className="text-sm opacity-80 uppercase">Invoices paid by supervisor:</p>
+          <p className="text-lg font-semibold">₹{safeBalanceData.invoicesPaid.toLocaleString()}</p>
+        </div>
+        
+        <div className="pt-3 border-t border-white/20">
           <div className="flex justify-between items-center">
-            <p className="text-sm opacity-80 uppercase">Funds Received from HO:</p>
-            <p className="text-lg font-semibold">₹{summary.fundsReceived.toLocaleString()}</p>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <p className="text-sm opacity-80 uppercase">Total Expenses paid by supervisor:</p>
-            <p className="text-lg font-semibold">₹{summary.totalExpenditure.toLocaleString()}</p>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <p className="text-sm opacity-80 uppercase">Total Advances paid by supervisor:</p>
-            <p className="text-lg font-semibold">₹{summary.totalAdvances.toLocaleString()}</p>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <p className="text-sm opacity-80 uppercase">Debits TO worker:</p>
-            <p className="text-lg font-semibold">₹{summary.debitsToWorker.toLocaleString()}</p>
-          </div>
-          
-          <div className="flex justify-between items-center">
-            <p className="text-sm opacity-80 uppercase">Invoices paid by supervisor:</p>
-            <p className="text-lg font-semibold">₹{summary.invoicesPaid.toLocaleString()}</p>
-          </div>
-          
-          <div className="pt-3 border-t border-white/20">
-            <div className="flex justify-between items-center">
-              <p className="text-sm opacity-80 uppercase">Current Balance:</p>
-              <p className="text-xl font-bold">₹{summary.totalBalance.toLocaleString()}</p>
-            </div>
+            <p className="text-sm opacity-80 uppercase">Current Balance:</p>
+            <p className="text-xl font-bold">₹{safeBalanceData.totalBalance.toLocaleString()}</p>
           </div>
         </div>
-      )}
+      </div>
     </CustomCard>
   );
 };

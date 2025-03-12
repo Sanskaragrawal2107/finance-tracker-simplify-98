@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -32,7 +33,6 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { Site } from "@/lib/types";
-import { supabase } from "@/integrations/supabase/client";
 
 interface SiteFormProps {
   isOpen: boolean;
@@ -62,21 +62,6 @@ type FormValues = z.infer<typeof formSchema>;
 const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervisorId }) => {
   const [startDateOpen, setStartDateOpen] = React.useState(false);
   const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-  
-  const getSupervisorId = () => {
-    if (supervisorId && supervisorId.trim() !== '') {
-      return supervisorId;
-    }
-    
-    const storedSupervisorId = localStorage.getItem('supervisorId');
-    if (storedSupervisorId && storedSupervisorId.trim() !== '') {
-      return storedSupervisorId;
-    }
-    
-    console.error("No supervisor ID available");
-    return null;
-  };
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -89,71 +74,26 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
     },
   });
 
-  const handleSubmit = async (values: FormValues) => {
-    try {
-      const uppercaseValues = {
-        ...values,
-        name: values.name.toUpperCase(),
-        jobName: values.jobName.toUpperCase(),
-        posNo: values.posNo.toUpperCase(),
-      };
-      
-      setLoading(true);
-      
-      const currentSupervisorId = getSupervisorId();
-      
-      if (!currentSupervisorId) {
-        toast.error("Cannot create site: Missing supervisor ID");
-        setLoading(false);
-        return;
-      }
-      
-      console.log("Creating site with supervisor ID:", currentSupervisorId);
-      
-      const { data, error } = await supabase
-        .from('sites')
-        .insert({
-          name: uppercaseValues.name,
-          job_name: uppercaseValues.jobName,
-          pos_no: uppercaseValues.posNo,
-          start_date: uppercaseValues.startDate.toISOString(),
-          completion_date: uppercaseValues.completionDate ? uppercaseValues.completionDate.toISOString() : null,
-          supervisor_id: currentSupervisorId,
-          is_completed: false,
-          funds: 0
-        })
-        .select('*')
-        .single();
-      
-      if (error) {
-        console.error("Error creating site:", error);
-        toast.error("Failed to create site: " + error.message);
-        return;
-      }
-      
-      const newSite: Partial<Site> = {
-        id: data.id,
-        name: data.name,
-        jobName: data.job_name,
-        posNo: data.pos_no,
-        startDate: new Date(data.start_date),
-        completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
-        supervisorId: data.supervisor_id,
-        isCompleted: data.is_completed,
-        createdAt: new Date(data.created_at),
-        funds: data.funds || 0
-      };
-      
-      onSubmit(newSite);
-      form.reset();
-      onClose();
-      toast.success("Site created successfully");
-    } catch (err: any) {
-      console.error("Failed to create site:", err);
-      toast.error("An unexpected error occurred: " + err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleSubmit = (values: FormValues) => {
+    // Transform values to uppercase
+    const uppercaseValues = {
+      ...values,
+      name: values.name.toUpperCase(),
+      jobName: values.jobName.toUpperCase(),
+      posNo: values.posNo.toUpperCase(),
+    };
+    
+    const newSite: Partial<Site> = {
+      ...uppercaseValues,
+      supervisorId,
+      isCompleted: false,
+      createdAt: new Date(),
+    };
+    
+    onSubmit(newSite);
+    form.reset();
+    onClose();
+    toast.success("Site created successfully");
   };
 
   return (
@@ -298,9 +238,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
               <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button type="submit" className="w-full sm:w-auto" disabled={loading}>
-                {loading ? "Creating..." : "Create Site"}
-              </Button>
+              <Button type="submit" className="w-full sm:w-auto">Create Site</Button>
             </DialogFooter>
           </form>
         </Form>

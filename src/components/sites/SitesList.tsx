@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { format } from 'date-fns';
 import { Building, CalendarCheck, Calendar, ArrowRight } from 'lucide-react';
@@ -7,10 +8,10 @@ import { Button } from '@/components/ui/button';
 
 interface SitesListProps {
   sites: Site[];
-  onSiteClick: (siteId: string) => void;
+  onSelectSite: (siteId: string) => void;
 }
 
-const SitesList: React.FC<SitesListProps> = ({ sites, onSiteClick }) => {
+const SitesList: React.FC<SitesListProps> = ({ sites, onSelectSite }) => {
   const activeSites = sites.filter(site => !site.isCompleted);
   const completedSites = sites.filter(site => site.isCompleted);
 
@@ -24,7 +25,7 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSiteClick }) => {
               <CustomCard 
                 key={site.id} 
                 className="cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => onSiteClick(site.id)}
+                onClick={() => onSelectSite(site.id)}
               >
                 <div className="p-3 sm:p-4 border-b">
                   <div className="flex items-center justify-between">
@@ -50,7 +51,7 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSiteClick }) => {
                     className="mt-2 w-full text-xs sm:text-sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSiteClick(site.id);
+                      onSelectSite(site.id);
                     }}
                   >
                     <span>View Details</span>
@@ -75,7 +76,7 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSiteClick }) => {
               <CustomCard 
                 key={site.id} 
                 className="cursor-pointer hover:border-primary/50 transition-colors bg-green-50/30"
-                onClick={() => onSiteClick(site.id)}
+                onClick={() => onSelectSite(site.id)}
               >
                 <div className="p-3 sm:p-4 border-b">
                   <div className="flex items-center justify-between">
@@ -101,7 +102,7 @@ const SitesList: React.FC<SitesListProps> = ({ sites, onSiteClick }) => {
                     className="mt-2 w-full text-xs sm:text-sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSiteClick(site.id);
+                      onSelectSite(site.id);
                     }}
                   >
                     <span>View Details</span>
