@@ -26,7 +26,7 @@ const RoleBasedRedirect = () => {
   }
   
   if (userRole === UserRole.SUPERVISOR) {
-    return <Navigate to="/expenses" replace />;
+    return <Navigate to="/supervisor/sites" replace />;
   }
   
   return <Navigate to="/dashboard" replace />;
@@ -80,8 +80,10 @@ const ProtectedRoute = ({
     // Redirect based on role
     if (userRole === UserRole.ADMIN) {
       return <Navigate to="/admin" replace />;
+    } else if (userRole === UserRole.SUPERVISOR) {
+      return <Navigate to="/supervisor/sites" replace />;
     } else {
-      return <Navigate to="/expenses" replace />;
+      return <Navigate to="/dashboard" replace />;
     }
   }
 
@@ -113,11 +115,15 @@ const AppLayout = ({ children, allowedRoles = [] }: { children: React.ReactNode,
   const getPageTitle = () => {
     const path = location.pathname;
     
+    if (path.includes('/expenses/')) {
+      return 'Site Expenses';
+    }
+    
     switch (path) {
       case '/dashboard':
         return 'Dashboard';
-      case '/expenses':
-        return 'Expenses';
+      case '/supervisor/sites':
+        return 'Sites';
       case '/admin':
         return 'Admin Dashboard';
       default:
@@ -182,7 +188,15 @@ const App = () => {
               } 
             />
             <Route 
-              path="/expenses" 
+              path="/supervisor/sites" 
+              element={
+                <AppLayout allowedRoles={[UserRole.ADMIN, UserRole.SUPERVISOR]}>
+                  <SupervisorSites />
+                </AppLayout>
+              } 
+            />
+            <Route 
+              path="/expenses/:siteId" 
               element={
                 <AppLayout allowedRoles={[UserRole.ADMIN, UserRole.SUPERVISOR]}>
                   <Expenses />

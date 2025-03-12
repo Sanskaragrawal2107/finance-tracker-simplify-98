@@ -61,7 +61,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       if (userRole === UserRole.ADMIN) {
         navigate('/admin');
       } else if (userRole === UserRole.SUPERVISOR) {
-        navigate('/expenses');
+        navigate('/supervisor/sites');
       } else {
         navigate('/dashboard');
       }
