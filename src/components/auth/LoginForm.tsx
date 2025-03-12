@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserRole } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface LoginFormProps {
   className?: string;
@@ -18,33 +20,65 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   
   const navigate = useNavigate();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
     
-    // Simulate login API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Sign in with Supabase
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Demo credentials for testing
-      if (email === 'admin@example.com' && password === 'password') {
-        // Store user info in localStorage or a state management solution
-        localStorage.setItem('userRole', UserRole.ADMIN);
-        localStorage.setItem('userName', 'Admin User');
-        navigate('/admin'); // Redirect admin to admin dashboard page
-      } else if (email === 'supervisor@example.com' && password === 'password') {
-        localStorage.setItem('userRole', UserRole.SUPERVISOR);
-        localStorage.setItem('userName', 'Supervisor User');
-        navigate('/expenses'); // Direct supervisors to expenses page
-      } else if (email === 'viewer@example.com' && password === 'password') {
-        localStorage.setItem('userRole', UserRole.VIEWER);
-        localStorage.setItem('userName', 'Viewer User');
-        navigate('/dashboard');
-      } else {
-        setError('Invalid email or password');
+      if (authError) throw authError;
+
+      // Get user profile to check role
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, supervisor_id')
+        .eq('id', data.user?.id)
+        .single();
+
+      if (userError) throw userError;
+      
+      // Store user info in localStorage
+      const userRole = userData.role as UserRole;
+      localStorage.setItem('userRole', userRole);
+      localStorage.setItem('userName', email.split('@')[0] || 'User');
+      
+      if (userData.supervisor_id) {
+        localStorage.setItem('supervisorId', userData.supervisor_id);
       }
-    }, 1000);
+      
+      // Redirect based on role
+      if (userRole === UserRole.ADMIN) {
+        navigate('/admin');
+      } else if (userRole === UserRole.SUPERVISOR) {
+        navigate('/expenses');
+      } else {
+        navigate('/dashboard');
+      }
+      
+      toast.success('Login successful');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Failed to login. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Demo login functions for quick testing
+  const loginAsAdmin = async () => {
+    setEmail('admin@example.com');
+    setPassword('password');
+  };
+
+  const loginAsSupervisor = async () => {
+    setEmail('supervisor@example.com');
+    setPassword('password');
   };
   
   return (
@@ -139,11 +173,25 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
         </button>
         
         <div className="text-center text-sm text-muted-foreground mt-6">
-          <p>Demo Credentials:</p>
-          <p className="mt-1">Admin: admin@example.com</p>
-          <p>Supervisor: supervisor@example.com</p>
-          <p>Viewer: viewer@example.com</p>
-          <p className="mt-1">Password: password</p>
+          <p>Demo Logins:</p>
+          <div className="flex justify-center gap-2 mt-2">
+            <button
+              type="button"
+              onClick={loginAsAdmin}
+              className="text-primary hover:underline"
+            >
+              Admin Login
+            </button>
+            <span>|</span>
+            <button
+              type="button"
+              onClick={loginAsSupervisor}
+              className="text-primary hover:underline"
+            >
+              Supervisor Login
+            </button>
+          </div>
+          <p className="mt-2 text-xs">Click to prefill, then submit.</p>
         </div>
       </form>
     </div>

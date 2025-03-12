@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 import { UserRole } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
@@ -10,19 +11,37 @@ const Index: React.FC = () => {
   
   useEffect(() => {
     // Check if user is already authenticated
-    const userRole = localStorage.getItem('userRole') as UserRole;
-    if (userRole) {
-      setIsAuthenticated(true);
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
       
-      // Redirect based on user role
-      if (userRole === UserRole.ADMIN) {
-        navigate('/admin');
-      } else if (userRole === UserRole.SUPERVISOR) {
-        navigate('/expenses');
-      } else {
-        navigate('/dashboard');
+      if (data.session) {
+        setIsAuthenticated(true);
+        
+        // Get user role from Supabase
+        const { data: userData, error } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', data.session.user.id)
+          .single();
+        
+        if (!error && userData) {
+          const userRole = userData.role as UserRole;
+          localStorage.setItem('userRole', userRole);
+          localStorage.setItem('userName', data.session.user.email?.split('@')[0] || 'User');
+          
+          // Redirect based on user role
+          if (userRole === UserRole.ADMIN) {
+            navigate('/admin');
+          } else if (userRole === UserRole.SUPERVISOR) {
+            navigate('/expenses');
+          } else {
+            navigate('/dashboard');
+          }
+        }
       }
-    }
+    };
+    
+    checkAuth();
   }, [navigate]);
   
   return (

@@ -9,7 +9,72 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      sites: {
+        Row: {
+          completion_date: string | null
+          created_at: string
+          funds: number | null
+          id: string
+          is_completed: boolean
+          job_name: string
+          name: string
+          pos_no: string
+          start_date: string
+          supervisor_id: string
+        }
+        Insert: {
+          completion_date?: string | null
+          created_at?: string
+          funds?: number | null
+          id?: string
+          is_completed?: boolean
+          job_name: string
+          name: string
+          pos_no: string
+          start_date: string
+          supervisor_id: string
+        }
+        Update: {
+          completion_date?: string | null
+          created_at?: string
+          funds?: number | null
+          id?: string
+          is_completed?: boolean
+          job_name?: string
+          name?: string
+          pos_no?: string
+          start_date?: string
+          supervisor_id?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          supervisor_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          supervisor_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          supervisor_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +83,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "supervisor"
     }
     CompositeTypes: {
       [_ in never]: never

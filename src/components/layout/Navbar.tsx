@@ -6,6 +6,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Home, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/lib/types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface NavbarProps {
   onMenuClick?: () => void;
@@ -23,10 +25,18 @@ const Navbar: React.FC<NavbarProps> = ({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('supervisorId');
+      navigate('/');
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error signing out');
+    }
   };
   
   return (
