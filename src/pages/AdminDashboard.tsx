@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -14,6 +13,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/use-auth';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
+import SiteForm from '@/components/sites/SiteForm';
 
 interface SupervisorStats {
   totalSites: number;
@@ -31,6 +31,7 @@ const AdminDashboard: React.FC = () => {
   const [supervisorStats, setSupervisorStats] = useState<Record<string, SupervisorStats>>({});
   const [supervisorsList, setSupervisorsList] = useState<SupervisorWithId[]>([]);
   const [isRegisterFormOpen, setIsRegisterFormOpen] = useState(false);
+  const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [loadingSupervisors, setLoadingSupervisors] = useState(true);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -43,11 +44,9 @@ const AdminDashboard: React.FC = () => {
         const supervisors = await getSupervisors();
         setSupervisorsList(supervisors);
         
-        // Fetch statistics for each supervisor
         const stats: Record<string, SupervisorStats> = {};
         
         for (const supervisor of supervisors) {
-          // Use type assertion to bypass TypeScript errors
           const { data, error } = await (supabase
             .from('sites') as any)
             .select('id, is_completed')
@@ -80,6 +79,31 @@ const AdminDashboard: React.FC = () => {
 
   const handleViewSites = (supervisorId: string) => {
     navigate('/expenses', { state: { supervisorId } });
+  };
+
+  const handleAddSite = () => {
+    if (selectedSupervisorId) {
+      setIsSiteFormOpen(true);
+    } else {
+      toast.error("Please select a supervisor first");
+    }
+  };
+
+  const handleCreateSite = (site: any) => {
+    setSupervisorStats(prev => {
+      const updatedStats = { ...prev };
+      if (site.supervisorId && updatedStats[site.supervisorId]) {
+        updatedStats[site.supervisorId] = {
+          ...updatedStats[site.supervisorId],
+          totalSites: updatedStats[site.supervisorId].totalSites + 1,
+          activeSites: updatedStats[site.supervisorId].activeSites + 1
+        };
+      }
+      return updatedStats;
+    });
+    
+    toast.success(`Site "${site.name}" created successfully`);
+    setIsSiteFormOpen(false);
   };
 
   const getSelectedSupervisor = () => {
@@ -250,7 +274,7 @@ const AdminDashboard: React.FC = () => {
           <Button 
             variant="outline" 
             className="h-auto py-6 flex flex-col items-center justify-center text-center"
-            onClick={() => navigate('/expenses', { state: { newSite: true } })}
+            onClick={() => handleAddSite()}
           >
             <Building2 className="h-8 w-8 mb-2" />
             <span className="text-base font-medium">Create New Site</span>
@@ -264,6 +288,13 @@ const AdminDashboard: React.FC = () => {
       <RegisterForm 
         isOpen={isRegisterFormOpen}
         onClose={() => setIsRegisterFormOpen(false)}
+      />
+      
+      <SiteForm
+        isOpen={isSiteFormOpen}
+        onClose={() => setIsSiteFormOpen(false)}
+        onSubmit={handleCreateSite}
+        supervisorId={selectedSupervisorId || undefined}
       />
     </div>
   );
