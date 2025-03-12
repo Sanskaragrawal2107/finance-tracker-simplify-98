@@ -15,7 +15,7 @@ interface ExpensesPageContentProps {
   onAddFunds: (fundsData: Partial<FundsReceived>) => Promise<void>;
   onAddInvoice: (invoiceData: Partial<Invoice>) => Promise<void>;
   onBack: () => void;
-  onCompleteSite: (siteId: string, completionDate: Date) => void;
+  onCompleteSite: (siteId: string, completionDate: Date) => Promise<void>;
 }
 
 const ExpensesPageContent: React.FC<ExpensesPageContentProps> = ({
