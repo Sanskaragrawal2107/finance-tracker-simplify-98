@@ -239,32 +239,57 @@ const Expenses: React.FC = () => {
       }
       
       if (data) {
-        const formattedInvoices: Invoice[] = data.map(invoice => ({
-          id: invoice.id,
-          date: new Date(invoice.date),
-          partyId: invoice.party_id,
-          partyName: invoice.party_name,
-          material: invoice.material,
-          quantity: invoice.quantity,
-          rate: invoice.rate,
-          gstPercentage: invoice.gst_percentage,
-          grossAmount: invoice.gross_amount,
-          netAmount: invoice.net_amount,
+        const formattedInvoices: Invoice[] = data.map(invoice => {
           // Parse bank_details if it's a string, or use as is if it's already an object
-          bankDetails: typeof invoice.bank_details === 'string' 
-            ? JSON.parse(invoice.bank_details)
-            : invoice.bank_details as BankDetails,
-          billUrl: invoice.bill_url,
-          invoiceImageUrl: invoice.invoice_image_url,
-          paymentStatus: invoice.payment_status as any,
-          createdBy: invoice.created_by,
-          createdAt: new Date(invoice.created_at),
-          approverType: invoice.approver_type as any,
-          siteId: invoice.site_id,
-          vendorName: invoice.vendor_name,
-          invoiceNumber: invoice.invoice_number,
-          amount: invoice.amount
-        }));
+          let parsedBankDetails: BankDetails;
+          
+          if (typeof invoice.bank_details === 'string') {
+            try {
+              parsedBankDetails = JSON.parse(invoice.bank_details);
+            } catch (e) {
+              // If parsing fails, create a default BankDetails object
+              parsedBankDetails = {
+                accountNumber: '',
+                bankName: '',
+                ifscCode: ''
+              };
+            }
+          } else if (invoice.bank_details && typeof invoice.bank_details === 'object') {
+            // If it's already an object, cast it
+            parsedBankDetails = invoice.bank_details as BankDetails;
+          } else {
+            // Default empty object
+            parsedBankDetails = {
+              accountNumber: '',
+              bankName: '',
+              ifscCode: ''
+            };
+          }
+          
+          return {
+            id: invoice.id,
+            date: new Date(invoice.date),
+            partyId: invoice.party_id,
+            partyName: invoice.party_name,
+            material: invoice.material,
+            quantity: invoice.quantity,
+            rate: invoice.rate,
+            gstPercentage: invoice.gst_percentage,
+            grossAmount: invoice.gross_amount,
+            netAmount: invoice.net_amount,
+            bankDetails: parsedBankDetails,
+            billUrl: invoice.bill_url,
+            invoiceImageUrl: invoice.invoice_image_url,
+            paymentStatus: invoice.payment_status as any,
+            createdBy: invoice.created_by,
+            createdAt: new Date(invoice.created_at),
+            approverType: invoice.approver_type as any,
+            siteId: invoice.site_id,
+            vendorName: invoice.vendor_name,
+            invoiceNumber: invoice.invoice_number,
+            amount: invoice.amount
+          };
+        });
         
         setInvoices(formattedInvoices);
       }
