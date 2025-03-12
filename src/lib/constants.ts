@@ -1,24 +1,46 @@
+export enum ExpenseCategory {
+  MATERIAL = "Material",
+  LABOR = "Labor",
+  TRAVEL = "Travel",
+  OFFICE = "Office",
+  MISC = "Miscellaneous",
+  TRANSPORT = "Transport",
+  FOOD = "Food",
+  ACCOMMODATION = "Accommodation",
+  EQUIPMENT = "Equipment",
+  MAINTENANCE = "Maintenance",
+}
 
-import { ExpenseCategory } from '@/lib/types';
-
-// Define the list of expense categories for use throughout the app
 export const EXPENSE_CATEGORIES = [
-  ExpenseCategory.STAFF_TRAVELLING_CHARGES,
-  ExpenseCategory.STATIONARY_PRINTING,
-  ExpenseCategory.DIESEL_FUEL_CHARGES,
-  ExpenseCategory.LABOUR_TRAVELLING_EXP,
-  ExpenseCategory.LOADGING_BOARDING_STAFF,
-  ExpenseCategory.FOOD_CHARGES_LABOUR,
-  ExpenseCategory.SITE_EXPENSES,
-  ExpenseCategory.ROOM_RENT_LABOUR,
-  ExpenseCategory.TRAVEL,
-  ExpenseCategory.MATERIAL,
-  ExpenseCategory.LABOR,
-  ExpenseCategory.OFFICE,
-  ExpenseCategory.MISC,
-  ExpenseCategory.TRANSPORT,
-  ExpenseCategory.FOOD,
-  ExpenseCategory.ACCOMMODATION,
-  ExpenseCategory.EQUIPMENT,
-  ExpenseCategory.MAINTENANCE
+  "STAFF TRAVELLING CHARGES",
+  "STATIONARY & PRINTING",
+  "DIESEL & FUEL CHARGES",
+  "LABOUR TRAVELLING EXP.",
+  "LOADGING & BOARDING FOR STAFF",
+  "FOOD CHARGES FOR LABOUR",
+  "SITE EXPENSES",
+  "ROOM RENT FOR LABOUR"
+];
+
+// Updated contractor and supervisor lists
+export const CONTRACTORS = [
+  "Kailash Meena",
+  "Devnath Prajapati",
+  "Mahendra Pandey",
+  "Mew Worker",
+  "Mew Staff"
+];
+
+export const SUPERVISORS = [
+  "Mithlesh Singh",
+  "Shubham Urmaliya",
+  "Yogesh Sharma",
+  "Vivek Giri Goswami",
+  "M.P. Naidu",
+  "Dinesh Nath",
+  "Jaspal Singh", 
+  "Sanjay Shukla",
+  "Kundan Kumar",
+  "Mahendra Pandey",
+  "Mithlesh Paul"
 ];

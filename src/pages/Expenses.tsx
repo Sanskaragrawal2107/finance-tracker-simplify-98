@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash, Loader2 } from 'lucide-react';
+import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
 import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -17,6 +17,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 import { supervisors } from '@/data/supervisors';
 
+const initialExpenses: Expense[] = [];
+const initialAdvances: Advance[] = [];
+const initialFunds: FundsReceived[] = [];
+const initialInvoices: Invoice[] = [];
+
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
   AdvancePurpose.TOOLS,
@@ -25,11 +30,11 @@ const DEBIT_ADVANCE_PURPOSES = [
 
 const Expenses: React.FC = () => {
   const location = useLocation();
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [sites, setSites] = useState<Site[]>([]);
-  const [advances, setAdvances] = useState<Advance[]>([]);
-  const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
+  const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
+  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -61,13 +66,6 @@ const Expenses: React.FC = () => {
     
     fetchSites();
   }, [location]);
-
-  useEffect(() => {
-    if (selectedSiteId) {
-      localStorage.setItem('selectedSiteId', selectedSiteId);
-      fetchSiteData(selectedSiteId);
-    }
-  }, [selectedSiteId]);
 
   const fetchSites = async () => {
     try {
@@ -111,166 +109,6 @@ const Expenses: React.FC = () => {
     }
   };
 
-  const fetchSiteData = async (siteId: string) => {
-    setIsLoading(true);
-    
-    try {
-      await Promise.all([
-        fetchExpenses(siteId),
-        fetchAdvances(siteId),
-        fetchFundsReceived(siteId),
-        fetchInvoices(siteId)
-      ]);
-    } catch (error: any) {
-      console.error('Error fetching site data:', error);
-      toast.error('Failed to load site data: ' + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchExpenses = async (siteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('site_id', siteId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const formattedExpenses: Expense[] = data.map(expense => ({
-          id: expense.id,
-          date: new Date(expense.date),
-          description: expense.description,
-          category: expense.category as ExpenseCategory,
-          amount: expense.amount,
-          status: expense.status as ApprovalStatus,
-          createdBy: expense.created_by,
-          createdAt: new Date(expense.created_at),
-          siteId: expense.site_id,
-          supervisorId: expense.supervisor_id
-        }));
-        
-        setExpenses(formattedExpenses);
-      }
-    } catch (error: any) {
-      console.error('Error fetching expenses:', error);
-      throw error;
-    }
-  };
-
-  const fetchAdvances = async (siteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('advances')
-        .select('*')
-        .eq('site_id', siteId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const formattedAdvances: Advance[] = data.map(advance => ({
-          id: advance.id,
-          date: new Date(advance.date),
-          recipientId: advance.recipient_id,
-          recipientName: advance.recipient_name,
-          recipientType: advance.recipient_type as any,
-          purpose: advance.purpose as any,
-          amount: advance.amount,
-          remarks: advance.remarks,
-          status: advance.status as ApprovalStatus,
-          createdBy: advance.created_by,
-          createdAt: new Date(advance.created_at),
-          siteId: advance.site_id
-        }));
-        
-        setAdvances(formattedAdvances);
-      }
-    } catch (error: any) {
-      console.error('Error fetching advances:', error);
-      throw error;
-    }
-  };
-
-  const fetchFundsReceived = async (siteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('funds_received')
-        .select('*')
-        .eq('site_id', siteId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const formattedFunds: FundsReceived[] = data.map(fund => ({
-          id: fund.id,
-          date: new Date(fund.date),
-          amount: fund.amount,
-          siteId: fund.site_id,
-          createdAt: new Date(fund.created_at),
-          reference: fund.reference,
-          method: fund.method as any
-        }));
-        
-        setFundsReceived(formattedFunds);
-      }
-    } catch (error: any) {
-      console.error('Error fetching funds:', error);
-      throw error;
-    }
-  };
-
-  const fetchInvoices = async (siteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('site_id', siteId);
-        
-      if (error) {
-        throw error;
-      }
-      
-      if (data) {
-        const formattedInvoices: Invoice[] = data.map(invoice => ({
-          id: invoice.id,
-          date: new Date(invoice.date),
-          partyId: invoice.party_id,
-          partyName: invoice.party_name,
-          material: invoice.material,
-          quantity: invoice.quantity,
-          rate: invoice.rate,
-          gstPercentage: invoice.gst_percentage,
-          grossAmount: invoice.gross_amount,
-          netAmount: invoice.net_amount,
-          bankDetails: invoice.bank_details,
-          billUrl: invoice.bill_url,
-          invoiceImageUrl: invoice.invoice_image_url,
-          paymentStatus: invoice.payment_status as any,
-          createdBy: invoice.created_by,
-          createdAt: new Date(invoice.created_at),
-          approverType: invoice.approver_type as any,
-          siteId: invoice.site_id,
-          vendorName: invoice.vendor_name,
-          invoiceNumber: invoice.invoice_number,
-          amount: invoice.amount
-        }));
-        
-        setInvoices(formattedInvoices);
-      }
-    } catch (error: any) {
-      console.error('Error fetching invoices:', error);
-      throw error;
-    }
-  };
-
   const ensureDateObjects = (site: Site): Site => {
     return {
       ...site,
@@ -289,102 +127,67 @@ const Expenses: React.FC = () => {
     fetchSites();
   };
 
-  const handleAddExpense = async (newExpense: Partial<Expense>) => {
-    if (newExpense.id) {
-      setExpenses(prevExpenses => [newExpense as Expense, ...prevExpenses]);
-      toast.success("Expense added successfully");
-    } else {
-      try {
-        const expenseWithId: Expense = {
-          ...newExpense as Expense,
-          id: Date.now().toString(),
-          status: ApprovalStatus.APPROVED,
-          createdAt: new Date(),
-          supervisorId: selectedSupervisorId || '',
-        };
-        
-        await fetchExpenses(expenseWithId.siteId || '');
-        toast.success("Expense added successfully");
-      } catch (error: any) {
-        console.error('Error adding expense:', error);
-        toast.error('Failed to add expense: ' + error.message);
-      }
-    }
+  const handleAddExpense = (newExpense: Partial<Expense>) => {
+    const expenseWithId: Expense = {
+      ...newExpense as Expense,
+      id: Date.now().toString(),
+      status: ApprovalStatus.APPROVED,
+      createdAt: new Date(),
+      supervisorId: selectedSupervisorId || '',
+    };
+    
+    setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
+    toast.success("Expense added successfully");
   };
 
-  const handleAddAdvance = async (newAdvance: Partial<Advance>) => {
-    if (newAdvance.id) {
-      setAdvances(prevAdvances => [newAdvance as Advance, ...prevAdvances]);
-      toast.success("Advance added successfully");
-    } else {
-      try {
-        const advanceWithId: Advance = {
-          ...newAdvance as Advance,
-          id: Date.now().toString(),
-          status: ApprovalStatus.APPROVED,
-          createdAt: new Date(),
-        };
-        
-        await fetchAdvances(advanceWithId.siteId || '');
-        toast.success("Advance added successfully");
-      } catch (error: any) {
-        console.error('Error adding advance:', error);
-        toast.error('Failed to add advance: ' + error.message);
-      }
-    }
+  const handleAddAdvance = (newAdvance: Partial<Advance>) => {
+    const advanceWithId: Advance = {
+      ...newAdvance as Advance,
+      id: Date.now().toString(),
+      status: ApprovalStatus.APPROVED,
+      createdAt: new Date(),
+    };
+    
+    setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
+    toast.success("Advance added successfully");
   };
 
-  const handleAddFunds = async (newFund: Partial<FundsReceived>) => {
-    if (newFund.id) {
-      setFundsReceived(prevFunds => [newFund as FundsReceived, ...prevFunds]);
-      
-      if (newFund.siteId) {
-        setSites(prevSites =>
-          prevSites.map(site =>
-            site.id === newFund.siteId
-              ? { ...site, funds: (site.funds || 0) + (newFund.amount || 0) }
-              : site
-          )
-        );
-      }
-      
-      toast.success("Funds received recorded successfully");
-    } else {
-      try {
-        const fundWithId: FundsReceived = {
-          ...newFund as FundsReceived,
-          id: Date.now().toString(),
-          createdAt: new Date(),
-        };
-        
-        await Promise.all([
-          fetchFundsReceived(fundWithId.siteId),
-          fetchSites()
-        ]);
-        
-        toast.success("Funds received recorded successfully");
-      } catch (error: any) {
-        console.error('Error adding funds:', error);
-        toast.error('Failed to add funds: ' + error.message);
-      }
+  const handleAddFunds = (newFund: Partial<FundsReceived>) => {
+    const fundWithId: FundsReceived = {
+      ...newFund as FundsReceived,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    };
+    
+    setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
+    
+    if (fundWithId.siteId) {
+      setSites(prevSites =>
+        prevSites.map(site =>
+          site.id === fundWithId.siteId
+            ? { ...site, funds: (site.funds || 0) + fundWithId.amount }
+            : site
+        )
+      );
     }
+    
+    toast.success("Funds received recorded successfully");
   };
 
-  const handleAddInvoice = async (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+  const handleAddInvoice = (newInvoice: Omit<Invoice, 'id' | 'createdAt'>) => {
     console.log("Adding new invoice with data:", newInvoice);
     
-    try {
-      if (newInvoice.id) {
-        setInvoices(prevInvoices => [newInvoice as Invoice, ...prevInvoices]);
-        toast.success("Invoice added successfully");
-      } else {
-        await fetchInvoices(newInvoice.siteId || '');
-        toast.success("Invoice added successfully");
-      }
-    } catch (error: any) {
-      console.error('Error adding invoice:', error);
-      toast.error('Failed to add invoice: ' + error.message);
-    }
+    const invoiceWithId: Invoice = {
+      ...newInvoice,
+      id: Date.now().toString(),
+      createdAt: new Date(),
+    };
+    
+    console.log("Created invoice with ID:", invoiceWithId.id);
+    console.log("Invoice image URL:", invoiceWithId.invoiceImageUrl);
+    
+    setInvoices(prevInvoices => [invoiceWithId, ...prevInvoices]);
+    toast.success("Invoice added successfully");
   };
 
   const handleCompleteSite = async (siteId: string, completionDate: Date) => {
