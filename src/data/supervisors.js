@@ -1,4 +1,6 @@
 
+import { supabase } from '@/integrations/supabase/client';
+
 export const supervisors = [
   { id: 1, name: "Mithlesh Singh" },
   { id: 2, name: "Shubham Urmaliya" },
@@ -12,3 +14,26 @@ export const supervisors = [
   { id: 10, name: "Mahendra Pandey" },
   { id: 11, name: "Mithlesh Paul" }
 ];
+
+// Function to fetch supervisors from the database
+export const getSupervisors = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name')
+      .eq('role', 'supervisor');
+    
+    if (error) {
+      console.error('Error fetching supervisors:', error);
+      return supervisors; // Return local data as fallback
+    }
+    
+    return data.map(supervisor => ({
+      id: supervisor.id,
+      name: supervisor.name
+    }));
+  } catch (error) {
+    console.error('Error in getSupervisors:', error);
+    return supervisors; // Return local data as fallback
+  }
+};

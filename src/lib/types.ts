@@ -1,4 +1,3 @@
-
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -219,4 +218,13 @@ export interface Activity {
   amount: number;
   date: Date;
   user: string;
+}
+
+// Authentication and user-related types
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  created_at: Date;
 }

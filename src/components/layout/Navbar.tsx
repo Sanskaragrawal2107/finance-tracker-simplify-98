@@ -6,6 +6,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { Home, Building, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/lib/types';
+import { useAuth } from '@/hooks/use-auth';
 
 interface NavbarProps {
   onMenuClick?: () => void;
@@ -22,12 +23,7 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  
-  const handleLogout = () => {
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('userName');
-    navigate('/');
-  };
+  const { logout, user } = useAuth();
   
   return (
     <header className={cn("h-14 sm:h-16 border-b bg-background/50 backdrop-blur-md sticky top-0 z-10", className)}>
@@ -69,27 +65,31 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => navigate('/expenses')}
-            className="p-1 md:p-2"
-            title="Go to Sites & Expenses"
-            aria-label="Go to Sites & Expenses"
-          >
-            <Building className="h-5 w-5 text-muted-foreground" />
-          </Button>
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleLogout}
-            className="p-1 md:p-2"
-            title="Logout"
-            aria-label="Logout"
-          >
-            <LogOut className="h-5 w-5 text-muted-foreground" />
-          </Button>
+          {user && (
+            <>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/expenses')}
+                className="p-1 md:p-2"
+                title="Go to Sites & Expenses"
+                aria-label="Go to Sites & Expenses"
+              >
+                <Building className="h-5 w-5 text-muted-foreground" />
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => logout()}
+                className="p-1 md:p-2"
+                title="Logout"
+                aria-label="Logout"
+              >
+                <LogOut className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

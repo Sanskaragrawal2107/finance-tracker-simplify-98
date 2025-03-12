@@ -1,9 +1,8 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { UserRole } from '@/lib/types';
+import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 interface LoginFormProps {
   className?: string;
@@ -12,39 +11,20 @@ interface LoginFormProps {
 const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   
-  const navigate = useNavigate();
+  const { login, signUp, loading, error } = useAuth();
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
     
-    // Simulate login API call
-    setTimeout(() => {
-      setLoading(false);
-      
-      // Demo credentials for testing
-      if (email === 'admin@example.com' && password === 'password') {
-        // Store user info in localStorage or a state management solution
-        localStorage.setItem('userRole', UserRole.ADMIN);
-        localStorage.setItem('userName', 'Admin User');
-        navigate('/admin'); // Redirect admin to admin dashboard page
-      } else if (email === 'supervisor@example.com' && password === 'password') {
-        localStorage.setItem('userRole', UserRole.SUPERVISOR);
-        localStorage.setItem('userName', 'Supervisor User');
-        navigate('/expenses'); // Direct supervisors to expenses page
-      } else if (email === 'viewer@example.com' && password === 'password') {
-        localStorage.setItem('userRole', UserRole.VIEWER);
-        localStorage.setItem('userName', 'Viewer User');
-        navigate('/dashboard');
-      } else {
-        setError('Invalid email or password');
-      }
-    }, 1000);
+    if (isRegistering) {
+      await signUp(email, password, name);
+    } else {
+      await login(email, password);
+    }
   };
   
   return (
@@ -54,7 +34,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           <span className="text-primary-foreground font-semibold text-xl">F</span>
         </div>
         <h1 className="text-2xl font-semibold">FinTrack</h1>
-        <p className="text-muted-foreground mt-2">Sign in to your account</p>
+        <p className="text-muted-foreground mt-2">
+          {isRegistering ? 'Create a new account' : 'Sign in to your account'}
+        </p>
       </div>
       
       {error && (
@@ -64,6 +46,26 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
+        {isRegistering && (
+          <div className="space-y-2">
+            <label htmlFor="name" className="text-sm font-medium">
+              Full Name
+            </label>
+            <div className="relative">
+              <User className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your full name"
+                className="w-full py-2 pl-10 pr-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                required={isRegistering}
+              />
+            </div>
+          </div>
+        )}
+        
         <div className="space-y-2">
           <label htmlFor="email" className="text-sm font-medium">
             Email
@@ -111,21 +113,23 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
           </div>
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <input
-              id="remember"
-              type="checkbox"
-              className="h-4 w-4 border border-gray-300 rounded"
-            />
-            <label htmlFor="remember" className="ml-2 text-sm text-muted-foreground">
-              Remember me
-            </label>
+        {!isRegistering && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                id="remember"
+                type="checkbox"
+                className="h-4 w-4 border border-gray-300 rounded"
+              />
+              <label htmlFor="remember" className="ml-2 text-sm text-muted-foreground">
+                Remember me
+              </label>
+            </div>
+            <a href="#" className="text-sm text-primary hover:text-primary/90 transition-colors">
+              Forgot password?
+            </a>
           </div>
-          <a href="#" className="text-sm text-primary hover:text-primary/90 transition-colors">
-            Forgot password?
-          </a>
-        </div>
+        )}
         
         <button
           type="submit"
@@ -135,15 +139,35 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
             loading ? "opacity-70" : "hover:bg-primary/90"
           )}
         >
-          {loading ? 'Signing in...' : 'Sign in'}
+          {loading 
+            ? (isRegistering ? 'Creating account...' : 'Signing in...') 
+            : (isRegistering ? 'Create Account' : 'Sign in')}
         </button>
         
         <div className="text-center text-sm text-muted-foreground mt-6">
-          <p>Demo Credentials:</p>
-          <p className="mt-1">Admin: admin@example.com</p>
-          <p>Supervisor: supervisor@example.com</p>
-          <p>Viewer: viewer@example.com</p>
-          <p className="mt-1">Password: password</p>
+          {isRegistering ? (
+            <p>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => setIsRegistering(false)}
+                className="text-primary hover:text-primary/90 transition-colors"
+              >
+                Sign in
+              </button>
+            </p>
+          ) : (
+            <p>
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={() => setIsRegistering(true)}
+                className="text-primary hover:text-primary/90 transition-colors"
+              >
+                Create one
+              </button>
+            </p>
+          )}
         </div>
       </form>
     </div>

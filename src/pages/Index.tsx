@@ -1,29 +1,34 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
+import { useAuth } from '@/hooks/use-auth';
 import { UserRole } from '@/lib/types';
 
 const Index: React.FC = () => {
   const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, loading } = useAuth();
   
   useEffect(() => {
-    // Check if user is already authenticated
-    const userRole = localStorage.getItem('userRole') as UserRole;
-    if (userRole) {
-      setIsAuthenticated(true);
-      
-      // Redirect based on user role
-      if (userRole === UserRole.ADMIN) {
+    // Redirect if user is already authenticated
+    if (user && !loading) {
+      if (user.role === UserRole.ADMIN) {
         navigate('/admin');
-      } else if (userRole === UserRole.SUPERVISOR) {
+      } else if (user.role === UserRole.SUPERVISOR) {
         navigate('/expenses');
       } else {
         navigate('/dashboard');
       }
     }
-  }, [navigate]);
+  }, [user, loading, navigate]);
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-blue-50 to-indigo-50 p-4">

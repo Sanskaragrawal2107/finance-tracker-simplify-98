@@ -1,10 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Expenses from "./pages/Expenses";
@@ -13,44 +13,56 @@ import NotFound from "./pages/NotFound";
 import Navbar from "./components/layout/Navbar";
 import { UserRole } from "./lib/types";
 import { useIsMobile } from "./hooks/use-mobile";
+import { AuthProvider, useAuth } from "./hooks/use-auth";
 
 const queryClient = new QueryClient();
 
 // Redirect component based on user role
 const RoleBasedRedirect = () => {
-  const userRole = localStorage.getItem('userRole') as UserRole;
+  const { user } = useAuth();
   
-  if (userRole === UserRole.ADMIN) {
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  if (user.role === UserRole.ADMIN) {
     return <Navigate to="/admin" replace />;
   }
   
-  if (userRole === UserRole.SUPERVISOR) {
-    return <Navigate to="/expenses" replace />;
+  return <Navigate to="/expenses" replace />;
+};
+
+// Protected route component
+const ProtectedRoute = ({ 
+  children, 
+  allowedRoles = [UserRole.ADMIN, UserRole.SUPERVISOR]
+}: { 
+  children: React.ReactNode, 
+  allowedRoles?: UserRole[] 
+}) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
   
-  return <Navigate to="/dashboard" replace />;
+  if (!user) {
+    return <Navigate to="/" state={{ from: location }} replace />;
+  }
+  
+  if (!allowedRoles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+  
+  return <>{children}</>;
 };
 
 // Layout component for authenticated pages
 const AppLayout = ({ children }: { children: React.ReactNode }) => {
-  const [userRole, setUserRole] = useState<UserRole>(UserRole.VIEWER);
-  const [userName, setUserName] = useState<string>('User');
+  const { user } = useAuth();
   const location = useLocation();
   const isMobile = useIsMobile();
-  
-  // Check if user is authenticated
-  useEffect(() => {
-    const storedUserRole = localStorage.getItem('userRole') as UserRole;
-    const storedUserName = localStorage.getItem('userName');
-    
-    if (storedUserRole) {
-      setUserRole(storedUserRole);
-    }
-    
-    if (storedUserName) {
-      setUserName(storedUserName);
-    }
-  }, []);
   
   // Get page title based on current route
   const getPageTitle = () => {
@@ -67,20 +79,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         return '';
     }
   };
-
-  // Check if user is supervisor and redirect from dashboard to expenses
-  useEffect(() => {
-    if ((userRole === UserRole.SUPERVISOR) && location.pathname === "/dashboard") {
-      window.location.href = "/expenses";
-    }
-  }, [userRole, location.pathname]);
   
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar 
         onMenuClick={() => {}} // Empty function since we don't have a sidebar
         pageTitle={getPageTitle()}
-        userRole={userRole}
+        userRole={user?.role}
       />
       
       <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
@@ -92,27 +97,56 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// Main App
+const AppContent = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route 
+        path="/dashboard" 
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Dashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/expenses" 
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <Expenses />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin" 
+        element={
+          <ProtectedRoute allowedRoles={[UserRole.ADMIN]}>
+            <AppLayout>
+              <AdminDashboard />
+            </AppLayout>
+          </ProtectedRoute>
+        } 
+      />
+      <Route path="/authenticated" element={<RoleBasedRedirect />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route 
-            path="/dashboard" 
-            element={
-              <AppLayout>
-                <Dashboard />
-              </AppLayout>
-            } 
-          />
-          <Route path="/expenses" element={<AppLayout><Expenses /></AppLayout>} />
-          <Route path="/admin" element={<AppLayout><AdminDashboard /></AppLayout>} />
-          <Route path="/authenticated" element={<RoleBasedRedirect />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -3,14 +3,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { User, Users, Building2, PieChart, BarChart } from 'lucide-react';
+import { User, Users, Building2, PieChart, BarChart, UserPlus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserRole } from '@/lib/types';
-import { supervisors } from '@/data/supervisors';
+import { getSupervisors } from '@/data/supervisors';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useAuth } from '@/hooks/use-auth';
+import RegisterForm from '@/components/auth/RegisterForm';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SupervisorStats {
   totalSites: number;
@@ -18,35 +21,60 @@ interface SupervisorStats {
   completedSites: number;
 }
 
+interface SupervisorWithId {
+  id: string;
+  name: string;
+}
+
 const AdminDashboard: React.FC = () => {
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [supervisorStats, setSupervisorStats] = useState<Record<string, SupervisorStats>>({});
+  const [supervisorsList, setSupervisorsList] = useState<SupervisorWithId[]>([]);
+  const [isRegisterFormOpen, setIsRegisterFormOpen] = useState(false);
+  const [loadingSupervisors, setLoadingSupervisors] = useState(true);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
   
-  // Check if user is admin
   useEffect(() => {
-    const userRole = localStorage.getItem('userRole') as UserRole;
-    if (userRole !== UserRole.ADMIN) {
-      toast.error("You don't have permission to access this page");
-      navigate('/');
-    }
-  }, [navigate]);
-
-  // Simulate fetching supervisor statistics
-  useEffect(() => {
-    // In a real app, this would be an API call
-    const mockStats: Record<string, SupervisorStats> = {};
+    const fetchSupervisors = async () => {
+      setLoadingSupervisors(true);
+      try {
+        const supervisors = await getSupervisors();
+        setSupervisorsList(supervisors);
+        
+        // Fetch statistics for each supervisor
+        const stats: Record<string, SupervisorStats> = {};
+        
+        for (const supervisor of supervisors) {
+          const { data, error } = await supabase
+            .from('sites')
+            .select('id, is_completed')
+            .eq('supervisor_id', supervisor.id);
+            
+          if (!error && data) {
+            const total = data.length;
+            const active = data.filter(site => !site.is_completed).length;
+            const completed = data.filter(site => site.is_completed).length;
+            
+            stats[supervisor.id] = {
+              totalSites: total,
+              activeSites: active,
+              completedSites: completed
+            };
+          }
+        }
+        
+        setSupervisorStats(stats);
+      } catch (error) {
+        console.error('Error fetching supervisors:', error);
+        toast.error('Error loading supervisors data');
+      } finally {
+        setLoadingSupervisors(false);
+      }
+    };
     
-    supervisors.forEach(supervisor => {
-      mockStats[supervisor.id] = {
-        totalSites: Math.floor(Math.random() * 10) + 1,
-        activeSites: Math.floor(Math.random() * 6) + 1,
-        completedSites: Math.floor(Math.random() * 5) + 1
-      };
-    });
-    
-    setSupervisorStats(mockStats);
+    fetchSupervisors();
   }, []);
 
   const handleViewSites = (supervisorId: string) => {
@@ -54,7 +82,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   const getSelectedSupervisor = () => {
-    return supervisors.find(s => s.id === selectedSupervisorId);
+    return supervisorsList.find(s => s.id === selectedSupervisorId);
   };
 
   return (
@@ -65,6 +93,14 @@ const AdminDashboard: React.FC = () => {
         className="mb-4"
       />
       
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold">User Management</h2>
+        <Button onClick={() => setIsRegisterFormOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-2" />
+          Add User
+        </Button>
+      </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <CustomCard className="bg-gradient-to-br from-blue-50 to-indigo-50">
           <div className="flex items-center">
@@ -73,7 +109,7 @@ const AdminDashboard: React.FC = () => {
             </div>
             <div>
               <h3 className="text-sm font-medium text-muted-foreground">Total Supervisors</h3>
-              <p className="text-2xl font-bold">{supervisors.length}</p>
+              <p className="text-2xl font-bold">{supervisorsList.length}</p>
             </div>
           </div>
         </CustomCard>
@@ -123,7 +159,7 @@ const AdminDashboard: React.FC = () => {
                 <SelectValue placeholder="Select Supervisor" />
               </SelectTrigger>
               <SelectContent>
-                {supervisors.map((supervisor) => (
+                {supervisorsList.map((supervisor) => (
                   <SelectItem key={supervisor.id} value={supervisor.id}>
                     {supervisor.name}
                   </SelectItem>
@@ -133,7 +169,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
         
-        {selectedSupervisorId && (
+        {selectedSupervisorId && supervisorStats[selectedSupervisorId] && (
           <div className="space-y-4">
             <div className="p-4 border rounded-lg bg-background">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -165,12 +201,16 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
         
-        {!selectedSupervisorId && (
+        {(!selectedSupervisorId || loadingSupervisors) && (
           <div className="text-center py-6">
             <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-medium mb-2">Select a Supervisor</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {loadingSupervisors ? 'Loading Supervisors...' : 'Select a Supervisor'}
+            </h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Choose a supervisor from the dropdown to view their sites and performance statistics.
+              {loadingSupervisors 
+                ? 'Please wait while we fetch the supervisor data.'
+                : 'Choose a supervisor from the dropdown to view their sites and performance statistics.'}
             </p>
           </div>
         )}
@@ -219,6 +259,11 @@ const AdminDashboard: React.FC = () => {
           </Button>
         </div>
       </CustomCard>
+
+      <RegisterForm 
+        isOpen={isRegisterFormOpen}
+        onClose={() => setIsRegisterFormOpen(false)}
+      />
     </div>
   );
 };

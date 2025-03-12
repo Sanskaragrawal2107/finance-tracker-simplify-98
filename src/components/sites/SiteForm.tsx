@@ -4,8 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Users } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,13 +33,21 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Site } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { useAuth } from '@/hooks/use-auth';
+
+interface Supervisor {
+  id: string;
+  name: string;
+}
 
 interface SiteFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (site: Partial<Site>) => void;
-  supervisorId: string;
+  supervisorId?: string;
 }
 
 const formSchema = z.object({
@@ -55,6 +64,9 @@ const formSchema = z.object({
     required_error: "Start date is required",
   }),
   completionDate: z.date().optional(),
+  supervisorId: z.string({
+    required_error: "Supervisor is required",
+  }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -62,6 +74,31 @@ type FormValues = z.infer<typeof formSchema>;
 const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervisorId }) => {
   const [startDateOpen, setStartDateOpen] = React.useState(false);
   const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
+  const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    const fetchSupervisors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, name')
+          .eq('role', 'supervisor');
+        
+        if (error) {
+          throw error;
+        }
+        
+        setSupervisors(data);
+      } catch (error) {
+        console.error('Error fetching supervisors:', error);
+        toast.error('Failed to load supervisors');
+      }
+    };
+    
+    fetchSupervisors();
+  }, []);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -71,29 +108,74 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
       posNo: "",
       startDate: new Date(),
       completionDate: undefined,
+      supervisorId: supervisorId || "",
     },
   });
 
-  const handleSubmit = (values: FormValues) => {
-    // Transform values to uppercase
-    const uppercaseValues = {
-      ...values,
-      name: values.name.toUpperCase(),
-      jobName: values.jobName.toUpperCase(),
-      posNo: values.posNo.toUpperCase(),
-    };
-    
-    const newSite: Partial<Site> = {
-      ...uppercaseValues,
-      supervisorId,
-      isCompleted: false,
-      createdAt: new Date(),
-    };
-    
-    onSubmit(newSite);
-    form.reset();
-    onClose();
-    toast.success("Site created successfully");
+  useEffect(() => {
+    if (supervisorId) {
+      form.setValue('supervisorId', supervisorId);
+    }
+  }, [supervisorId, form]);
+
+  const handleSubmit = async (values: FormValues) => {
+    try {
+      setIsLoading(true);
+      
+      // Transform values to uppercase
+      const uppercaseValues = {
+        ...values,
+        name: values.name.toUpperCase(),
+        jobName: values.jobName.toUpperCase(),
+        posNo: values.posNo.toUpperCase(),
+      };
+      
+      // Insert site into Supabase
+      const { data, error } = await supabase
+        .from('sites')
+        .insert([
+          {
+            name: uppercaseValues.name,
+            job_name: uppercaseValues.jobName,
+            pos_no: uppercaseValues.posNo,
+            start_date: uppercaseValues.startDate.toISOString(),
+            completion_date: uppercaseValues.completionDate?.toISOString(),
+            supervisor_id: uppercaseValues.supervisorId,
+            is_completed: false
+          }
+        ])
+        .select()
+        .single();
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Transform the response to match our Site type
+      const newSite: Site = {
+        id: data.id,
+        name: data.name,
+        jobName: data.job_name,
+        posNo: data.pos_no,
+        startDate: new Date(data.start_date),
+        completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+        supervisorId: data.supervisor_id,
+        createdAt: new Date(data.created_at),
+        isCompleted: data.is_completed,
+        funds: data.funds || 0
+      };
+      
+      // Call the onSubmit callback
+      onSubmit(newSite);
+      form.reset();
+      onClose();
+      toast.success("Site created successfully");
+    } catch (error: any) {
+      console.error('Error creating site:', error);
+      toast.error(error.message || 'Failed to create site');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -233,12 +315,44 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                 </FormItem>
               )}
             />
+            
+            {user?.role === UserRole.ADMIN && (
+              <FormField
+                control={form.control}
+                name="supervisorId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Assign Supervisor</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a supervisor" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {supervisors.map((supervisor) => (
+                          <SelectItem key={supervisor.id} value={supervisor.id}>
+                            {supervisor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button type="submit" className="w-full sm:w-auto">Create Site</Button>
+              <Button type="submit" className="w-full sm:w-auto" disabled={isLoading}>
+                {isLoading ? 'Creating...' : 'Create Site'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>
