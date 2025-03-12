@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash, Loader2 } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, BankDetails } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -250,7 +250,10 @@ const Expenses: React.FC = () => {
           gstPercentage: invoice.gst_percentage,
           grossAmount: invoice.gross_amount,
           netAmount: invoice.net_amount,
-          bankDetails: invoice.bank_details,
+          // Parse bank_details if it's a string, or use as is if it's already an object
+          bankDetails: typeof invoice.bank_details === 'string' 
+            ? JSON.parse(invoice.bank_details)
+            : invoice.bank_details as BankDetails,
           billUrl: invoice.bill_url,
           invoiceImageUrl: invoice.invoice_image_url,
           paymentStatus: invoice.payment_status as any,

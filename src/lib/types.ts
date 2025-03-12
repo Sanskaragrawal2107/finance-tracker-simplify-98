@@ -161,6 +161,9 @@ export interface MaterialItem {
   amount: number | null;
 }
 
+// We're making BankDetails match what could come from the database as Json
+export type SupabaseBankDetails = BankDetails | string | null;
+
 export interface Invoice {
   id: string;
   date: Date;

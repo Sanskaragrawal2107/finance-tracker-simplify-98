@@ -83,20 +83,33 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
         throw error;
       }
 
-      // Update the site funds amount
-      if (fundsData.siteId) {
+      // Update the site funds amount - Fixed this to use direct update with addition
+      if (fundsData.siteId && fundsData.amount) {
+        // First, get the current site funds
+        const { data: siteData, error: siteGetError } = await supabase
+          .from('sites')
+          .select('funds')
+          .eq('id', fundsData.siteId)
+          .single();
+          
+        if (siteGetError) {
+          console.error("Error getting site funds:", siteGetError);
+          throw siteGetError;
+        }
+        
+        // Calculate new funds value
+        const currentFunds = siteData.funds || 0;
+        const newFunds = currentFunds + fundsData.amount;
+        
+        // Update the site with the new funds value
         const { error: siteError } = await supabase
           .from('sites')
-          .update({ 
-            funds: supabase.rpc('increment_funds', { 
-              site_id: fundsData.siteId, 
-              amount: fundsData.amount 
-            }) 
-          })
+          .update({ funds: newFunds })
           .eq('id', fundsData.siteId);
 
         if (siteError) {
           console.error("Error updating site funds:", siteError);
+          throw siteError;
         }
       }
 
