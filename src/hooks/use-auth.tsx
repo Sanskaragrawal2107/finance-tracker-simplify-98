@@ -24,8 +24,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      // Use type assertion to resolve TypeScript errors
       const { data, error } = await supabase
-        .from('users' as any)
+        .from('users')
         .select('*')
         .eq('id', userId)
         .single();
@@ -35,7 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
-      return data as AuthUser;
+      return data as unknown as AuthUser;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       return null;

@@ -6,13 +6,12 @@ import { User, Users, Building2, PieChart, BarChart, UserPlus } from 'lucide-rea
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { UserRole } from '@/lib/types';
-import { getSupervisors } from '@/data/supervisors';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/use-auth';
 import RegisterForm from '@/components/auth/RegisterForm';
 import { supabase } from '@/integrations/supabase/client';
+import { getSupervisors } from '@/data/supervisors';
 
 interface SupervisorStats {
   totalSites: number;
@@ -46,7 +45,7 @@ const AdminDashboard: React.FC = () => {
         
         for (const supervisor of supervisors) {
           const { data, error } = await supabase
-            .from('sites' as any)
+            .from('sites')
             .select('id, is_completed')
             .eq('supervisor_id', supervisor.id);
             

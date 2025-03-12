@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -82,7 +81,6 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
   useEffect(() => {
     const fetchSupervisors = async () => {
       try {
-        // Use the getSupervisors function from data/supervisors.js instead of direct Supabase query
         const supervisorsList = await getSupervisors();
         setSupervisors(supervisorsList);
       } catch (error) {
@@ -116,7 +114,6 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
     try {
       setIsLoading(true);
       
-      // Transform values to uppercase
       const uppercaseValues = {
         ...values,
         name: values.name.toUpperCase(),
@@ -124,10 +121,8 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         posNo: values.posNo.toUpperCase(),
       };
       
-      // Insert site into Supabase - use "as any" to bypass TypeScript issues temporarily
-      // We'll fix the type definitions in a more comprehensive way later
       const { data, error } = await supabase
-        .from('sites' as any)
+        .from('sites')
         .insert([
           {
             name: uppercaseValues.name,
@@ -138,30 +133,28 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
             supervisor_id: uppercaseValues.supervisorId,
             is_completed: false
           }
-        ] as any)
-        .select()
-        .single();
+        ])
+        .select();
       
       if (error) {
         throw error;
       }
       
-      if (data) {
-        // Transform the response to match our Site type
+      if (data && data.length > 0) {
+        const siteData = data[0];
         const newSite: Site = {
-          id: data.id,
-          name: data.name,
-          jobName: data.job_name,
-          posNo: data.pos_no,
-          startDate: new Date(data.start_date),
-          completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
-          supervisorId: data.supervisor_id,
-          createdAt: new Date(data.created_at),
-          isCompleted: data.is_completed,
-          funds: data.funds || 0
+          id: siteData.id,
+          name: siteData.name,
+          jobName: siteData.job_name,
+          posNo: siteData.pos_no,
+          startDate: new Date(siteData.start_date),
+          completionDate: siteData.completion_date ? new Date(siteData.completion_date) : undefined,
+          supervisorId: siteData.supervisor_id,
+          createdAt: new Date(siteData.created_at),
+          isCompleted: siteData.is_completed,
+          funds: siteData.funds || 0
         };
         
-        // Call the onSubmit callback
         onSubmit(newSite);
         form.reset();
         onClose();
