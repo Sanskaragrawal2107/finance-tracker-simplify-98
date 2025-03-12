@@ -9,6 +9,224 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      advances: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          date: string
+          id: string
+          purpose: string
+          recipient_id: string | null
+          recipient_name: string
+          recipient_type: string
+          remarks: string | null
+          site_id: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          date: string
+          id?: string
+          purpose: string
+          recipient_id?: string | null
+          recipient_name: string
+          recipient_type: string
+          remarks?: string | null
+          site_id?: string | null
+          status: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          id?: string
+          purpose?: string
+          recipient_id?: string | null
+          recipient_name?: string
+          recipient_type?: string
+          remarks?: string | null
+          site_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advances_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          created_by: string | null
+          date: string
+          description: string
+          id: string
+          site_id: string | null
+          status: string
+          supervisor_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string
+          created_by?: string | null
+          date: string
+          description: string
+          id?: string
+          site_id?: string | null
+          status: string
+          supervisor_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          description?: string
+          id?: string
+          site_id?: string | null
+          status?: string
+          supervisor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funds_received: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          method: string | null
+          reference: string | null
+          site_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date: string
+          id?: string
+          method?: string | null
+          reference?: string | null
+          site_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          method?: string | null
+          reference?: string | null
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funds_received_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number | null
+          approver_type: string | null
+          bank_details: Json
+          bill_url: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          gross_amount: number
+          gst_percentage: number
+          id: string
+          invoice_image_url: string | null
+          invoice_number: string | null
+          material: string
+          net_amount: number
+          party_id: string
+          party_name: string
+          payment_status: string
+          quantity: number
+          rate: number
+          site_id: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          amount?: number | null
+          approver_type?: string | null
+          bank_details: Json
+          bill_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          date: string
+          gross_amount: number
+          gst_percentage: number
+          id?: string
+          invoice_image_url?: string | null
+          invoice_number?: string | null
+          material: string
+          net_amount: number
+          party_id: string
+          party_name: string
+          payment_status: string
+          quantity: number
+          rate: number
+          site_id?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number | null
+          approver_type?: string | null
+          bank_details?: Json
+          bill_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          gross_amount?: number
+          gst_percentage?: number
+          id?: string
+          invoice_image_url?: string | null
+          invoice_number?: string | null
+          material?: string
+          net_amount?: number
+          party_id?: string
+          party_name?: string
+          payment_status?: string
+          quantity?: number
+          rate?: number
+          site_id?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           completion_date: string | null
@@ -80,6 +298,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_site_supervisor_id: {
+        Args: {
+          site_id: string
+        }
+        Returns: string
+      }
       get_supervisor_id: {
         Args: Record<PropertyKey, never>
         Returns: string

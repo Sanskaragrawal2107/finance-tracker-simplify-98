@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, User, Briefcase, UserCog } from "lucide-react";
+import { CalendarIcon, Plus, User, Briefcase, UserCog, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from '@/integrations/supabase/client';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -81,6 +81,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
   const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
   const [showRemarks, setShowRemarks] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -122,24 +123,69 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
     }
   };
 
-  const handleSubmit = (values: FormValues) => {
-    const newAdvance: Partial<Advance> = {
-      date: values.date,
-      recipientName: values.recipientName,
-      recipientType: values.recipientType,
-      purpose: values.purpose,
-      amount: values.amount,
-      remarks: values.remarks,
-      status: ApprovalStatus.PENDING,
-      createdBy: "Current User", // In a real app, this would be the current user's name
-      createdAt: new Date(),
-      siteId: siteId,
-    };
+  const saveAdvanceToDatabase = async (advanceData: Partial<Advance>): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('advances')
+        .insert({
+          date: advanceData.date?.toISOString(),
+          recipient_id: advanceData.recipientId,
+          recipient_name: advanceData.recipientName,
+          recipient_type: advanceData.recipientType,
+          purpose: advanceData.purpose,
+          amount: advanceData.amount,
+          remarks: advanceData.remarks,
+          status: advanceData.status,
+          created_by: 'Current User',
+          site_id: siteId
+        })
+        .select('id')
+        .single();
 
-    onSubmit(newAdvance);
-    form.reset();
-    onClose();
-    toast.success("Advance added successfully");
+      if (error) {
+        console.error("Error saving advance:", error);
+        throw error;
+      }
+
+      console.log("Advance saved to database:", data);
+      return data.id;
+    } catch (error: any) {
+      console.error("Failed to save advance:", error.message);
+      return null;
+    }
+  };
+
+  const handleSubmit = async (values: FormValues) => {
+    setLoading(true);
+    
+    try {
+      const newAdvance: Partial<Advance> = {
+        date: values.date,
+        recipientName: values.recipientName,
+        recipientType: values.recipientType,
+        purpose: values.purpose,
+        amount: values.amount,
+        remarks: values.remarks,
+        status: ApprovalStatus.PENDING,
+        createdBy: "Current User",
+        createdAt: new Date(),
+        siteId: siteId,
+      };
+
+      const advanceId = await saveAdvanceToDatabase(newAdvance);
+      
+      if (advanceId) {
+        newAdvance.id = advanceId;
+        onSubmit(newAdvance);
+        form.reset();
+        onClose();
+        toast.success("Advance added successfully");
+      }
+    } catch (error: any) {
+      toast.error(`Failed to save advance: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -357,12 +403,21 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
             />
 
             <DialogFooter className="pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
                 Cancel
               </Button>
-              <Button type="submit">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Advance
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Advance
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </form>
