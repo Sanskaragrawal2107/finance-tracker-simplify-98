@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -65,6 +64,20 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
   const [completionDateOpen, setCompletionDateOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   
+  const getSupervisorId = () => {
+    if (supervisorId && supervisorId.trim() !== '') {
+      return supervisorId;
+    }
+    
+    const storedSupervisorId = localStorage.getItem('supervisorId');
+    if (storedSupervisorId && storedSupervisorId.trim() !== '') {
+      return storedSupervisorId;
+    }
+    
+    console.error("No supervisor ID available");
+    return null;
+  };
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,7 +91,6 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
 
   const handleSubmit = async (values: FormValues) => {
     try {
-      // Transform values to uppercase
       const uppercaseValues = {
         ...values,
         name: values.name.toUpperCase(),
@@ -88,7 +100,16 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
       
       setLoading(true);
       
-      // Create site in Supabase
+      const currentSupervisorId = getSupervisorId();
+      
+      if (!currentSupervisorId) {
+        toast.error("Cannot create site: Missing supervisor ID");
+        setLoading(false);
+        return;
+      }
+      
+      console.log("Creating site with supervisor ID:", currentSupervisorId);
+      
       const { data, error } = await supabase
         .from('sites')
         .insert({
@@ -97,7 +118,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
           pos_no: uppercaseValues.posNo,
           start_date: uppercaseValues.startDate.toISOString(),
           completion_date: uppercaseValues.completionDate ? uppercaseValues.completionDate.toISOString() : null,
-          supervisor_id: supervisorId,
+          supervisor_id: currentSupervisorId,
           is_completed: false,
           funds: 0
         })
@@ -110,7 +131,6 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         return;
       }
       
-      // Map Supabase response to our Site type
       const newSite: Partial<Site> = {
         id: data.id,
         name: data.name,
@@ -124,7 +144,6 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         funds: data.funds || 0
       };
       
-      // Pass the created site to the parent component
       onSubmit(newSite);
       form.reset();
       onClose();
