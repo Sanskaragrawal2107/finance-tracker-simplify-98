@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -43,12 +42,11 @@ const AdminDashboard: React.FC = () => {
         const supervisors = await getSupervisors();
         setSupervisorsList(supervisors);
         
-        // Fetch statistics for each supervisor
         const stats: Record<string, SupervisorStats> = {};
         
         for (const supervisor of supervisors) {
           const { data, error } = await supabase
-            .from('sites')
+            .from('sites' as any)
             .select('id, is_completed')
             .eq('supervisor_id', supervisor.id);
             
