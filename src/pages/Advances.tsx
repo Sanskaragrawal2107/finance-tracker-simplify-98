@@ -1,214 +1,263 @@
-import React from 'react';
+// Your import statements here
+import React, { useState } from 'react';
 import PageTitle from '@/components/common/PageTitle';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
+import { Advance, RecipientType, AdvancePurpose, ApprovalStatus } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, FileText, Upload, Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
-import { Advance, AdvancePurpose, ApprovalStatus, RecipientType } from '@/lib/types';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import AdvanceForm from '@/components/advances/AdvanceForm';
 
-// Mock data for demonstration
-const advances: Advance[] = [
+// Mock data adjustment to match the enum values
+const mockAdvances: Advance[] = [
   {
     id: '1',
-    date: new Date('2023-07-05'),
-    recipientId: '101',
-    recipientName: 'Raj Construction',
+    date: new Date('2023-04-15'),
+    recipientId: 'C001',
+    recipientName: 'ABC Contractors',
     recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.MATERIAL,
-    amount: 150000,
+    amount: 25000,
     status: ApprovalStatus.APPROVED,
     createdBy: 'Admin',
-    createdAt: new Date('2023-07-05'),
+    createdAt: new Date('2023-04-15'),
+    siteId: 'S001',
+    siteName: 'Project Alpha'
   },
   {
     id: '2',
-    date: new Date('2023-07-04'),
-    recipientId: '102',
-    recipientName: 'Suresh Electrical',
+    date: new Date('2023-04-10'),
+    recipientId: 'C002',
+    recipientName: 'XYZ Builders',
     recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.MATERIAL,
-    amount: 75000,
+    amount: 15000,
     status: ApprovalStatus.APPROVED,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-04'),
+    createdBy: 'Admin',
+    createdAt: new Date('2023-04-10'),
+    siteId: 'S001',
+    siteName: 'Project Alpha'
   },
   {
     id: '3',
-    date: new Date('2023-07-03'),
-    recipientId: '201',
-    recipientName: 'Labor Group A',
+    date: new Date('2023-04-08'),
+    recipientId: 'W001',
+    recipientName: 'John Smith',
     recipientType: RecipientType.WORKER,
-    purpose: AdvancePurpose.WAGES,
-    amount: 45000,
+    purpose: AdvancePurpose.ADVANCE,
+    amount: 5000,
     status: ApprovalStatus.APPROVED,
     createdBy: 'Admin',
-    createdAt: new Date('2023-07-03'),
+    createdAt: new Date('2023-04-08'),
+    siteId: 'S002',
+    siteName: 'Project Beta'
   },
   {
     id: '4',
-    date: new Date('2023-07-02'),
-    recipientId: '103',
-    recipientName: 'Premium Transport',
+    date: new Date('2023-04-05'),
+    recipientId: 'C003',
+    recipientName: 'Reliable Construction',
     recipientType: RecipientType.SUBCONTRACTOR,
     purpose: AdvancePurpose.TRANSPORT,
-    amount: 35000,
+    amount: 18000,
     status: ApprovalStatus.PENDING,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-02'),
+    createdBy: 'Admin',
+    createdAt: new Date('2023-04-05'),
+    siteId: 'S001',
+    siteName: 'Project Alpha'
   },
   {
     id: '5',
-    date: new Date('2023-07-01'),
-    recipientId: '202',
-    recipientName: 'Labor Group B',
+    date: new Date('2023-04-03'),
+    recipientId: 'W002',
+    recipientName: 'Michael Johnson',
     recipientType: RecipientType.WORKER,
-    purpose: AdvancePurpose.WAGES,
-    amount: 30000,
+    purpose: AdvancePurpose.ADVANCE,
+    amount: 3000,
     status: ApprovalStatus.PENDING,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-01'),
-  },
+    createdBy: 'Admin',
+    createdAt: new Date('2023-04-03'),
+    siteId: 'S002',
+    siteName: 'Project Beta'
+  }
 ];
 
-const getPurposeColor = (purpose: AdvancePurpose) => {
-  switch (purpose) {
-    case AdvancePurpose.MATERIAL:
-      return 'bg-blue-100 text-blue-800';
-    case AdvancePurpose.WAGES:
-      return 'bg-green-100 text-green-800';
-    case AdvancePurpose.TRANSPORT:
-      return 'bg-orange-100 text-orange-800';
-    case AdvancePurpose.MISC:
-      return 'bg-gray-100 text-gray-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getStatusColor = (status: ApprovalStatus) => {
-  switch (status) {
-    case ApprovalStatus.APPROVED:
-      return 'bg-green-100 text-green-800';
-    case ApprovalStatus.PENDING:
-      return 'bg-yellow-100 text-yellow-800';
-    case ApprovalStatus.REJECTED:
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-};
-
-const getRecipientTypeColor = (type: RecipientType) => {
-  switch (type) {
-    case RecipientType.SUBCONTRACTOR:
-      return 'bg-purple-100 text-purple-800';
-    case RecipientType.WORKER:
-      return 'bg-indigo-100 text-indigo-800';
-    case RecipientType.SUPERVISOR:
-      return 'bg-blue-100 text-blue-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
+const purposeColorMap: Record<string, string> = {
+  [AdvancePurpose.MATERIAL]: 'blue',
+  [AdvancePurpose.ADVANCE]: 'green',
+  [AdvancePurpose.TRANSPORT]: 'yellow',
+  [AdvancePurpose.MISC]: 'purple',
+  [AdvancePurpose.SAFETY_SHOES]: 'pink',
+  [AdvancePurpose.TOOLS]: 'orange',
+  [AdvancePurpose.OTHER]: 'gray'
 };
 
 const Advances: React.FC = () => {
+  const [advances, setAdvances] = useState<Advance[]>(mockAdvances);
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
+  const siteId = localStorage.getItem('selectedSiteId') || '';
+
+  const filterByType = (type: string) => {
+    setSelectedType(type);
+  };
+
+  const filterByPurposeType = (purposeType: string) => {
+    if (purposeType === 'all') {
+      return filteredAdvances;
+    }
+    return filteredAdvances.filter(advance => 
+      advance.purpose === purposeType
+    );
+  };
+
+  const filterByApprovalStatus = (statusType: string) => {
+    if (statusType === 'all') {
+      return filteredAdvances;
+    }
+    return filteredAdvances.filter(advance => 
+      advance.status === statusType
+    );
+  };
+
+  const handleAddAdvance = (newAdvance: Advance) => {
+    setAdvances([newAdvance, ...advances]);
+  };
+
+  const filteredAdvances = advances.filter(advance => {
+    if (selectedType === 'all') {
+      return true;
+    }
+    return advance.recipientType === selectedType;
+  });
+
+  const purposeFilteredAdvances = filterByPurposeType(selectedType);
+  const statusFilteredAdvances = filterByApprovalStatus(selectedStatus);
+
+  const getBadgeColor = (status: ApprovalStatus): string => {
+    switch (status) {
+      case ApprovalStatus.APPROVED:
+        return "green";
+      case ApprovalStatus.PENDING:
+        return "yellow";
+      case ApprovalStatus.REJECTED:
+        return "red";
+      default:
+        return "gray";
+    }
+  };
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <PageTitle 
-        title="Advances" 
-        subtitle="Manage advances given to contractors and workers"
-      />
-      
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="relative max-w-md">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-          <input 
-            type="text" 
-            placeholder="Search advances..." 
-            className="py-2 pl-10 pr-4 border rounded-md w-full md:w-80 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
+    <div>
+      <PageTitle title="Advances" subtitle="Manage worker advances and payments" />
+
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex gap-4">
+          <Select value={selectedType} onValueChange={filterByType}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value={RecipientType.WORKER}>Worker</SelectItem>
+              <SelectItem value={RecipientType.SUBCONTRACTOR}>Subcontractor</SelectItem>
+              <SelectItem value={RecipientType.SUPERVISOR}>Supervisor</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value={ApprovalStatus.PENDING}>Pending</SelectItem>
+              <SelectItem value={ApprovalStatus.APPROVED}>Approved</SelectItem>
+              <SelectItem value={ApprovalStatus.REJECTED}>Rejected</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        
-        <div className="flex flex-wrap gap-2">
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-            <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-            Filter
-          </button>
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
-            Import
-          </button>
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md bg-white text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors">
-            <Download className="h-4 w-4 mr-2 text-muted-foreground" />
-            Export
-          </button>
-          <button className="inline-flex items-center px-3 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium shadow-sm hover:bg-primary/90 transition-colors">
-            <Plus className="h-4 w-4 mr-2" />
-            New Advance
-          </button>
-        </div>
+        <Button onClick={() => setIsAdvanceFormOpen(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Advance
+        </Button>
       </div>
-      
-      <CustomCard>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                <th className="pb-3 font-medium text-muted-foreground">Recipient</th>
-                <th className="pb-3 font-medium text-muted-foreground">Type</th>
-                <th className="pb-3 font-medium text-muted-foreground">Purpose</th>
-                <th className="pb-3 font-medium text-muted-foreground">Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                <th className="pb-3 font-medium text-muted-foreground">Created By</th>
-                <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {advances.map((advance) => (
-                <tr key={advance.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                  <td className="py-4 pl-4 text-sm">{format(advance.date, 'MMM dd, yyyy')}</td>
-                  <td className="py-4 text-sm">{advance.recipientName}</td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getRecipientTypeColor(advance.recipientType)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {advance.recipientType}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getPurposeColor(advance.purpose)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {advance.purpose}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm font-medium">₹{advance.amount.toLocaleString()}</td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getStatusColor(advance.status)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {advance.status}
-                    </span>
-                  </td>
-                  <td className="py-4 text-sm">{advance.createdBy}</td>
-                  <td className="py-4 pr-4 text-right">
-                    <button className="p-1 rounded-md hover:bg-muted transition-colors">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="flex items-center justify-between mt-4 border-t pt-4">
-          <p className="text-sm text-muted-foreground">Showing 1-5 of 5 entries</p>
-          <div className="flex items-center space-x-2">
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </button>
-            <button className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm">1</button>
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
+
+      {advances.length > 0 ? (
+        <Table>
+          <TableCaption>A list of all recent advances.</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[100px]">Date</TableHead>
+              <TableHead>Recipient</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Purpose</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredAdvances.map((advance) => (
+              <TableRow key={advance.id}>
+                <TableCell>{advance.date instanceof Date ? advance.date.toLocaleDateString() : new Date(advance.date).toLocaleDateString()}</TableCell>
+                <TableCell>{advance.recipientName}</TableCell>
+                <TableCell>{advance.recipientType}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="gap-x-2">
+                    {advance.purpose}
+                    <div
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: purposeColorMap[advance.purpose] }}
+                    />
+                  </Badge>
+                </TableCell>
+                <TableCell>{advance.amount}</TableCell>
+                <TableCell>
+                  <Badge className={`bg-${getBadgeColor(advance.status)}-100 text-${getBadgeColor(advance.status)}-800`}>
+                    {advance.status}
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      ) : (
+        <CustomCard>
+          <div className="p-12 text-center">
+            <h3 className="text-lg font-medium mb-2">No Advances Added Yet</h3>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Record your first advance payment to start tracking.
+            </p>
+            <Button onClick={() => setIsAdvanceFormOpen(true)} className="mx-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Add First Advance
+            </Button>
           </div>
-        </div>
-      </CustomCard>
+        </CustomCard>
+      )}
+
+      <AdvanceForm
+        isOpen={isAdvanceFormOpen}
+        onClose={() => setIsAdvanceFormOpen(false)}
+        onSubmit={handleAddAdvance}
+        siteId={siteId}
+      />
     </div>
   );
 };

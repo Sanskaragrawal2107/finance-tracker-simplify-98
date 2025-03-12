@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -174,7 +175,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
           payment_status: invoiceData.paymentStatus,
           created_by: 'Current User',
           site_id: invoiceData.siteId,
-          approver_type: 'supervisor'
+          approver_type: 'supervisor',
+          status: 'pending',
+          remarks: ''
         })
         .select('id')
         .single();
@@ -233,8 +236,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
       const netAmount = calculateNetAmount(grossAmount, values.gstPercentage);
       
       const bankDetails: BankDetails = {
-        accountNumber: values.accountNumber,
         bankName: values.bankName,
+        accountNumber: values.accountNumber,
         ifscCode: values.ifscCode,
         email: values.email || undefined,
         mobile: values.mobile || undefined,
@@ -256,6 +259,10 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit }) 
         paymentStatus: PaymentStatus.PENDING,
         createdBy: "Current User",
         siteId: selectedSiteId,
+        siteName: "",  // This will be filled in by the backend
+        status: "pending",
+        remarks: "",
+        amount: netAmount,
         approverType: "supervisor"
       };
 

@@ -96,9 +96,17 @@ const Expenses: React.FC = () => {
           startDate: new Date(site.start_date),
           completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
           supervisorId: site.supervisor_id,
+          supervisorName: "Supervisor Name", // Default value
           isCompleted: site.is_completed,
           createdAt: new Date(site.created_at),
-          funds: site.funds || 0
+          funds: site.funds || 0,
+          location: "Location", // Default value
+          status: "active", // Default value
+          clientName: "Client", // Default value
+          contactPerson: "Contact Person", // Default value
+          contactNumber: "Contact Number", // Default value
+          budget: 0, // Default value
+          endDate: undefined
         }));
         
         setSites(formattedSites);
@@ -151,7 +159,8 @@ const Expenses: React.FC = () => {
           createdBy: expense.created_by,
           createdAt: new Date(expense.created_at),
           siteId: expense.site_id,
-          supervisorId: expense.supervisor_id
+          supervisorId: expense.supervisor_id,
+          siteName: "Site Name" // Default value since it's required
         }));
         
         setExpenses(formattedExpenses);
@@ -186,7 +195,8 @@ const Expenses: React.FC = () => {
           status: advance.status as ApprovalStatus,
           createdBy: advance.created_by,
           createdAt: new Date(advance.created_at),
-          siteId: advance.site_id
+          siteId: advance.site_id,
+          siteName: "Site Name" // Default value
         }));
         
         setAdvances(formattedAdvances);
@@ -216,7 +226,9 @@ const Expenses: React.FC = () => {
           siteId: fund.site_id,
           createdAt: new Date(fund.created_at),
           reference: fund.reference,
-          method: fund.method as any
+          method: fund.method as any,
+          source: "Source", // Default value since it's required
+          createdBy: "Current User" // Default value since it's required
         }));
         
         setFundsReceived(formattedFunds);
@@ -256,7 +268,7 @@ const Expenses: React.FC = () => {
             }
           } else if (invoice.bank_details && typeof invoice.bank_details === 'object') {
             // If it's already an object, cast it
-            parsedBankDetails = invoice.bank_details as BankDetails;
+            parsedBankDetails = invoice.bank_details as unknown as BankDetails;
           } else {
             // Default empty object
             parsedBankDetails = {
@@ -287,7 +299,10 @@ const Expenses: React.FC = () => {
             siteId: invoice.site_id,
             vendorName: invoice.vendor_name,
             invoiceNumber: invoice.invoice_number,
-            amount: invoice.amount
+            amount: invoice.amount,
+            status: "pending", // Default value
+            siteName: "Site Name", // Default value
+            remarks: "" // Default value
           };
         });
         
@@ -329,6 +344,7 @@ const Expenses: React.FC = () => {
           status: ApprovalStatus.APPROVED,
           createdAt: new Date(),
           supervisorId: selectedSupervisorId || '',
+          siteName: "Site Name"
         };
         
         await fetchExpenses(expenseWithId.siteId || '');
@@ -351,6 +367,7 @@ const Expenses: React.FC = () => {
           id: Date.now().toString(),
           status: ApprovalStatus.APPROVED,
           createdAt: new Date(),
+          siteName: "Site Name"
         };
         
         await fetchAdvances(advanceWithId.siteId || '');
@@ -383,6 +400,8 @@ const Expenses: React.FC = () => {
           ...newFund as FundsReceived,
           id: Date.now().toString(),
           createdAt: new Date(),
+          source: "Source",
+          createdBy: "Current User"
         };
         
         await Promise.all([

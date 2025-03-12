@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -128,7 +129,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
       const { data, error } = await supabase
         .from('advances')
         .insert({
-          date: advanceData.date?.toISOString(),
+          date: advanceData.date instanceof Date ? advanceData.date.toISOString() : advanceData.date,
           recipient_id: advanceData.recipientId,
           recipient_name: advanceData.recipientName,
           recipient_type: advanceData.recipientType,

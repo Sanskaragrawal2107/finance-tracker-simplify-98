@@ -25,7 +25,8 @@ export enum ExpenseCategory {
   FOOD = 'food',
   ACCOMMODATION = 'accommodation',
   EQUIPMENT = 'equipment',
-  MAINTENANCE = 'maintenance'
+  MAINTENANCE = 'maintenance',
+  WAGES = 'wages'
 }
 
 export enum RecipientType {
@@ -38,7 +39,11 @@ export enum AdvancePurpose {
   ADVANCE = 'advance',
   SAFETY_SHOES = 'safety_shoes',
   TOOLS = 'tools',
-  OTHER = 'other'
+  OTHER = 'other',
+  MATERIAL = 'material',
+  WAGES = 'wages',
+  TRANSPORT = 'transport',
+  MISC = 'misc'
 }
 
 export enum ApprovalStatus {
@@ -264,6 +269,8 @@ export interface HeadOfficeTransaction {
   status: string;
   reference?: string;
   createdAt: Date;
+  supervisorId?: string;
+  supervisorName?: string;
 }
 
 // Component Props Interfaces
