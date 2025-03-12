@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Search } from 'lucide-react';
-import { ExpenseCategory, Expense, Advance, Invoice, FundsReceived, BalanceSummary, ApprovalStatus } from '@/lib/types';
+import { ExpenseCategory, Expense, Advance, Invoice, FundsReceived, BalanceSummary, ApprovalStatus, BankDetails } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import PageTitle from '@/components/common/PageTitle';
 import SiteDetail from '@/components/sites/SiteDetail';
@@ -25,7 +25,7 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     if (fundsError) throw fundsError;
     
-    const fundsReceived = fundsData.reduce((sum, fund) => sum + parseFloat(String(fund.amount)), 0);
+    const fundsReceived = fundsData.reduce((sum, fund) => sum + Number(fund.amount), 0);
     
     // Fetch expenses
     const { data: expensesData, error: expensesError } = await supabase
@@ -35,7 +35,7 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     if (expensesError) throw expensesError;
     
-    const totalExpenditure = expensesData.reduce((sum, expense) => sum + parseFloat(String(expense.amount)), 0);
+    const totalExpenditure = expensesData.reduce((sum, expense) => sum + Number(expense.amount), 0);
     
     // Fetch advances
     const { data: advancesData, error: advancesError } = await supabase
@@ -51,9 +51,9 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     for (const advance of advancesData) {
       if (['safety_shoes', 'tools', 'other'].includes(advance.purpose)) {
-        debitsToWorker += parseFloat(String(advance.amount));
+        debitsToWorker += Number(advance.amount);
       } else {
-        totalAdvances += parseFloat(String(advance.amount));
+        totalAdvances += Number(advance.amount);
       }
     }
     
@@ -71,9 +71,9 @@ const calculateSiteFinancials = async (siteId: string): Promise<BalanceSummary> 
     
     for (const invoice of invoicesData) {
       if (invoice.payment_status === 'paid') {
-        invoicesPaid += parseFloat(String(invoice.net_amount));
+        invoicesPaid += Number(invoice.net_amount);
       } else {
-        pendingInvoices += parseFloat(String(invoice.net_amount));
+        pendingInvoices += Number(invoice.net_amount);
       }
     }
     
@@ -119,43 +119,53 @@ const ExpensesPage = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [balanceSummary, setBalanceSummary] = useState<BalanceSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (siteId) {
       fetchSiteData();
       fetchTransactions();
+    } else {
+      setIsLoading(false);
+      setError("No site ID provided");
     }
   }, [siteId]);
 
   const fetchSiteData = async () => {
-    if (!siteId) return;
-    
-    setIsLoading(true);
+    if (!siteId) {
+      setIsLoading(false);
+      setError("No site ID provided");
+      return;
+    }
     
     try {
       const { data: siteData, error: siteError } = await supabase
         .from('sites')
         .select('*')
         .eq('id', siteId)
-        .maybeSingle();  // Use maybeSingle instead of single to avoid errors if no data
+        .maybeSingle();
 
       if (siteError) {
         console.error('Error fetching site:', siteError);
+        setError("Failed to load site data");
         toast({
           title: "Error",
           description: "Failed to load site data",
           variant: "destructive"
         });
+        setIsLoading(false);
         return;
       }
 
       if (!siteData) {
+        setError("Site not found");
         toast({
           title: "Not Found",
           description: "Site not found",
           variant: "destructive"
         });
         navigate(-1);
+        setIsLoading(false);
         return;
       }
 
@@ -164,22 +174,23 @@ const ExpensesPage = () => {
       // Fetch balance summary
       const summary = await calculateSiteFinancials(siteId);
       setBalanceSummary(summary);
+      
+      // Set loading to false only after site data is loaded
+      setIsLoading(false);
     } catch (error) {
       console.error('Error in fetchSiteData:', error);
+      setError("An unexpected error occurred");
       toast({
         title: "Error",
         description: "An unexpected error occurred",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
 
   const fetchTransactions = async () => {
     if (!siteId) return;
-    
-    setIsLoading(true);
     
     try {
       // Fetch expenses
@@ -302,8 +313,6 @@ const ExpensesPage = () => {
         description: "Failed to load transaction data",
         variant: "destructive"
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -325,7 +334,7 @@ const ExpensesPage = () => {
 
       const { data, error } = await supabase
         .from('expenses')
-        .insert([supabaseExpense])
+        .insert(supabaseExpense)
         .select()
         .single();
 
@@ -374,7 +383,7 @@ const ExpensesPage = () => {
 
       const { data, error } = await supabase
         .from('advances')
-        .insert([supabaseAdvance])
+        .insert(supabaseAdvance)
         .select()
         .single();
 
@@ -418,7 +427,7 @@ const ExpensesPage = () => {
 
       const { data, error } = await supabase
         .from('funds_received')
-        .insert([supabaseFunds])
+        .insert(supabaseFunds)
         .select()
         .single();
 
@@ -476,7 +485,7 @@ const ExpensesPage = () => {
 
       const { data, error } = await supabase
         .from('invoices')
-        .insert([supabaseInvoice])
+        .insert(supabaseInvoice)
         .select()
         .single();
 
@@ -547,6 +556,16 @@ const ExpensesPage = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading site data...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-6 text-center">
+        <h2 className="text-xl font-semibold">Error</h2>
+        <p className="mt-2 text-muted-foreground">{error}</p>
+        <Button className="mt-4" onClick={handleBack}>Go Back</Button>
       </div>
     );
   }
