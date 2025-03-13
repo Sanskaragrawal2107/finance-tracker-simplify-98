@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log("Fetching user profile for ID:", userId);
       // Use type assertion to bypass TypeScript errors with Supabase
       const { data, error } = await (supabase
         .from('users') as any)
@@ -36,6 +37,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
 
+      console.log("Found user profile:", data);
       return data as AuthUser;
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
@@ -70,8 +72,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(true);
         
         if (event === 'SIGNED_IN' && session) {
+          console.log("Auth state change - SIGNED_IN:", session.user.id);
           const profile = await fetchUserProfile(session.user.id);
           if (profile) {
+            console.log("Setting user with role:", profile.role);
             setUser(profile);
             
             // Redirect based on role
@@ -102,6 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
       
+      console.log("Attempting login for:", email);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -112,18 +117,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.user) {
+        console.log("Login successful for:", data.user.id);
         const profile = await fetchUserProfile(data.user.id);
         if (profile) {
+          console.log("Found user profile with role:", profile.role);
           setUser(profile);
 
-          // Redirect based on role
+          // Redirect based on role - forcing navigation
+          console.log("Redirecting based on role:", profile.role);
           if (profile.role === UserRole.ADMIN) {
-            navigate('/admin');
+            console.log("Redirecting to /admin");
+            navigate('/admin', { replace: true });
           } else if (profile.role === UserRole.SUPERVISOR) {
-            navigate('/expenses');
+            console.log("Redirecting to /expenses");
+            navigate('/expenses', { replace: true });
           } else {
-            navigate('/dashboard');
+            console.log("Redirecting to /dashboard");
+            navigate('/dashboard', { replace: true });
           }
+        } else {
+          console.error("No user profile found for:", data.user.id);
+          toast.error("User profile not found");
         }
       }
     } catch (error: any) {
@@ -140,22 +154,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
       
+      // First, create the user in auth.users
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            name,
-            role
-          }
-        }
       });
 
       if (error) {
         throw error;
       }
 
-      toast.success('Registration successful! Please check your email for verification.');
+      if (data.user) {
+        // Then, create a record in public.users with the same ID
+        const { error: profileError } = await (supabase
+          .from('users') as any)
+          .insert({
+            id: data.user.id,
+            email: email,
+            name: name,
+            role: role
+          });
+
+        if (profileError) {
+          console.error('Error creating user profile:', profileError);
+          // Try to delete the auth user if profile creation fails
+          await supabase.auth.admin.deleteUser(data.user.id);
+          throw profileError;
+        }
+
+        toast.success('Registration successful! Please check your email for verification.');
+      }
     } catch (error: any) {
       console.error('Signup error:', error);
       setError(error.message || 'An error occurred during registration');

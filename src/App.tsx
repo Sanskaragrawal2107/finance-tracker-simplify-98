@@ -28,17 +28,23 @@ const queryClient = new QueryClient({
 // Redirect component based on user role
 const RoleBasedRedirect = () => {
   const { user } = useAuth();
+  console.log("RoleBasedRedirect - current user:", user);
   
   if (!user) {
+    console.log("No user found, redirecting to /");
     return <Navigate to="/" replace />;
   }
   
+  console.log("User role:", user.role);
   if (user.role === UserRole.ADMIN) {
+    console.log("Admin user, redirecting to /admin");
     return <Navigate to="/admin" replace />;
   } else if (user.role === UserRole.SUPERVISOR) {
+    console.log("Supervisor user, redirecting to /expenses");
     return <Navigate to="/expenses" replace />;
   }
   
+  console.log("Default case, redirecting to /dashboard");
   return <Navigate to="/dashboard" replace />;
 };
 
