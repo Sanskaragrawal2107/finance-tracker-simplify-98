@@ -19,6 +19,7 @@ export interface Site {
   name: string;
   jobName: string;
   posNo: string;
+  location: string; // Added location field to match database requirements
   startDate: Date;
   completionDate?: Date;
   supervisorId: string;

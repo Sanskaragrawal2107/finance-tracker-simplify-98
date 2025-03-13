@@ -59,6 +59,9 @@ const formSchema = z.object({
   posNo: z.string().min(1, {
     message: "POS number is required",
   }),
+  location: z.string().min(1, {
+    message: "Location is required",
+  }),
   startDate: z.date({
     required_error: "Start date is required",
   }),
@@ -106,6 +109,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
       name: "",
       jobName: "",
       posNo: "",
+      location: "",
       startDate: new Date(),
       completionDate: undefined,
       supervisorId: supervisorId || "",
@@ -128,6 +132,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         name: values.name.toUpperCase(),
         jobName: values.jobName.toUpperCase(),
         posNo: values.posNo.toUpperCase(),
+        location: values.location.toUpperCase(),
       };
       
       // Insert site into Supabase with type assertion to bypass TypeScript errors
@@ -138,6 +143,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
             name: uppercaseValues.name,
             job_name: uppercaseValues.jobName,
             pos_no: uppercaseValues.posNo,
+            location: uppercaseValues.location,
             start_date: uppercaseValues.startDate.toISOString(),
             completion_date: uppercaseValues.completionDate?.toISOString(),
             supervisor_id: uppercaseValues.supervisorId,
@@ -158,6 +164,7 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         name: data?.name,
         jobName: data?.job_name,
         posNo: data?.pos_no,
+        location: data?.location,
         startDate: new Date(data?.start_date),
         completionDate: data?.completion_date ? new Date(data?.completion_date) : undefined,
         supervisorId: data?.supervisor_id,
@@ -227,6 +234,20 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
                   <FormLabel>P.O. Number</FormLabel>
                   <FormControl>
                     <Input placeholder="Enter P.O. number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Location</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter site location" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
