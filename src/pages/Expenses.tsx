@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -464,7 +463,7 @@ const Expenses: React.FC = () => {
     return {
       fundsReceived: totalFunds,
       totalExpenditure: totalExpenses,
-      totalAdvances: totalRegularAdvances,
+      totalAdvances: totalRegularAdvances + totalDebitToWorker,
       debitsToWorker: totalDebitToWorker,
       invoicesPaid: supervisorInvoiceTotal,
       pendingInvoices: pendingInvoicesTotal,
