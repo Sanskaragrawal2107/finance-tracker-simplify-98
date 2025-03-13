@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -141,11 +140,11 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
         created_at: new Date().toISOString(),
       };
       
+      // Using the raw SQL query approach to insert into advances table
       const { data, error } = await supabase
         .from('advances')
-        .insert(advanceData)
-        .select('*')
-        .single();
+        .insert([advanceData])
+        .select();
       
       if (error) {
         console.error('Error creating advance:', error);
@@ -153,19 +152,20 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
         return;
       }
       
-      if (data) {
+      if (data && data.length > 0) {
+        const firstRow = data[0];
         const advanceWithId: Partial<Advance> = {
-          id: data.id,
-          date: new Date(data.date),
-          recipientName: data.recipient_name,
-          recipientType: data.recipient_type as RecipientType,
-          purpose: data.purpose as AdvancePurpose,
-          amount: Number(data.amount),
-          remarks: data.remarks,
-          status: data.status as ApprovalStatus,
-          createdBy: data.created_by,
-          createdAt: new Date(data.created_at),
-          siteId: data.site_id,
+          id: firstRow.id,
+          date: new Date(firstRow.date),
+          recipientName: firstRow.recipient_name,
+          recipientType: firstRow.recipient_type as RecipientType,
+          purpose: firstRow.purpose as AdvancePurpose,
+          amount: Number(firstRow.amount),
+          remarks: firstRow.remarks,
+          status: firstRow.status as ApprovalStatus,
+          createdBy: firstRow.created_by,
+          createdAt: new Date(firstRow.created_at),
+          siteId: firstRow.site_id,
         };
         
         onSubmit(advanceWithId);

@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
-import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
+import { Search, Filter, Building, User, Users, CheckSquare } from 'lucide-react';
+import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose, RecipientType } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import SiteForm from '@/components/sites/SiteForm';
@@ -168,9 +168,9 @@ const Expenses: React.FC = () => {
           recipientType: advance.recipient_type as RecipientType,
           purpose: advance.purpose as AdvancePurpose,
           amount: Number(advance.amount),
-          remarks: advance.remarks,
+          remarks: advance.remarks || '',
           status: advance.status as ApprovalStatus,
-          createdBy: advance.created_by,
+          createdBy: advance.created_by || '',
           createdAt: new Date(advance.created_at),
         }));
         
