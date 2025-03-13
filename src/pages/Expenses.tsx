@@ -13,16 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 
 import { supervisors } from '@/data/supervisors';
 
 const initialExpenses: Expense[] = [];
-const initialSites: Site[] = [];
 const initialAdvances: Advance[] = [];
 const initialFunds: FundsReceived[] = [];
 const initialInvoices: Invoice[] = [];
-
-const SUPERVISOR_ID = "sup123";
 
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
@@ -32,8 +31,9 @@ const DEBIT_ADVANCE_PURPOSES = [
 
 const Expenses: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [sites, setSites] = useState<Site[]>(initialSites);
+  const [sites, setSites] = useState<Site[]>([]);
   const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
   const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
@@ -43,26 +43,71 @@ const Expenses: React.FC = () => {
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'completed'>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchSites = async () => {
+    setIsLoading(true);
+    try {
+      let query = supabase.from('sites').select('*');
+      
+      if (user?.role === UserRole.SUPERVISOR) {
+        query = query.eq('supervisor_id', user.id);
+      } 
+      else if (selectedSupervisorId) {
+        query = query.eq('supervisor_id', selectedSupervisorId);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const transformedSites: Site[] = data.map(site => ({
+          id: site.id,
+          name: site.name,
+          jobName: site.job_name,
+          posNo: site.pos_no,
+          location: site.location,
+          startDate: new Date(site.start_date),
+          completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
+          supervisorId: site.supervisor_id,
+          createdAt: new Date(site.created_at),
+          isCompleted: site.is_completed,
+          funds: site.funds || 0
+        }));
+        
+        setSites(transformedSites);
+      }
+    } catch (error) {
+      console.error('Error fetching sites:', error);
+      toast.error('Failed to load sites');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const storedUserRole = localStorage.getItem('userRole') as UserRole;
-    if (storedUserRole) {
-      setUserRole(storedUserRole);
+    if (user) {
+      setUserRole(user.role);
       
-      if (storedUserRole === UserRole.SUPERVISOR) {
-        setSelectedSupervisorId(SUPERVISOR_ID);
+      if (user.role === UserRole.SUPERVISOR) {
+        setSelectedSupervisorId(user.id);
       }
     }
     
     const locationState = location.state as { supervisorId?: string, newSite?: boolean } | null;
-    if (locationState?.supervisorId && storedUserRole === UserRole.ADMIN) {
+    if (locationState?.supervisorId && user?.role === UserRole.ADMIN) {
       setSelectedSupervisorId(locationState.supervisorId);
     }
     
-    if (locationState?.newSite && storedUserRole === UserRole.ADMIN) {
+    if (locationState?.newSite && user?.role === UserRole.ADMIN) {
       setIsSiteFormOpen(true);
     }
-  }, [location]);
+    
+    fetchSites();
+  }, [location, user, selectedSupervisorId]);
 
   const ensureDateObjects = (site: Site): Site => {
     return {
@@ -74,22 +119,77 @@ const Expenses: React.FC = () => {
     };
   };
 
-  const handleAddSite = (newSite: Partial<Site>) => {
-    const currentSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
-      ? selectedSupervisorId 
-      : SUPERVISOR_ID;
+  const handleAddSite = async (newSite: Partial<Site>) => {
+    try {
+      const currentSupervisorId = userRole === UserRole.ADMIN && selectedSupervisorId 
+        ? selectedSupervisorId 
+        : user?.id;
       
-    const siteWithId: Site = {
-      ...newSite as Site,
-      id: Date.now().toString(),
-      supervisorId: currentSupervisorId,
-      createdAt: new Date(),
-      isCompleted: false,
-      funds: 0
-    };
-    
-    setSites(prevSites => [...prevSites, siteWithId]);
-    toast.success(`Site "${siteWithId.name}" created successfully`);
+      if (!currentSupervisorId) {
+        toast.error("No supervisor assigned");
+        return;
+      }
+      
+      const siteData = {
+        name: newSite.name,
+        job_name: newSite.jobName,
+        pos_no: newSite.posNo,
+        location: newSite.location || "",
+        start_date: newSite.startDate?.toISOString(),
+        completion_date: newSite.completionDate?.toISOString(),
+        supervisor_id: currentSupervisorId,
+        is_completed: false,
+        funds: 0
+      };
+      
+      const { data: existingSite, error: checkError } = await supabase
+        .from('sites')
+        .select('id')
+        .eq('name', siteData.name)
+        .maybeSingle();
+      
+      if (existingSite) {
+        toast.error(`Site with name "${siteData.name}" already exists`);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('sites')
+        .insert(siteData)
+        .select('*')
+        .single();
+      
+      if (error) {
+        if (error.code === '23505' && error.message.includes('sites_name_key')) {
+          toast.error(`Site with name "${siteData.name}" already exists`);
+        } else {
+          toast.error('Failed to create site: ' + error.message);
+        }
+        return;
+      }
+      
+      if (data) {
+        const newSiteData: Site = {
+          id: data.id,
+          name: data.name,
+          jobName: data.job_name,
+          posNo: data.pos_no,
+          location: data.location,
+          startDate: new Date(data.start_date),
+          completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+          supervisorId: data.supervisor_id,
+          createdAt: new Date(data.created_at),
+          isCompleted: data.is_completed,
+          funds: data.funds || 0
+        };
+        
+        setSites(prevSites => [...prevSites, newSiteData]);
+        toast.success(`Site "${newSiteData.name}" created successfully`);
+      }
+    } catch (error: any) {
+      console.error('Error creating site:', error);
+      toast.error('Failed to create site: ' + error.message);
+    }
   };
 
   const handleAddExpense = (newExpense: Partial<Expense>) => {
@@ -260,7 +360,11 @@ const Expenses: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in max-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
-      {selectedSite ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      ) : selectedSite ? (
         <div className="overflow-y-auto flex-1 pr-2">
           <SiteDetail 
             site={selectedSite}
@@ -442,7 +546,7 @@ const Expenses: React.FC = () => {
         onSubmit={handleAddSite}
         supervisorId={userRole === UserRole.ADMIN && selectedSupervisorId 
           ? selectedSupervisorId 
-          : SUPERVISOR_ID}
+          : user?.id}
       />
     </div>
   );

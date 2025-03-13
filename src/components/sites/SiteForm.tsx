@@ -134,79 +134,13 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         location: values.location.toUpperCase(),
       };
       
-      // Check if a site with the same name already exists
-      const { data: existingSite, error: checkError } = await (supabase
-        .from('sites') as any)
-        .select('id')
-        .eq('name', uppercaseValues.name)
-        .single();
-      
-      if (existingSite) {
-        form.setError('name', { 
-          type: 'manual', 
-          message: 'A site with this name already exists' 
-        });
-        toast.error('A site with this name already exists');
-        setIsLoading(false);
-        return;
-      }
-      
-      // Insert site into Supabase with type assertion to bypass TypeScript errors
-      const { data, error } = await (supabase
-        .from('sites') as any)
-        .insert([
-          {
-            name: uppercaseValues.name,
-            job_name: uppercaseValues.jobName,
-            pos_no: uppercaseValues.posNo,
-            location: uppercaseValues.location,
-            start_date: uppercaseValues.startDate.toISOString(),
-            completion_date: uppercaseValues.completionDate?.toISOString(),
-            supervisor_id: uppercaseValues.supervisorId,
-            is_completed: false
-          }
-        ])
-        .select()
-        .single();
-      
-      if (error) {
-        // Handle specific error for duplicate name constraint
-        if (error.code === '23505' && error.message.includes('sites_name_key')) {
-          form.setError('name', { 
-            type: 'manual', 
-            message: 'A site with this name already exists' 
-          });
-          toast.error('A site with this name already exists');
-          return;
-        }
-        
-        throw error;
-      }
-      
-      // Transform the response to match our Site type
-      // Use data? with optional chaining to handle potential null data
-      const newSite: Site = {
-        id: data?.id,
-        name: data?.name,
-        jobName: data?.job_name,
-        posNo: data?.pos_no,
-        location: data?.location,
-        startDate: new Date(data?.start_date),
-        completionDate: data?.completion_date ? new Date(data?.completion_date) : undefined,
-        supervisorId: data?.supervisor_id,
-        createdAt: new Date(data?.created_at),
-        isCompleted: data?.is_completed,
-        funds: data?.funds || 0
-      };
-      
-      // Call the onSubmit callback
-      onSubmit(newSite);
+      // Pass the values to the parent component's onSubmit
+      onSubmit(uppercaseValues);
       form.reset();
       onClose();
-      toast.success("Site created successfully");
     } catch (error: any) {
-      console.error('Error creating site:', error);
-      toast.error(error.message || 'Failed to create site');
+      console.error('Error in form submission:', error);
+      toast.error(error.message || 'Failed to submit form');
     } finally {
       setIsLoading(false);
     }

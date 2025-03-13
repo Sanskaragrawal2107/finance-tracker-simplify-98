@@ -38,51 +38,52 @@ const AdminDashboard: React.FC = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
   
-  useEffect(() => {
-    const fetchSupervisors = async () => {
-      setLoadingSupervisors(true);
-      try {
-        const supervisors = await getSupervisors();
-        setSupervisorsList(supervisors);
-        
-        const stats: Record<string, SupervisorStats> = {};
-        
-        for (const supervisor of supervisors) {
-          const { data, error } = await supabase
-            .from('sites')
-            .select('id, is_completed')
-            .eq('supervisor_id', supervisor.id);
-            
-          if (!error && data) {
-            const total = data.length;
-            const active = data.filter((site: any) => !site.is_completed).length;
-            const completed = data.filter((site: any) => site.is_completed).length;
-            
-            stats[supervisor.id] = {
-              totalSites: total,
-              activeSites: active,
-              completedSites: completed
-            };
-          } else {
-            console.error('Error fetching sites for supervisor', supervisor.id, error);
-            stats[supervisor.id] = {
-              totalSites: 0,
-              activeSites: 0,
-              completedSites: 0
-            };
-          }
+  // Function to fetch supervisors and their sites
+  const fetchSupervisorsAndSites = async () => {
+    setLoadingSupervisors(true);
+    try {
+      const supervisors = await getSupervisors();
+      setSupervisorsList(supervisors);
+      
+      const stats: Record<string, SupervisorStats> = {};
+      
+      for (const supervisor of supervisors) {
+        const { data, error } = await supabase
+          .from('sites')
+          .select('id, is_completed')
+          .eq('supervisor_id', supervisor.id);
+          
+        if (!error && data) {
+          const total = data.length;
+          const active = data.filter((site: any) => !site.is_completed).length;
+          const completed = data.filter((site: any) => site.is_completed).length;
+          
+          stats[supervisor.id] = {
+            totalSites: total,
+            activeSites: active,
+            completedSites: completed
+          };
+        } else {
+          console.error('Error fetching sites for supervisor', supervisor.id, error);
+          stats[supervisor.id] = {
+            totalSites: 0,
+            activeSites: 0,
+            completedSites: 0
+          };
         }
-        
-        setSupervisorStats(stats);
-      } catch (error) {
-        console.error('Error fetching supervisors:', error);
-        toast.error('Error loading supervisors data');
-      } finally {
-        setLoadingSupervisors(false);
       }
-    };
-    
-    fetchSupervisors();
+      
+      setSupervisorStats(stats);
+    } catch (error) {
+      console.error('Error fetching supervisors:', error);
+      toast.error('Error loading supervisors data');
+    } finally {
+      setLoadingSupervisors(false);
+    }
+  };
+  
+  useEffect(() => {
+    fetchSupervisorsAndSites();
   }, []);
 
   const handleViewSites = (supervisorId: string) => {
@@ -111,6 +112,18 @@ const AdminDashboard: React.FC = () => {
         funds: site.funds || 0
       };
       
+      // Check if a site with the same name already exists
+      const { data: existingSite, error: checkError } = await supabase
+        .from('sites')
+        .select('id')
+        .eq('name', siteData.name)
+        .single();
+      
+      if (existingSite) {
+        toast.error(`Site with name "${siteData.name}" already exists`);
+        return;
+      }
+      
       // Save the site to the database
       const { data, error } = await supabase
         .from('sites')
@@ -119,7 +132,13 @@ const AdminDashboard: React.FC = () => {
       
       if (error) {
         console.error('Error creating site:', error);
-        toast.error('Failed to create site: ' + error.message);
+        
+        // Handle the duplicate key constraint error explicitly
+        if (error.code === '23505' && error.message.includes('sites_name_key')) {
+          toast.error(`Site with name "${siteData.name}" already exists`);
+        } else {
+          toast.error('Failed to create site: ' + error.message);
+        }
         return;
       }
       
