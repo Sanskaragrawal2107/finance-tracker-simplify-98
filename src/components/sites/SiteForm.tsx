@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -135,6 +134,23 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         location: values.location.toUpperCase(),
       };
       
+      // Check if a site with the same name already exists
+      const { data: existingSite, error: checkError } = await (supabase
+        .from('sites') as any)
+        .select('id')
+        .eq('name', uppercaseValues.name)
+        .single();
+      
+      if (existingSite) {
+        form.setError('name', { 
+          type: 'manual', 
+          message: 'A site with this name already exists' 
+        });
+        toast.error('A site with this name already exists');
+        setIsLoading(false);
+        return;
+      }
+      
       // Insert site into Supabase with type assertion to bypass TypeScript errors
       const { data, error } = await (supabase
         .from('sites') as any)
@@ -154,6 +170,16 @@ const SiteForm: React.FC<SiteFormProps> = ({ isOpen, onClose, onSubmit, supervis
         .single();
       
       if (error) {
+        // Handle specific error for duplicate name constraint
+        if (error.code === '23505' && error.message.includes('sites_name_key')) {
+          form.setError('name', { 
+            type: 'manual', 
+            message: 'A site with this name already exists' 
+          });
+          toast.error('A site with this name already exists');
+          return;
+        }
+        
         throw error;
       }
       
