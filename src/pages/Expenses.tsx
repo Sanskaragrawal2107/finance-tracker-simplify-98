@@ -59,7 +59,8 @@ const Expenses: React.FC = () => {
   const [hasFetchedData, setHasFetchedData] = useState(false);
 
   const fetchSites = useCallback(async () => {
-    if (hasFetchedData && !selectedSiteId) return;
+    if (hasFetchedData && !selectedSiteId && !location.state) return;
+    
     setIsLoading(true);
     try {
       let query = supabase.from('sites').select('*');
@@ -102,7 +103,7 @@ const Expenses: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [user, selectedSupervisorId, hasFetchedData, selectedSiteId]);
+  }, [user, selectedSupervisorId, hasFetchedData, selectedSiteId, location.state]);
 
   useEffect(() => {
     if (user) {
@@ -491,15 +492,12 @@ const Expenses: React.FC = () => {
         
         setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
         
+        // Update the site's funds directly
+        const updatedFunds = (sites.find(site => site.id === selectedSiteId)?.funds || 0) + Number(fundWithId.amount);
+        
         const { error: updateError } = await supabase
           .from('sites')
-          .update({ 
-            funds: supabase.rpc('increment', { 
-              x: Number(fundWithId.amount), 
-              row_id: selectedSiteId, 
-              column_name: 'funds' 
-            })
-          })
+          .update({ funds: updatedFunds })
           .eq('id', selectedSiteId);
           
         if (updateError) {
@@ -508,7 +506,7 @@ const Expenses: React.FC = () => {
           setSites(prevSites =>
             prevSites.map(site =>
               site.id === selectedSiteId
-                ? { ...site, funds: (site.funds || 0) + Number(fundWithId.amount) }
+                ? { ...site, funds: updatedFunds }
                 : site
             )
           );
@@ -638,7 +636,10 @@ const Expenses: React.FC = () => {
       .filter(invoice => invoice.paymentStatus === PaymentStatus.PENDING)
       .reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
 
-    const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
+    // Updated balance calculation according to the requirement:
+    // current balance = Funds Received from HO - Total Expenses - Total Advances - Invoices paid
+    // (note: debits to worker are tracked separately but not subtracted from balance)
+    const totalBalance = totalFunds - totalExpenses - totalAdvances - supervisorInvoiceTotal;
 
     return {
       fundsReceived: totalFunds,

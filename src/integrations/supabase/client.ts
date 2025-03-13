@@ -11,18 +11,27 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Helper function for incrementing values - updated with proper types
+// Helper function for incrementing values
 if (!supabase.rpc) {
-  // This is a simplified version as the actual implementation would depend on Supabase's SDK
-  // We are using this as a fallback only, and it should be removed once proper RPC is available
-  supabase.rpc = async (fn: string, params: any) => {
-    try {
-      return await supabase.from(params.row_id).update({
-        [params.column_name]: params.x
-      });
-    } catch (error) {
-      console.error("RPC error:", error);
-      throw error;
-    }
-  };
+  // Create a placeholder rpc function if it doesn't exist
+  // This will be replaced by the real implementation when Supabase is initialized
+  console.warn("RPC function not available, using fallback implementation");
 }
+
+// RPC helper to increment a column value
+export const incrementValue = async (value: number, rowId: string, columnName: string) => {
+  try {
+    // Using direct update instead of rpc
+    const { data, error } = await supabase
+      .from('sites')
+      .update({ [columnName]: value })
+      .eq('id', rowId)
+      .select();
+      
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error incrementing value:", error);
+    throw error;
+  }
+};
