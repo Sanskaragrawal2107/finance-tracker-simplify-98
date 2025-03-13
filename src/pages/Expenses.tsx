@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
+import { Search, Filter, Building, User, Users, CheckSquare, CircleSlash } from 'lucide-react';
 import { Expense, ExpenseCategory, ApprovalStatus, Site, Advance, FundsReceived, Invoice, UserRole, AdvancePurpose } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -109,6 +109,57 @@ const Expenses: React.FC = () => {
     fetchSites();
   }, [location, user, selectedSupervisorId]);
 
+  useEffect(() => {
+    if (selectedSiteId) {
+      fetchSiteExpenses(selectedSiteId);
+      fetchSiteAdvances(selectedSiteId);
+      fetchSiteFundsReceived(selectedSiteId);
+      fetchSiteInvoices(selectedSiteId);
+    }
+  }, [selectedSiteId]);
+
+  const fetchSiteExpenses = async (siteId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('*')
+        .eq('site_id', siteId);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const transformedExpenses: Expense[] = data.map(expense => ({
+          id: expense.id,
+          siteId: expense.site_id,
+          date: new Date(expense.date),
+          description: expense.description || '',
+          category: expense.category as ExpenseCategory,
+          amount: Number(expense.amount),
+          status: ApprovalStatus.APPROVED,
+          createdAt: new Date(expense.created_at),
+          supervisorId: user?.id || '',
+        }));
+        
+        setExpenses(transformedExpenses);
+      }
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+      toast.error('Failed to load expenses for this site');
+    }
+  };
+
+  const fetchSiteAdvances = async (siteId: string) => {
+    setAdvances(initialAdvances);
+  };
+
+  const fetchSiteFundsReceived = async (siteId: string) => {
+    setFundsReceived(initialFunds);
+  };
+
+  const fetchSiteInvoices = async (siteId: string) => {
+    setInvoices(initialInvoices);
+  };
+
   const ensureDateObjects = (site: Site): Site => {
     return {
       ...site,
@@ -192,17 +243,45 @@ const Expenses: React.FC = () => {
     }
   };
 
-  const handleAddExpense = (newExpense: Partial<Expense>) => {
-    const expenseWithId: Expense = {
-      ...newExpense as Expense,
-      id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED,
-      createdAt: new Date(),
-      supervisorId: SUPERVISOR_ID,
-    };
-    
-    setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
-    toast.success("Expense added successfully");
+  const handleAddExpense = async (newExpense: Partial<Expense>) => {
+    try {
+      const expenseData = {
+        site_id: newExpense.siteId,
+        date: newExpense.date instanceof Date ? newExpense.date.toISOString() : new Date().toISOString(),
+        description: newExpense.description || '',
+        category: newExpense.category,
+        amount: newExpense.amount,
+        created_by: user?.id
+      };
+      
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert(expenseData)
+        .select('*')
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        const expenseWithId: Expense = {
+          id: data.id,
+          siteId: data.site_id,
+          date: new Date(data.date),
+          description: data.description || '',
+          category: data.category as ExpenseCategory,
+          amount: Number(data.amount),
+          status: ApprovalStatus.APPROVED,
+          createdAt: new Date(data.created_at),
+          supervisorId: user?.id || '',
+        };
+        
+        setExpenses(prevExpenses => [expenseWithId, ...prevExpenses]);
+        toast.success("Expense added successfully");
+      }
+    } catch (error: any) {
+      console.error('Error adding expense:', error);
+      toast.error('Failed to add expense: ' + error.message);
+    }
   };
 
   const handleAddAdvance = (newAdvance: Partial<Advance>) => {
@@ -255,16 +334,31 @@ const Expenses: React.FC = () => {
     toast.success("Invoice added successfully");
   };
 
-  const handleCompleteSite = (siteId: string, completionDate: Date) => {
-    setSites(prevSites => 
-      prevSites.map(site => 
-        site.id === siteId 
-          ? { ...site, isCompleted: true, completionDate } 
-          : site
-      )
-    );
-    
-    toast.success("Site marked as completed");
+  const handleCompleteSite = async (siteId: string, completionDate: Date) => {
+    try {
+      const { error } = await supabase
+        .from('sites')
+        .update({ 
+          is_completed: true, 
+          completion_date: completionDate.toISOString() 
+        })
+        .eq('id', siteId);
+        
+      if (error) throw error;
+      
+      setSites(prevSites => 
+        prevSites.map(site => 
+          site.id === siteId 
+            ? { ...site, isCompleted: true, completionDate } 
+            : site
+        )
+      );
+      
+      toast.success("Site marked as completed");
+    } catch (error: any) {
+      console.error('Error completing site:', error);
+      toast.error('Failed to mark site as completed: ' + error.message);
+    }
   };
 
   const filteredSites = sites.filter(site => {
@@ -491,15 +585,6 @@ const Expenses: React.FC = () => {
                   </div>
                 </PopoverContent>
               </Popover>
-              <Button 
-                size="sm" 
-                className="h-10"
-                onClick={() => setIsSiteFormOpen(true)}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                <Building className="h-4 w-4 mr-2" />
-                New Site
-              </Button>
             </div>
           </div>
           
@@ -524,15 +609,10 @@ const Expenses: React.FC = () => {
                   <Building className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                   <h3 className="text-lg font-medium mb-2">No Sites Added Yet</h3>
                   <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                    Create your first construction site to start tracking expenses. Each site will have its own dedicated expense tracking.
+                    {userRole === UserRole.ADMIN 
+                      ? "Create sites from the admin dashboard to start tracking expenses."
+                      : "No sites have been assigned to you yet."}
                   </p>
-                  <Button 
-                    onClick={() => setIsSiteFormOpen(true)}
-                    className="mx-auto"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create First Site
-                  </Button>
                 </div>
               </CustomCard>
             )}
