@@ -54,7 +54,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   const displayExpenses = expenses;
   
-  // Show all advances in the advances tab, don't separate them
+  // Show all advances in the advances tab, including debits to worker
   const displayAdvances = advances;
   
   const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
@@ -156,6 +156,18 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         <span className="font-medium text-sm">Amount:</span>
         <span className="font-medium text-sm">₹{fund.amount.toLocaleString()}</span>
       </div>
+      {fund.reference && (
+        <div className="flex justify-between items-center">
+          <span className="font-medium text-sm">Reference:</span>
+          <span className="text-sm">{fund.reference}</span>
+        </div>
+      )}
+      {fund.method && (
+        <div className="flex justify-between items-center">
+          <span className="font-medium text-sm">Method:</span>
+          <span className="text-sm">{fund.method}</span>
+        </div>
+      )}
     </div>
   );
 
@@ -179,7 +191,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       </div>
       <div className="flex items-center justify-between mt-1.5">
         <span className="font-medium text-sm mr-2">Status:</span>
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
           {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
         </span>
       </div>
@@ -293,7 +307,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                         <tr key={advance.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
-                          <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
+                          <td className="px-4 py-3 text-sm uppercase">
+                            {isDebitToWorker(advance) ? "Debit To Worker" : "Regular Advance"}
+                          </td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
                           <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
@@ -336,6 +352,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                     <thead className="bg-gray-100">
                       <tr>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Reference</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Method</th>
                         <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
                       </tr>
                     </thead>
@@ -343,6 +361,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                       {fundsReceived.map(fund => (
                         <tr key={fund.id}>
                           <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(fund.date), 'MMM dd, yyyy')}</td>
+                          <td className="px-4 py-3 text-sm">{fund.reference || "-"}</td>
+                          <td className="px-4 py-3 text-sm">{fund.method || "-"}</td>
                           <td className="px-4 py-3 text-sm text-right">₹{fund.amount.toLocaleString()}</td>
                         </tr>
                       ))}
@@ -352,7 +372,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                 
                 <div className="sm:hidden">
                   {renderMobileTable(
-                    ['Date', 'Amount'],
+                    ['Date', 'Amount', 'Reference', 'Method'],
                     fundsReceived,
                     renderFundMobileRow
                   )}

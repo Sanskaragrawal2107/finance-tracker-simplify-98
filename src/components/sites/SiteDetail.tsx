@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
-import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary } from '@/lib/types';
+import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary, AdvancePurpose, ApprovalStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,6 +29,13 @@ interface SiteDetailProps {
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
 
+// Define DEBIT_ADVANCE_PURPOSES here for consistency
+const DEBIT_ADVANCE_PURPOSES = [
+  AdvancePurpose.SAFETY_SHOES,
+  AdvancePurpose.TOOLS,
+  AdvancePurpose.OTHER
+];
+
 const SiteDetail: React.FC<SiteDetailProps> = ({
   site,
   expenses,
@@ -51,6 +59,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   // Calculate these from the passed balanceSummary to ensure consistent calculation
   const totalExpenses = balanceSummary.totalExpenditure;
   const totalAdvances = balanceSummary.totalAdvances || 0;
+  const totalDebitToWorker = balanceSummary.debitsToWorker || 0;
   const totalFundsReceived = balanceSummary.fundsReceived;
   const totalInvoices = balanceSummary.invoicesPaid || 0;
   
@@ -166,7 +175,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Advances</span>
-                  <span className="font-medium">₹{balanceSummary.totalAdvances.toLocaleString()}</span>
+                  <span className="font-medium">₹{totalAdvances.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Invoices</span>
@@ -174,7 +183,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Debits to Worker</span>
-                  <span className="font-medium">₹{balanceSummary.debitsToWorker.toLocaleString()}</span>
+                  <span className="font-medium">₹{totalDebitToWorker.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Funds Received</span>

@@ -143,7 +143,7 @@ export interface FundsReceived {
   siteId: string;
   createdAt: Date;
   reference?: string;
-  method?: PaymentMethod;
+  method?: string; // Changed from PaymentMethod to string to be more flexible
 }
 
 export interface BankDetails {
