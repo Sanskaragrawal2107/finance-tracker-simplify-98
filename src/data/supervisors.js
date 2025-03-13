@@ -18,7 +18,6 @@ export const supervisors = [
 // Function to fetch supervisors from the database
 export const getSupervisors = async () => {
   try {
-    // Use type assertion to bypass TypeScript errors
     const { data, error } = await supabase
       .from('users')
       .select('id, name')
@@ -29,10 +28,15 @@ export const getSupervisors = async () => {
       return supervisors; // Return local data as fallback
     }
     
-    return data.map(supervisor => ({
-      id: supervisor.id,
-      name: supervisor.name
-    }));
+    if (data && data.length > 0) {
+      return data.map(supervisor => ({
+        id: supervisor.id,
+        name: supervisor.name
+      }));
+    } else {
+      console.log('No supervisors found in database, using local data');
+      return supervisors; // Return local data if no supervisors in DB
+    }
   } catch (error) {
     console.error('Error in getSupervisors:', error);
     return supervisors; // Return local data as fallback

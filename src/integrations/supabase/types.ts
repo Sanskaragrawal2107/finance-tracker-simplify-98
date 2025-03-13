@@ -150,30 +150,58 @@ export type Database = {
       }
       sites: {
         Row: {
+          completion_date: string | null
           created_at: string | null
           created_by: string | null
+          funds: number | null
           id: string
+          is_completed: boolean | null
+          job_name: string | null
           location: string
           name: string
+          pos_no: string | null
+          start_date: string | null
+          supervisor_id: string | null
         }
         Insert: {
+          completion_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          funds?: number | null
           id?: string
+          is_completed?: boolean | null
+          job_name?: string | null
           location: string
           name: string
+          pos_no?: string | null
+          start_date?: string | null
+          supervisor_id?: string | null
         }
         Update: {
+          completion_date?: string | null
           created_at?: string | null
           created_by?: string | null
+          funds?: number | null
           id?: string
+          is_completed?: boolean | null
+          job_name?: string | null
           location?: string
           name?: string
+          pos_no?: string | null
+          start_date?: string | null
+          supervisor_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "sites_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sites_supervisor_id_fkey"
+            columns: ["supervisor_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -185,18 +213,21 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          name: string | null
           role: string
         }
         Insert: {
           created_at?: string | null
           email: string
           id?: string
+          name?: string | null
           role: string
         }
         Update: {
           created_at?: string | null
           email?: string
           id?: string
+          name?: string | null
           role?: string
         }
         Relationships: []

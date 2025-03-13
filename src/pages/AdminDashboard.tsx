@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -47,8 +48,8 @@ const AdminDashboard: React.FC = () => {
         const stats: Record<string, SupervisorStats> = {};
         
         for (const supervisor of supervisors) {
-          const { data, error } = await (supabase
-            .from('sites') as any)
+          const { data, error } = await supabase
+            .from('sites')
             .select('id, is_completed')
             .eq('supervisor_id', supervisor.id);
             
@@ -61,6 +62,13 @@ const AdminDashboard: React.FC = () => {
               totalSites: total,
               activeSites: active,
               completedSites: completed
+            };
+          } else {
+            console.error('Error fetching sites for supervisor', supervisor.id, error);
+            stats[supervisor.id] = {
+              totalSites: 0,
+              activeSites: 0,
+              completedSites: 0
             };
           }
         }
@@ -89,21 +97,53 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleCreateSite = (site: any) => {
-    setSupervisorStats(prev => {
-      const updatedStats = { ...prev };
-      if (site.supervisorId && updatedStats[site.supervisorId]) {
-        updatedStats[site.supervisorId] = {
-          ...updatedStats[site.supervisorId],
-          totalSites: updatedStats[site.supervisorId].totalSites + 1,
-          activeSites: updatedStats[site.supervisorId].activeSites + 1
-        };
+  const handleCreateSite = async (site: any) => {
+    try {
+      const siteData = {
+        name: site.name,
+        job_name: site.jobName,
+        pos_no: site.posNo,
+        start_date: site.startDate,
+        completion_date: site.completionDate,
+        location: site.location || "",
+        supervisor_id: site.supervisorId || selectedSupervisorId,
+        is_completed: false,
+        funds: site.funds || 0
+      };
+      
+      // Save the site to the database
+      const { data, error } = await supabase
+        .from('sites')
+        .insert(siteData)
+        .select();
+      
+      if (error) {
+        console.error('Error creating site:', error);
+        toast.error('Failed to create site: ' + error.message);
+        return;
       }
-      return updatedStats;
-    });
-    
-    toast.success(`Site "${site.name}" created successfully`);
-    setIsSiteFormOpen(false);
+      
+      // Update the local state
+      setSupervisorStats(prev => {
+        const updatedStats = { ...prev };
+        const supervisorId = site.supervisorId || selectedSupervisorId;
+        
+        if (supervisorId && updatedStats[supervisorId]) {
+          updatedStats[supervisorId] = {
+            ...updatedStats[supervisorId],
+            totalSites: updatedStats[supervisorId].totalSites + 1,
+            activeSites: updatedStats[supervisorId].activeSites + 1
+          };
+        }
+        return updatedStats;
+      });
+      
+      toast.success(`Site "${site.name}" created successfully`);
+      setIsSiteFormOpen(false);
+    } catch (error: any) {
+      console.error('Error in handleCreateSite:', error);
+      toast.error('Failed to create site: ' + error.message);
+    }
   };
 
   const getSelectedSupervisor = () => {
