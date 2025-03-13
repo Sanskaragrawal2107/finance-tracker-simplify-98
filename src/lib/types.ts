@@ -1,3 +1,4 @@
+
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -26,6 +27,7 @@ export interface Site {
   createdAt: Date;
   isCompleted: boolean;
   funds?: number;
+  totalFunds?: number;
 }
 
 // Financial data types

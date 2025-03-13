@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
@@ -49,12 +48,11 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const isMobile = useIsMobile();
 
-  // Calculate site financial summary - we'll use the balanceSummary prop now instead
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
-  const totalAdvances = advances.reduce((sum, advance) => sum + advance.amount, 0);
-  const totalFundsReceived = fundsReceived.reduce((sum, fund) => sum + fund.amount, 0);
-  // Include all invoices to show in transaction history
-  const totalInvoices = invoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+  // Calculate these from the passed balanceSummary to ensure consistent calculation
+  const totalExpenses = balanceSummary.totalExpenditure;
+  const totalAdvances = balanceSummary.totalAdvances || 0;
+  const totalFundsReceived = balanceSummary.fundsReceived;
+  const totalInvoices = balanceSummary.invoicesPaid || 0;
   
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());

@@ -23,7 +23,7 @@ const HODebitsCard: React.FC<HODebitsCardProps> = ({
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-medium">Debits by H.O.</CardTitle>
+        <CardTitle className="text-base font-medium">Funds Received From H.O.</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex justify-between items-center">

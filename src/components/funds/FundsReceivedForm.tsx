@@ -6,6 +6,7 @@ import * as z from "zod";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +33,8 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { FundsReceived } from "@/lib/types";
+import { FundsReceived, PaymentMethod } from "@/lib/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface FundsReceivedFormProps {
   isOpen: boolean;
@@ -50,6 +52,8 @@ const formSchema = z.object({
   }).positive({
     message: "Amount must be a positive number",
   }),
+  reference: z.string().optional(),
+  method: z.nativeEnum(PaymentMethod).optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -60,13 +64,17 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
     defaultValues: {
       date: new Date(),
       amount: undefined,
+      reference: '',
+      method: undefined,
     },
   });
 
-  const handleSubmit = (values: FormValues) => {
+  const handleSubmit = async (values: FormValues) => {
     const newFunds: Partial<FundsReceived> = {
       date: values.date,
       amount: values.amount,
+      reference: values.reference,
+      method: values.method,
     };
 
     onSubmit(newFunds);
@@ -144,6 +152,51 @@ const FundsReceivedForm: React.FC<FundsReceivedFormProps> = ({ isOpen, onClose, 
                       }}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reference"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>REFERENCE NUMBER (OPTIONAL)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Enter reference number"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="method"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>PAYMENT METHOD (OPTIONAL)</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment method" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Object.values(PaymentMethod).map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {method}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

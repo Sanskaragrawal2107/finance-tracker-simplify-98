@@ -135,6 +135,44 @@ export type Database = {
           },
         ]
       }
+      funds_received: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          id: string
+          method: string | null
+          reference: string | null
+          site_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          id?: string
+          method?: string | null
+          reference?: string | null
+          site_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          id?: string
+          method?: string | null
+          reference?: string | null
+          site_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funds_received_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -219,6 +257,7 @@ export type Database = {
           pos_no: string | null
           start_date: string | null
           supervisor_id: string | null
+          total_funds: number | null
         }
         Insert: {
           completion_date?: string | null
@@ -233,6 +272,7 @@ export type Database = {
           pos_no?: string | null
           start_date?: string | null
           supervisor_id?: string | null
+          total_funds?: number | null
         }
         Update: {
           completion_date?: string | null
@@ -247,6 +287,7 @@ export type Database = {
           pos_no?: string | null
           start_date?: string | null
           supervisor_id?: string | null
+          total_funds?: number | null
         }
         Relationships: [
           {
