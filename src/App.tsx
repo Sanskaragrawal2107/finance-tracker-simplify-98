@@ -15,7 +15,15 @@ import { UserRole } from "./lib/types";
 import { useIsMobile } from "./hooks/use-mobile";
 import { AuthProvider, useAuth } from "./hooks/use-auth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 30000,
+    },
+  },
+});
 
 // Redirect component based on user role
 const RoleBasedRedirect = () => {
@@ -27,9 +35,11 @@ const RoleBasedRedirect = () => {
   
   if (user.role === UserRole.ADMIN) {
     return <Navigate to="/admin" replace />;
+  } else if (user.role === UserRole.SUPERVISOR) {
+    return <Navigate to="/expenses" replace />;
   }
   
-  return <Navigate to="/expenses" replace />;
+  return <Navigate to="/dashboard" replace />;
 };
 
 // Protected route component
@@ -44,7 +54,11 @@ const ProtectedRoute = ({
   const location = useLocation();
   
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
   
   if (!user) {

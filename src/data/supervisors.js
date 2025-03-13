@@ -20,25 +20,34 @@ export const getSupervisors = async () => {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, name')
+      .select('id, name, email')
       .eq('role', 'supervisor');
     
     if (error) {
       console.error('Error fetching supervisors:', error);
-      return supervisors; // Return local data as fallback
+      return supervisors.map(sup => ({
+        id: String(sup.id),
+        name: sup.name
+      })); // Return local data as fallback with string IDs
     }
     
     if (data && data.length > 0) {
       return data.map(supervisor => ({
         id: supervisor.id,
-        name: supervisor.name
+        name: supervisor.name || supervisor.email
       }));
     } else {
       console.log('No supervisors found in database, using local data');
-      return supervisors; // Return local data if no supervisors in DB
+      return supervisors.map(sup => ({
+        id: String(sup.id),
+        name: sup.name
+      })); // Return local data if no supervisors in DB
     }
   } catch (error) {
     console.error('Error in getSupervisors:', error);
-    return supervisors; // Return local data as fallback
+    return supervisors.map(sup => ({
+      id: String(sup.id),
+      name: sup.name
+    })); // Return local data as fallback
   }
 };

@@ -77,8 +77,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Redirect based on role
             if (profile.role === UserRole.ADMIN) {
               navigate('/admin');
-            } else {
+            } else if (profile.role === UserRole.SUPERVISOR) {
               navigate('/expenses');
+            } else {
+              navigate('/dashboard');
             }
           }
         } else if (event === 'SIGNED_OUT') {
@@ -117,8 +119,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           // Redirect based on role
           if (profile.role === UserRole.ADMIN) {
             navigate('/admin');
-          } else {
+          } else if (profile.role === UserRole.SUPERVISOR) {
             navigate('/expenses');
+          } else {
+            navigate('/dashboard');
           }
         }
       }
