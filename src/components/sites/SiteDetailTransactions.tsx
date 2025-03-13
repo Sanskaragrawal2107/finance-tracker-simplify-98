@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,20 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const [activeTab, setActiveTab] = useState("expenses");
 
   const displayExpenses = expenses;
-  const displayAdvances = advances;
+  
+  // Filter advances based on purpose
+  const regularAdvances = advances.filter(advance => 
+    !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+  );
+  
+  const debitAdvances = advances.filter(advance => 
+    DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
+  );
+  
+  // Choose which advances to display based on the tab
+  const displayAdvances = regularAdvances;
+  const displayDebitAdvances = debitAdvances;
+  
   const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
 
   const isDebitToWorker = (advance: Advance) => {
@@ -204,6 +218,10 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                 <span className="hidden sm:inline">ADVANCES PAID</span>
                 <span className="sm:hidden">ADV</span>
               </TabsTrigger>
+              <TabsTrigger value="debitToWorker" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
+                <span className="hidden sm:inline">DEBITS TO WORKER</span>
+                <span className="sm:hidden">DEBIT</span>
+              </TabsTrigger>
               <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
                 <span className="hidden sm:inline">PURCHASED INVOICE</span>
                 <span className="sm:hidden">INV</span>
@@ -279,7 +297,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Recipient</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Type</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Advance Type</th>
                         <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
                         <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
                       </tr>
@@ -291,9 +308,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.recipientType}</td>
                           <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
-                          <td className="px-4 py-3 text-sm uppercase">
-                            {isDebitToWorker(advance) ? "Debit To Worker" : "Regular Advance"}
-                          </td>
                           <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -323,6 +337,59 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             ) : (
               <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
                 <p className="opacity-80">No advances paid yet.</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="debitToWorker" className="space-y-4 bg-white">
+            {displayDebitAdvances.length > 0 ? (
+              <>
+                <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Date</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Worker</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Purpose</th>
+                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Amount</th>
+                        <th scope="col" className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white">
+                      {displayDebitAdvances.map(advance => (
+                        <tr key={advance.id}>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm">{format(new Date(advance.date), 'MMM dd, yyyy')}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{advance.recipientName}</td>
+                          <td className="px-4 py-3 text-sm uppercase">{advance.purpose}</td>
+                          <td className="px-4 py-3 text-sm text-right">₹{advance.amount.toLocaleString()}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              advance.status === ApprovalStatus.APPROVED 
+                                ? 'bg-green-100 text-green-800' 
+                                : advance.status === ApprovalStatus.REJECTED
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {advance.status.toUpperCase()}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="sm:hidden">
+                  {renderMobileTable(
+                    ['Date', 'Worker', 'Purpose', 'Amount', 'Status'],
+                    displayDebitAdvances,
+                    renderAdvanceMobileRow
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center p-6 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="opacity-80">No debits to worker recorded yet.</p>
               </div>
             )}
           </TabsContent>

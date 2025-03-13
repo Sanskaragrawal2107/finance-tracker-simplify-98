@@ -45,6 +45,8 @@ import { Advance, AdvancePurpose, RecipientType, ApprovalStatus } from "@/lib/ty
 import SearchableDropdown from '../expenses/SearchableDropdown';
 import { contractors } from '@/data/contractors';
 import { supervisors } from '@/data/supervisors';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 
 interface AdvanceFormProps {
   isOpen: boolean;
@@ -81,6 +83,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
   const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
   const [showRemarks, setShowRemarks] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const { user } = useAuth();
   
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -122,24 +125,58 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
     }
   };
 
-  const handleSubmit = (values: FormValues) => {
-    const newAdvance: Partial<Advance> = {
-      date: values.date,
-      recipientName: values.recipientName,
-      recipientType: values.recipientType,
-      purpose: values.purpose,
-      amount: values.amount,
-      remarks: values.remarks,
-      status: ApprovalStatus.PENDING,
-      createdBy: "Current User", // In a real app, this would be the current user's name
-      createdAt: new Date(),
-      siteId: siteId,
-    };
-
-    onSubmit(newAdvance);
-    form.reset();
-    onClose();
-    toast.success("Advance added successfully");
+  const handleSubmit = async (values: FormValues) => {
+    try {
+      // Insert into Supabase advances table
+      const advanceData = {
+        site_id: siteId,
+        date: values.date.toISOString(),
+        recipient_name: values.recipientName,
+        recipient_type: values.recipientType,
+        purpose: values.purpose,
+        amount: values.amount,
+        remarks: values.remarks || "",
+        status: ApprovalStatus.PENDING,
+        created_by: user?.id || "",
+        created_at: new Date().toISOString(),
+      };
+      
+      const { data, error } = await supabase
+        .from('advances')
+        .insert(advanceData)
+        .select('*')
+        .single();
+      
+      if (error) {
+        console.error('Error creating advance:', error);
+        toast.error('Failed to create advance: ' + error.message);
+        return;
+      }
+      
+      if (data) {
+        const advanceWithId: Partial<Advance> = {
+          id: data.id,
+          date: new Date(data.date),
+          recipientName: data.recipient_name,
+          recipientType: data.recipient_type as RecipientType,
+          purpose: data.purpose as AdvancePurpose,
+          amount: Number(data.amount),
+          remarks: data.remarks,
+          status: data.status as ApprovalStatus,
+          createdBy: data.created_by,
+          createdAt: new Date(data.created_at),
+          siteId: data.site_id,
+        };
+        
+        onSubmit(advanceWithId);
+        form.reset();
+        onClose();
+        toast.success("Advance added successfully");
+      }
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      toast.error('An error occurred while submitting the advance');
+    }
   };
 
   return (

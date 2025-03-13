@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
@@ -137,6 +138,7 @@ const Expenses: React.FC = () => {
           amount: Number(expense.amount),
           status: ApprovalStatus.APPROVED,
           createdAt: new Date(expense.created_at),
+          createdBy: expense.created_by || '',
           supervisorId: user?.id || '',
         }));
         
@@ -149,7 +151,38 @@ const Expenses: React.FC = () => {
   };
 
   const fetchSiteAdvances = async (siteId: string) => {
-    setAdvances(initialAdvances);
+    try {
+      const { data, error } = await supabase
+        .from('advances')
+        .select('*')
+        .eq('site_id', siteId);
+      
+      if (error) throw error;
+      
+      if (data) {
+        const transformedAdvances: Advance[] = data.map(advance => ({
+          id: advance.id,
+          siteId: advance.site_id,
+          date: new Date(advance.date),
+          recipientName: advance.recipient_name,
+          recipientType: advance.recipient_type as RecipientType,
+          purpose: advance.purpose as AdvancePurpose,
+          amount: Number(advance.amount),
+          remarks: advance.remarks,
+          status: advance.status as ApprovalStatus,
+          createdBy: advance.created_by,
+          createdAt: new Date(advance.created_at),
+        }));
+        
+        setAdvances(transformedAdvances);
+      } else {
+        setAdvances([]);
+      }
+    } catch (error) {
+      console.error('Error fetching advances:', error);
+      toast.error('Failed to load advances for this site');
+      setAdvances([]);
+    }
   };
 
   const fetchSiteFundsReceived = async (siteId: string) => {
@@ -272,6 +305,7 @@ const Expenses: React.FC = () => {
           amount: Number(data.amount),
           status: ApprovalStatus.APPROVED,
           createdAt: new Date(data.created_at),
+          createdBy: data.created_by || '',
           supervisorId: user?.id || '',
         };
         
@@ -284,16 +318,11 @@ const Expenses: React.FC = () => {
     }
   };
 
-  const handleAddAdvance = (newAdvance: Partial<Advance>) => {
-    const advanceWithId: Advance = {
-      ...newAdvance as Advance,
-      id: Date.now().toString(),
-      status: ApprovalStatus.APPROVED,
-      createdAt: new Date(),
-    };
-    
-    setAdvances(prevAdvances => [advanceWithId, ...prevAdvances]);
-    toast.success("Advance added successfully");
+  const handleAddAdvance = async (newAdvance: Partial<Advance>) => {
+    // Update UI without waiting for fetch
+    if (newAdvance.id) {
+      setAdvances(prevAdvances => [newAdvance as Advance, ...prevAdvances]);
+    }
   };
 
   const handleAddFunds = (newFund: Partial<FundsReceived>) => {
