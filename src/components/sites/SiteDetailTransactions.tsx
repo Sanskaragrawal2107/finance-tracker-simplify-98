@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -57,22 +56,18 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   const displayExpenses = expenses;
   
-  // Show all advances in the advances tab, including debits to worker
   const displayAdvances = advances;
   
-  // Use site invoices if available, otherwise fall back to the passed in invoices
   const displayInvoices = siteInvoices.length > 0 
     ? siteInvoices 
     : supervisorInvoices.length > 0 
       ? supervisorInvoices 
       : invoices;
 
-  // Helper function to determine if an advance is a debit to worker (for display purposes only)
   const isDebitToWorker = (advance: Advance) => {
     return DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose);
   };
 
-  // Fetch invoices from Supabase
   useEffect(() => {
     const fetchInvoices = async () => {
       if (!siteId) return;
@@ -91,7 +86,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         
         if (data && data.length > 0) {
           const mappedInvoices: Invoice[] = data.map(invoice => {
-            // Parse material_items and bank_details from JSON strings
             let parsedMaterialItems: MaterialItem[] = [];
             try {
               parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
@@ -134,6 +128,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           });
           
           setSiteInvoices(mappedInvoices);
+          console.log('Fetched site invoices:', mappedInvoices);
         }
       } catch (error) {
         console.error('Error:', error);
@@ -303,7 +298,6 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       
       if (data && data.length > 0) {
         const mappedInvoices: Invoice[] = data.map(invoice => {
-          // Parse material_items and bank_details from JSON strings
           let parsedMaterialItems: MaterialItem[] = [];
           try {
             parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
@@ -346,6 +340,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         });
         
         setSiteInvoices(mappedInvoices);
+        console.log('Updated site invoices after adding:', mappedInvoices);
       }
     } catch (error) {
       console.error('Error:', error);
