@@ -17,7 +17,7 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
   balanceData,
   className,
   siteId
-}) {
+}) => {
   const [localBalanceData, setLocalBalanceData] = useState(balanceData);
   const [isLoading, setIsLoading] = useState(false);
   
