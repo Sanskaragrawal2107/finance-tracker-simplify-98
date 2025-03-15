@@ -44,9 +44,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
     document.body.appendChild(script);
     
     return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
+      document.body.removeChild(script);
     };
   }, []);
   
@@ -278,16 +276,16 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
             <div>
               <h4 className="font-medium mb-2">Bank Details</h4>
               <div className="bg-muted rounded-md p-4 space-y-2">
-                <p><span className="font-medium">Account Number:</span> {invoice.bankDetails?.accountNumber || '-'}</p>
-                <p><span className="font-medium">Bank & Branch:</span> {invoice.bankDetails?.bankName || '-'}</p>
-                <p><span className="font-medium">IFSC Code:</span> {invoice.bankDetails?.ifscCode || '-'}</p>
-                {invoice.bankDetails?.email && (
+                <p><span className="font-medium">Account Number:</span> {invoice.bankDetails.accountNumber}</p>
+                <p><span className="font-medium">Bank & Branch:</span> {invoice.bankDetails.bankName}</p>
+                <p><span className="font-medium">IFSC Code:</span> {invoice.bankDetails.ifscCode}</p>
+                {invoice.bankDetails.email && (
                   <p className="flex items-center">
                     <Mail className="h-4 w-4 mr-1" />
                     <span className="font-medium mr-1">Email:</span> {invoice.bankDetails.email}
                   </p>
                 )}
-                {invoice.bankDetails?.mobile && (
+                {invoice.bankDetails.mobile && (
                   <p className="flex items-center">
                     <Phone className="h-4 w-4 mr-1" />
                     <span className="font-medium mr-1">Mobile:</span> {invoice.bankDetails.mobile}
