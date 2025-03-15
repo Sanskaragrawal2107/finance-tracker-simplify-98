@@ -213,7 +213,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Invoice Entries</span>
-                  <span className="font-medium">{invoices.length}</span>
+                  <span className="font-medium">{invoices.length + (supervisorInvoices ? supervisorInvoices.length : 0)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Funds Received Entries</span>

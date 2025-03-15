@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Clock, FileText, ArrowUpDown, Truck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose, MaterialItem, BankDetails } from '@/lib/types';
+import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose, MaterialItem, BankDetails, PaymentStatus } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import AdvanceForm from '@/components/advances/AdvanceForm';
@@ -12,7 +12,8 @@ import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, incrementValue } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface SiteDetailTransactionsProps {
   siteId: string;
@@ -46,6 +47,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   onAddInvoice
 }) => {
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
   const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
@@ -106,7 +108,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
               ifscCode: ''
             };
             try {
-              parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+              if (invoice.bank_details) {
+                parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+              }
             } catch (e) {
               console.error('Error parsing bank details:', e);
             }
@@ -125,7 +129,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
               materialItems: parsedMaterialItems,
               bankDetails: parsedBankDetails,
               billUrl: invoice.bill_url,
-              paymentStatus: invoice.payment_status as any,
+              paymentStatus: invoice.payment_status as PaymentStatus,
               createdBy: invoice.created_by || '',
               createdAt: new Date(invoice.created_at),
               approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
@@ -273,24 +277,30 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       <div className="flex items-center justify-between mt-1.5">
         <span className="font-medium text-sm mr-2">Status:</span>
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+          invoice.paymentStatus === PaymentStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
         }`}>
-          {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
+          {invoice.paymentStatus}
         </span>
       </div>
       <div className="flex justify-center mt-2">
-        <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
+        <Button variant="primary" size="sm" onClick={() => handleViewInvoice(invoice)}>
           VIEW DETAILS
         </Button>
       </div>
     </div>
   );
 
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+  };
+
   const handleAddInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    onAddInvoice(invoice);
-    
-    setIsLoadingSiteInvoices(true);
     try {
+      onAddInvoice(invoice);
+      
+      // After adding the invoice, refresh the list
+      setIsLoadingSiteInvoices(true);
+      
       const { data, error } = await supabase
         .from('site_invoices')
         .select('*')
@@ -318,7 +328,9 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             ifscCode: ''
           };
           try {
-            parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+            if (invoice.bank_details) {
+              parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+            }
           } catch (e) {
             console.error('Error parsing bank details:', e);
           }
@@ -337,7 +349,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
             materialItems: parsedMaterialItems,
             bankDetails: parsedBankDetails,
             billUrl: invoice.bill_url,
-            paymentStatus: invoice.payment_status as any,
+            paymentStatus: invoice.payment_status as PaymentStatus,
             createdBy: invoice.created_by || '',
             createdAt: new Date(invoice.created_at),
             approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
@@ -346,11 +358,41 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         });
         
         setSiteInvoices(mappedInvoices);
+        
+        // If invoice was created by supervisor, update the invoicesPaid field in site
+        if (invoice.approverType === 'supervisor') {
+          try {
+            // Get current invoicesPaid value
+            const { data: siteData, error: siteError } = await supabase
+              .from('sites')
+              .select('invoicesPaid')
+              .eq('id', siteId)
+              .single();
+              
+            if (siteError) {
+              console.error('Error fetching site data:', siteError);
+            } else {
+              const currentInvoicesPaid = siteData?.invoicesPaid || 0;
+              const newInvoicesPaid = currentInvoicesPaid + invoice.netAmount;
+              
+              // Update invoicesPaid value
+              await incrementValue(newInvoicesPaid, siteId, 'invoicesPaid');
+              
+              toast({
+                title: "Balance updated",
+                description: `Site balance has been updated with invoice amount of ₹${invoice.netAmount.toLocaleString()}.`
+              });
+            }
+          } catch (updateError) {
+            console.error('Error updating site balance:', updateError);
+          }
+        }
       }
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setIsLoadingSiteInvoices(false);
+      setIsInvoiceFormOpen(false);
     }
   };
 
@@ -564,12 +606,12 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                           <td className="px-4 py-3 text-sm text-center uppercase">{invoice.approverType || "supervisor"}</td>
                           <td className="px-4 py-3 text-sm text-right">₹{invoice.netAmount.toLocaleString()}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                              {invoice.paymentStatus === 'paid' ? 'PAID' : 'PENDING'}
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${invoice.paymentStatus === PaymentStatus.PAID ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                              {invoice.paymentStatus}
                             </span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-center">
-                            <Button variant="primary" size="sm" onClick={() => setSelectedInvoice(invoice)}>
+                            <Button variant="primary" size="sm" onClick={() => handleViewInvoice(invoice)}>
                               VIEW
                             </Button>
                           </td>

@@ -19,16 +19,21 @@ if (!supabase.rpc) {
 }
 
 // RPC helper to increment a column value
-export const incrementValue = async (value: number, rowId: string, columnName: string) => {
+export const incrementValue = async (value: number, rowId: string, columnName: string, tableName = 'sites') => {
   try {
     // Using direct update instead of rpc
     const { data, error } = await supabase
-      .from('sites')
+      .from(tableName)
       .update({ [columnName]: value })
       .eq('id', rowId)
       .select();
       
-    if (error) throw error;
+    if (error) {
+      console.error("Error incrementing value:", error);
+      throw error;
+    }
+    
+    console.log(`Successfully updated ${columnName} to ${value} for row ${rowId} in table ${tableName}`);
     return data;
   } catch (error) {
     console.error("Error incrementing value:", error);
