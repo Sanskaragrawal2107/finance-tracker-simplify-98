@@ -1,21 +1,29 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { toast } from 'sonner';
+import { Calendar as CalendarIcon, Upload, Camera, Plus } from "lucide-react"
+import { format } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from "@/lib/utils"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
-import { Invoice, MaterialItem, BankDetails } from '@/lib/types';
-import { Plus, Trash } from 'lucide-react';
+import { Invoice, MaterialItem, BankDetails, PaymentStatus } from '@/lib/types';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 
 interface InvoiceFormProps {
   isOpen: boolean;
@@ -26,20 +34,45 @@ interface InvoiceFormProps {
 
 const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, siteId }) => {
   const { user } = useAuth();
-  const [partyId, setPartyId] = useState('');
+  const [date, setDate] = useState<Date>(new Date());
   const [partyName, setPartyName] = useState('');
+  const [partyId, setPartyId] = useState('');
   const [material, setMaterial] = useState('');
-  const [quantity, setQuantity] = useState(0);
-  const [rate, setRate] = useState(0);
-  const [gstPercentage, setGstPercentage] = useState(0);
+  const [materialItems, setMaterialItems] = useState<MaterialItem[]>([
+    { material: '', quantity: 0, rate: 0, gstPercentage: 18 }
+  ]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [materialItems, setMaterialItems] = useState<MaterialItem[]>([{ itemName: '', quantity: 0, rate: 0 }]);
+  const [approverType, setApproverType] = useState<'ho' | 'supervisor'>('ho');
   const [bankDetails, setBankDetails] = useState<BankDetails>({
     bankName: '',
     accountNumber: '',
-    ifscCode: ''
+    ifscCode: '',
+    email: '',
+    mobile: ''
   });
+  const [netTaxableAmount, setNetTaxableAmount] = useState(0);
+  const [grandTotal, setGrandTotal] = useState(0);
+
+  // Calculate totals when material items change
+  useEffect(() => {
+    let taxableAmount = 0;
+    let total = 0;
+
+    materialItems.forEach(item => {
+      if (item.quantity && item.rate) {
+        const itemAmount = item.quantity * item.rate;
+        taxableAmount += itemAmount;
+        
+        // Calculate GST if percentage exists
+        const gstAmount = item.gstPercentage ? (itemAmount * item.gstPercentage) / 100 : 0;
+        total += itemAmount + (gstAmount || 0);
+      }
+    });
+
+    setNetTaxableAmount(taxableAmount);
+    setGrandTotal(total);
+  }, [materialItems]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,11 +103,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, si
         billUrl = publicUrl;
       }
       
-      // Calculate gross amount and net amount
-      const grossAmount = quantity * rate;
-      const gstAmount = (grossAmount * gstPercentage) / 100;
-      const netAmount = grossAmount + gstAmount;
-      
       // Convert material items and bank details to strings for storage
       const materialItemsString = JSON.stringify(materialItems);
       const bankDetailsString = JSON.stringify(bankDetails);
@@ -84,21 +112,21 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, si
         .from('site_invoices')
         .insert({
           site_id: siteId,
-          date: new Date().toISOString(),
+          date: date.toISOString(),
           party_id: partyId,
           party_name: partyName,
           material: material,
-          quantity: quantity,
-          rate: rate,
-          gst_percentage: gstPercentage,
-          gross_amount: grossAmount,
-          net_amount: netAmount,
+          quantity: materialItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          rate: materialItems.length > 0 ? materialItems[0].rate || 0 : 0,
+          gst_percentage: materialItems.length > 0 ? materialItems[0].gstPercentage || 0 : 0,
+          gross_amount: netTaxableAmount,
+          net_amount: grandTotal,
           material_items: materialItemsString,
           bank_details: bankDetailsString,
           bill_url: billUrl,
-          payment_status: 'pending',
+          payment_status: 'pending' as PaymentStatus,
           created_by: user?.id || '',
-          approver_type: 'supervisor'
+          approver_type: approverType
         })
         .select();
       
@@ -110,21 +138,21 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, si
         // Prepare data for the onSubmit callback
         const invoice: Omit<Invoice, 'id' | 'createdAt'> = {
           siteId: siteId,
-          date: new Date(),
+          date: date,
           partyId: partyId,
           partyName: partyName,
           material: material,
-          quantity: quantity,
-          rate: rate,
-          gstPercentage: gstPercentage,
-          grossAmount: grossAmount,
-          netAmount: netAmount,
+          quantity: materialItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+          rate: materialItems.length > 0 ? materialItems[0].rate || 0 : 0,
+          gstPercentage: materialItems.length > 0 ? materialItems[0].gstPercentage || 0 : 0,
+          grossAmount: netTaxableAmount,
+          netAmount: grandTotal,
           materialItems: materialItems,
           bankDetails: bankDetails,
           billUrl: billUrl,
           paymentStatus: 'pending',
           createdBy: user?.id || '',
-          approverType: 'supervisor'
+          approverType: approverType
         };
         
         // Call the onSubmit callback from the parent component
@@ -156,13 +184,16 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, si
 
   // Function to add a material item
   const addMaterialItem = () => {
-    setMaterialItems([...materialItems, { itemName: '', quantity: 0, rate: 0 }]);
+    setMaterialItems([...materialItems, { material: '', quantity: 0, rate: 0, gstPercentage: 18 }]);
   };
 
   // Function to update a material item
-  const updateMaterialItem = (index: number, field: string, value: any) => {
+  const updateMaterialItem = (index: number, field: keyof MaterialItem, value: any) => {
     const updatedItems = [...materialItems];
-    updatedItems[index][field] = value;
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: value
+    };
     setMaterialItems(updatedItems);
   };
 
@@ -173,188 +204,295 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({ isOpen, onClose, onSubmit, si
     setMaterialItems(updatedItems);
   };
 
-  // Function to update bank details
-  const updateBankDetails = (field: string, value: string) => {
-    setBankDetails({ ...bankDetails, [field]: value });
-  };
-
   // Reset the form to initial state
   const resetForm = () => {
-    setPartyId('');
+    setDate(new Date());
     setPartyName('');
+    setPartyId('');
     setMaterial('');
-    setQuantity(0);
-    setRate(0);
-    setGstPercentage(0);
+    setMaterialItems([{ material: '', quantity: 0, rate: 0, gstPercentage: 18 }]);
     setSelectedFile(null);
-    setMaterialItems([{ itemName: '', quantity: 0, rate: 0 }]);
     setBankDetails({
       bankName: '',
       accountNumber: '',
-      ifscCode: ''
+      ifscCode: '',
+      email: '',
+      mobile: ''
     });
+    setApproverType('ho');
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle>Add New Invoice</DialogTitle>
+          <DialogTitle>Add Site Invoice</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Invoice Header */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="partyId">Party ID</Label>
-              <Input
-                id="partyId"
-                value={partyId}
-                onChange={(e) => setPartyId(e.target.value)}
-                required
-              />
+              <Label htmlFor="date">Invoice Date</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "MMMM dd, yyyy") : <span>Select date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(date) => date && setDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="space-y-2">
               <Label htmlFor="partyName">Party Name</Label>
-              <Input
+              <Input 
                 id="partyName"
+                placeholder="Enter party name"
                 value={partyName}
                 onChange={(e) => setPartyName(e.target.value)}
                 required
               />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="material">Material</Label>
-            <Input
-              id="material"
-              value={material}
-              onChange={(e) => setMaterial(e.target.value)}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="partyId">Invoice Number</Label>
               <Input
-                type="number"
-                id="quantity"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rate">Rate</Label>
-              <Input
-                type="number"
-                id="rate"
-                value={rate}
-                onChange={(e) => setRate(Number(e.target.value))}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gstPercentage">GST Percentage</Label>
-              <Input
-                type="number"
-                id="gstPercentage"
-                value={gstPercentage}
-                onChange={(e) => setGstPercentage(Number(e.target.value))}
+                id="partyId"
+                placeholder="Enter invoice number"
+                value={partyId}
+                onChange={(e) => setPartyId(e.target.value)}
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Material Items</Label>
+          <Separator />
+
+          {/* Materials Section */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Materials</h3>
+
             {materialItems.map((item, index) => (
-              <div key={index} className="flex items-center space-x-2 mb-2">
-                <Input
-                  type="text"
-                  placeholder="Item Name"
-                  value={item.itemName}
-                  onChange={(e) => updateMaterialItem(index, 'itemName', e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  type="number"
-                  placeholder="Quantity"
-                  value={item.quantity}
-                  onChange={(e) => updateMaterialItem(index, 'quantity', Number(e.target.value))}
-                  className="w-24"
-                />
-                <Input
-                  type="number"
-                  placeholder="Rate"
-                  value={item.rate}
-                  onChange={(e) => updateMaterialItem(index, 'rate', Number(e.target.value))}
-                  className="w-24"
-                />
-                <Button type="button" variant="destructive" size="icon" onClick={() => removeMaterialItem(index)}>
-                  <Trash className="h-4 w-4" />
-                </Button>
+              <div key={index} className="p-4 bg-gray-50 rounded-lg space-y-4">
+                <h4 className="font-medium">Add New Material</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`materialName-${index}`}>Material Name</Label>
+                    <Input
+                      id={`materialName-${index}`}
+                      placeholder="e.g., TMT Steel Bars"
+                      value={item.material || ''}
+                      onChange={(e) => updateMaterialItem(index, 'material', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`quantity-${index}`}>Quantity</Label>
+                    <Input
+                      id={`quantity-${index}`}
+                      type="number"
+                      value={item.quantity || ''}
+                      onChange={(e) => updateMaterialItem(index, 'quantity', Number(e.target.value))}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor={`rate-${index}`}>Rate (₹)</Label>
+                    <Input
+                      id={`rate-${index}`}
+                      type="number"
+                      value={item.rate || ''}
+                      onChange={(e) => updateMaterialItem(index, 'rate', Number(e.target.value))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor={`gst-${index}`}>GST Percentage (%)</Label>
+                    <Select
+                      value={String(item.gstPercentage)}
+                      onValueChange={(value) => updateMaterialItem(index, 'gstPercentage', Number(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select GST %" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="0">0%</SelectItem>
+                        <SelectItem value="5">5%</SelectItem>
+                        <SelectItem value="12">12%</SelectItem>
+                        <SelectItem value="18">18%</SelectItem>
+                        <SelectItem value="28">28%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             ))}
-            <Button type="button" variant="secondary" size="sm" onClick={addMaterialItem}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Item
-            </Button>
-          </div>
 
-          <div className="space-y-2">
-            <Label>Bank Details</Label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label htmlFor="bankName">Bank Name</Label>
-                <Input
-                  type="text"
-                  id="bankName"
-                  value={bankDetails.bankName}
-                  onChange={(e) => updateBankDetails('bankName', e.target.value)}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={addMaterialItem}
+              className="flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Material
+            </Button>
+
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="space-y-2">
+                <Label>Net Taxable Amount (₹)</Label>
+                <Input 
+                  readOnly 
+                  value={netTaxableAmount.toFixed(2)}
                 />
               </div>
-              <div>
-                <Label htmlFor="accountNumber">Account Number</Label>
-                <Input
-                  type="text"
-                  id="accountNumber"
-                  value={bankDetails.accountNumber}
-                  onChange={(e) => updateBankDetails('accountNumber', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label htmlFor="ifscCode">IFSC Code</Label>
-                <Input
-                  type="text"
-                  id="ifscCode"
-                  value={bankDetails.ifscCode}
-                  onChange={(e) => updateBankDetails('ifscCode', e.target.value)}
+              <div className="space-y-2">
+                <Label>Grand Net Total (₹)</Label>
+                <Input 
+                  readOnly 
+                  value={grandTotal.toFixed(2)}
+                  className="font-bold text-blue-600"
                 />
               </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="bill">Upload Bill</Label>
-            <Input
-              type="file"
-              id="bill"
-              accept="image/*,application/pdf"
-              onChange={handleFileSelect}
-            />
-            {selectedFile && (
-              <p className="text-sm text-muted-foreground">
-                Selected File: {selectedFile.name}
-              </p>
-            )}
+          <Separator />
+
+          {/* Payment Information */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Payment made by</h3>
+            <RadioGroup 
+              value={approverType} 
+              onValueChange={(v) => setApproverType(v as 'ho' | 'supervisor')}
+              className="flex space-x-8"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ho" id="ho" />
+                <Label htmlFor="ho">Head Office</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="supervisor" id="supervisor" />
+                <Label htmlFor="supervisor">Supervisor</Label>
+              </div>
+            </RadioGroup>
           </div>
+          
+          <Separator />
+
+          {/* Bank Details */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Bank Details</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="accountNumber">Account Number (max 16 digits)</Label>
+                <Input
+                  id="accountNumber"
+                  placeholder="Enter Account Number (max 16 digits)"
+                  value={bankDetails.accountNumber}
+                  onChange={(e) => setBankDetails({...bankDetails, accountNumber: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ifscCode">IFSC Code</Label>
+                <Input
+                  id="ifscCode"
+                  placeholder="Enter IFSC Code (11 characters)"
+                  value={bankDetails.ifscCode}
+                  onChange={(e) => setBankDetails({...bankDetails, ifscCode: e.target.value})}
+                />
+                <p className="text-xs text-muted-foreground">Must be 11 characters and 5th digit must be '0'</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bankName">Bank Name & Branch</Label>
+                <Input
+                  id="bankName"
+                  placeholder="Bank Name (auto-filled from IFSC)"
+                  value={bankDetails.bankName}
+                  onChange={(e) => setBankDetails({...bankDetails, bankName: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email (Optional)</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Email Address"
+                  value={bankDetails.email || ''}
+                  onChange={(e) => setBankDetails({...bankDetails, email: e.target.value})}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mobile">Mobile Number (Optional)</Label>
+              <Input
+                id="mobile"
+                placeholder="Mobile Number"
+                value={bankDetails.mobile || ''}
+                onChange={(e) => setBankDetails({...bankDetails, mobile: e.target.value})}
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Upload and Payment Status */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="uploadBill">Upload Bill</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer" 
+                onClick={() => document.getElementById('fileInput')?.click()}>
+                <div className="flex justify-center space-x-2">
+                  <Upload className="h-5 w-5 text-gray-400" />
+                  <Camera className="h-5 w-5 text-gray-400" />
+                </div>
+                <p className="mt-2 text-sm text-gray-500">Click to upload or take a photo</p>
+                <input
+                  id="fileInput"
+                  type="file"
+                  className="hidden"
+                  accept="image/*,application/pdf"
+                  onChange={handleFileSelect}
+                />
+                {selectedFile && (
+                  <p className="mt-2 text-xs text-green-600">
+                    Selected: {selectedFile.name}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Payment Status</Label>
+              <Input 
+                value="Pending" 
+                readOnly 
+                className="bg-gray-50"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="secondary" disabled={isSubmitting}>
+              <Button type="button" variant="outline" disabled={isSubmitting}>
                 Cancel
               </Button>
             </DialogClose>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Submitting..." : "Submit"}
+              {isSubmitting ? "Saving..." : "Save Invoice"}
             </Button>
           </DialogFooter>
         </form>
