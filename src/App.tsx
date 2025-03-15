@@ -59,6 +59,9 @@ const ProtectedRoute = ({
   const { user, loading } = useAuth();
   const location = useLocation();
   
+  console.log("ProtectedRoute - checking access for path:", location.pathname);
+  console.log("ProtectedRoute - user:", user, "loading:", loading);
+  
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -68,13 +71,17 @@ const ProtectedRoute = ({
   }
   
   if (!user) {
+    console.log("User not authenticated, redirecting to login");
     return <Navigate to="/" state={{ from: location }} replace />;
   }
   
   if (!allowedRoles.includes(user.role)) {
+    console.log("User role not allowed:", user.role);
+    console.log("Allowed roles:", allowedRoles);
     return <Navigate to="/unauthorized" replace />;
   }
   
+  console.log("Access granted to:", location.pathname);
   return <>{children}</>;
 };
 

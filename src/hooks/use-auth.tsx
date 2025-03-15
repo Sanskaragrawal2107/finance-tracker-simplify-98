@@ -49,13 +49,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const checkSession = async () => {
       try {
+        console.log("Checking for existing session...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session) {
+          console.log("Session found, user ID:", session.user.id);
           const profile = await fetchUserProfile(session.user.id);
           if (profile) {
+            console.log("Setting user with profile:", profile);
             setUser(profile);
+            
+            // Don't automatically navigate here, let the protected routes handle it
+          } else {
+            console.log("No profile found for user");
           }
+        } else {
+          console.log("No active session found");
         }
       } catch (error) {
         console.error('Session check error:', error);
@@ -69,6 +78,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log("Auth state change event:", event);
+        
         setLoading(true);
         
         if (event === 'SIGNED_IN' && session) {
@@ -80,16 +91,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             
             // Redirect based on role
             if (profile.role === UserRole.ADMIN) {
-              navigate('/admin');
+              console.log("Redirecting to /admin");
+              navigate('/admin', { replace: true });
             } else if (profile.role === UserRole.SUPERVISOR) {
-              navigate('/expenses');
+              console.log("Redirecting to /expenses");
+              navigate('/expenses', { replace: true });
             } else {
-              navigate('/dashboard');
+              console.log("Redirecting to /dashboard");
+              navigate('/dashboard', { replace: true });
             }
+          } else {
+            console.log("No profile found after sign in");
+            // Handle the case where user is authenticated but has no profile
+            setError("User profile not found. Please contact support.");
           }
         } else if (event === 'SIGNED_OUT') {
+          console.log("User signed out");
           setUser(null);
           navigate('/');
+        } else if (event === 'USER_UPDATED') {
+          console.log("User updated");
+          if (session) {
+            const profile = await fetchUserProfile(session.user.id);
+            if (profile) {
+              setUser(profile);
+            }
+          }
         }
         
         setLoading(false);
@@ -97,6 +124,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     return () => {
+      console.log("Cleaning up auth listener");
       subscription.unsubscribe();
     };
   }, [navigate]);
@@ -137,6 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           console.error("No user profile found for:", data.user.id);
+          setError("User profile not found. Please contact support.");
           toast.error("User profile not found");
         }
       }
@@ -154,6 +183,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       setError(null);
       
+      console.log("Signing up new user:", email, "with role:", role);
+      
       // First, create the user in auth.users
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -165,6 +196,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.user) {
+        console.log("Auth user created successfully:", data.user.id);
+        
         // Then, create a record in public.users with the same ID
         const { error: profileError } = await (supabase
           .from('users') as any)
@@ -178,11 +211,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (profileError) {
           console.error('Error creating user profile:', profileError);
           // Try to delete the auth user if profile creation fails
-          await supabase.auth.admin.deleteUser(data.user.id);
-          throw profileError;
+          // Note: this may not be possible with client credentials
+          setError("Error creating user profile. Please contact support.");
+          toast.error("Error creating user profile");
+          return;
         }
 
+        console.log("User profile created successfully");
         toast.success('Registration successful! Please check your email for verification.');
+        
+        // Don't auto-login after signup, just show success message
+        setIsRegistering(false);
       }
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -196,12 +235,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     try {
       setLoading(true);
+      console.log("Attempting to log out");
+      
       const { error } = await supabase.auth.signOut();
       
       if (error) {
         throw error;
       }
       
+      console.log("Logout successful");
       setUser(null);
       navigate('/');
     } catch (error: any) {
@@ -210,6 +252,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Function to update the isRegistering state in the LoginForm
+  // This is needed because we're setting it to false after successful signup
+  const setIsRegistering = (value: boolean) => {
+    // This function would need to be implemented if you want to control
+    // the isRegistering state from outside the LoginForm component
+    // For now, we'll just handle this with a toast message
   };
 
   const value = {

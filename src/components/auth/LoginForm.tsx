@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { toast } from 'sonner';
 
 interface LoginFormProps {
   className?: string;
@@ -20,10 +21,20 @@ const LoginForm: React.FC<LoginFormProps> = ({ className }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isRegistering) {
-      await signUp(email, password, name);
-    } else {
-      await login(email, password);
+    try {
+      if (isRegistering) {
+        if (!name.trim()) {
+          toast.error('Please enter your name');
+          return;
+        }
+        console.log('Attempting signup with:', { email, name });
+        await signUp(email, password, name);
+      } else {
+        console.log('Attempting login with:', { email });
+        await login(email, password);
+      }
+    } catch (err) {
+      console.error('Form submission error:', err);
     }
   };
   

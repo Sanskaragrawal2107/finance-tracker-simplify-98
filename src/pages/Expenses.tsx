@@ -1,1260 +1,483 @@
-
 import React, { useState, useEffect } from 'react';
-import { format, subDays } from 'date-fns';
-import {
-  Expense,
-  Site,
-  Advance,
-  FundsReceived,
-  Invoice,
-  BalanceSummary,
-  ExpenseCategory,
-  AdvancePurpose,
-  UserRole,
-  ApprovalStatus,
-  RecipientType,
-  PaymentStatus
-} from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+import { useAuth } from '@/hooks/use-auth';
+import { UserRole } from '@/lib/types';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
-import { useToast } from '@/components/ui/use-toast';
-import { useUser } from '@/hooks/use-user';
-import { useNavigate } from 'react-router-dom';
-import StatCard from '@/components/dashboard/StatCard';
-import {
-  Building2,
-  Calendar,
-  Coins,
-  FileText,
-  LayoutDashboard,
-  ListChecks,
-  LucideIcon,
-  ScrollText,
-  ShoppingBag,
-  Truck,
-  User,
-  Wallet,
-} from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from '@/components/ui/select';
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
-import SiteForm from '@/components/sites/SiteForm';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { formatCurrency } from '@/lib/utils';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Pencil, Trash2, Plus, FileText, DollarSign, Calendar } from 'lucide-react';
 
-interface DashboardCardProps {
+// Define expense status types
+type ExpenseStatus = 'pending' | 'approved' | 'rejected' | 'paid';
+
+// Define expense interface
+interface Expense {
+  id: string;
   title: string;
-  value: string | number;
-  icon: LucideIcon;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-    label?: string;
-  };
-  className?: string;
-  isLoading: boolean;
+  amount: number;
+  category: string;
+  description: string;
+  status: ExpenseStatus;
+  created_at: string;
+  user_id: string;
+  user_name?: string;
 }
 
-const DashboardCard: React.FC<DashboardCardProps> = ({
-  title,
-  value,
-  icon: Icon,
-  trend,
-  className,
-  isLoading,
-}) => {
-  return (
-    <Card className={className}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {isLoading ? (
-          <Skeleton className="h-4 w-10" />
-        ) : (
-          <Icon className="h-4 w-4 text-muted-foreground" />
-        )}
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-8 w-32" />
-        ) : (
-          <div className="text-2xl font-bold">
-            {typeof value === 'number' ? value.toLocaleString() : value}
-          </div>
-        )}
-        {trend && (
-          <p
-            className={`text-sm font-medium ${trend.isPositive ? 'text-green-500' : 'text-red-500'
-              }`}
-          >
-            {trend.isPositive ? '+' : '-'}
-            {trend.value}% {trend.label}
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
-const Expenses = () => {
-  const [sites, setSites] = useState<Site[]>([]);
+const Expenses: React.FC = () => {
+  const { user } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [advances, setAdvances] = useState<Advance[]>([]);
-  const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>([]);
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [supervisorInvoices, setSupervisorInvoices] = useState<Invoice[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
-  const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
-  const [isMobile] = useIsMobile();
-  const { toast } = useToast();
-  const { user } = useUser();
-  const navigate = useNavigate();
-
+  const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  
+  // Form state
+  const [title, setTitle] = useState('');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('');
+  const [description, setDescription] = useState('');
+  
+  // Filter state
+  const [statusFilter, setStatusFilter] = useState<ExpenseStatus | 'all'>('all');
+  
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-    }
-  }, [user, navigate]);
-
-  useEffect(() => {
-    const fetchAllData = async () => {
-      setIsLoading(true);
-      try {
-        const { data: sitesData, error: sitesError } = await supabase
-          .from('sites')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (sitesError) {
-          console.error('Error fetching sites:', sitesError);
-          toast({
-            title: "Error",
-            description: "Failed to load sites. Please try again.",
-            variant: "destructive",
-          })
-          return;
-        }
-
-        const { data: expensesData, error: expensesError } = await supabase
-          .from('expenses')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (expensesError) {
-          console.error('Error fetching expenses:', expensesError);
-          toast({
-            title: "Error",
-            description: "Failed to load expenses. Please try again.",
-            variant: "destructive",
-          })
-          return;
-        }
-
-        const { data: advancesData, error: advancesError } = await supabase
-          .from('advances')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (advancesError) {
-          console.error('Error fetching advances:', advancesError);
-          toast({
-            title: "Error",
-            description: "Failed to load advances. Please try again.",
-            variant: "destructive",
-          })
-          return;
-        }
-
-        const { data: fundsData, error: fundsError } = await supabase
-          .from('funds_received')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (fundsError) {
-          console.error('Error fetching funds:', fundsError);
-          toast({
-            title: "Error",
-            description: "Failed to load funds received. Please try again.",
-            variant: "destructive",
-          })
-          return;
-        }
-
-        // Fetch invoices from Supabase
-        const { data: invoicesData, error: invoicesError } = await supabase
-          .from('site_invoices')
-          .select('*')
-          .order('date', { ascending: false });
-
-        if (invoicesError) {
-          console.error('Error fetching invoices:', invoicesError);
-          toast({
-            title: "Error",
-            description: "Failed to load invoices. Please try again.",
-            variant: "destructive",
-          })
-          return;
-        }
-
-        // Map invoices data
-        const mappedInvoices: Invoice[] = invoicesData
-          ? invoicesData.map((invoice) => {
-            // Parse material_items and bank_details from JSON strings
-            let parsedMaterialItems: any[] = [];
-            try {
-              parsedMaterialItems = JSON.parse(invoice.material_items as string) as any[];
-            } catch (e) {
-              console.error('Error parsing material items:', e);
-              parsedMaterialItems = [];
-            }
-
-            let parsedBankDetails: any = {
-              accountNumber: '',
-              bankName: '',
-              ifscCode: '',
-            };
-            try {
-              parsedBankDetails = JSON.parse(invoice.bank_details as string) as any;
-            } catch (e) {
-              console.error('Error parsing bank details:', e);
-            }
-
-            return {
-              id: invoice.id,
-              date: new Date(invoice.date),
-              partyId: invoice.party_id,
-              partyName: invoice.party_name,
-              material: invoice.material,
-              quantity: Number(invoice.quantity),
-              rate: Number(invoice.rate),
-              gstPercentage: Number(invoice.gst_percentage),
-              grossAmount: Number(invoice.gross_amount),
-              netAmount: Number(invoice.net_amount),
-              materialItems: parsedMaterialItems,
-              bankDetails: parsedBankDetails,
-              billUrl: invoice.bill_url,
-              paymentStatus: invoice.payment_status as PaymentStatus,
-              createdBy: invoice.created_by || '',
-              createdAt: new Date(invoice.created_at),
-              approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
-              siteId: invoice.site_id || '',
-              // Add required fields to match the Invoice type
-              vendorName: invoice.party_name,
-              invoiceNumber: invoice.id,
-              amount: Number(invoice.net_amount)
-            };
-          })
-          : [];
-
-        // Separate invoices based on approver_type
-        const siteInvoices = mappedInvoices.filter(
-          (invoice) => invoice.approverType !== 'supervisor'
-        );
-        const supervisorInvoices = mappedInvoices.filter(
-          (invoice) => invoice.approverType === 'supervisor'
-        );
-
-        // Convert date strings to Date objects and map to correct Type interfaces
-        setSites(
-          sitesData
-            ? sitesData.map((site) => ({
-              id: site.id,
-              name: site.name,
-              jobName: site.job_name || '',
-              posNo: site.pos_no || '',
-              location: site.location,
-              startDate: new Date(site.start_date || Date.now()),
-              completionDate: site.completion_date
-                ? new Date(site.completion_date)
-                : undefined,
-              supervisorId: site.supervisor_id || '',
-              createdAt: new Date(site.created_at || Date.now()),
-              isCompleted: site.is_completed || false,
-              funds: site.funds || 0,
-              totalFunds: site.total_funds || 0
-            }))
-            : []
-        );
-
-        setExpenses(
-          expensesData
-            ? expensesData.map((expense) => ({
-              id: expense.id,
-              date: new Date(expense.date),
-              description: expense.description || '',
-              category: expense.category as ExpenseCategory,
-              amount: Number(expense.amount),
-              status: ApprovalStatus.APPROVED, // Default value since it's required
-              createdBy: expense.created_by || '',
-              createdAt: new Date(expense.created_at || Date.now()),
-              siteId: expense.site_id || '',
-              supervisorId: '' // Default value since it's required
-            }))
-            : []
-        );
-
-        setAdvances(
-          advancesData
-            ? advancesData.map((advance) => ({
-              id: advance.id,
-              date: new Date(advance.date),
-              recipientId: '',
-              recipientName: advance.recipient_name,
-              recipientType: advance.recipient_type as RecipientType,
-              purpose: advance.purpose as AdvancePurpose,
-              amount: Number(advance.amount),
-              remarks: advance.remarks || '',
-              status: advance.status as ApprovalStatus,
-              createdBy: advance.created_by || '',
-              createdAt: new Date(advance.created_at),
-              siteId: advance.site_id || ''
-            }))
-            : []
-        );
-
-        setFundsReceived(
-          fundsData
-            ? fundsData.map((fund) => ({
-              id: fund.id,
-              date: new Date(fund.date),
-              amount: Number(fund.amount),
-              siteId: fund.site_id,
-              createdAt: new Date(fund.created_at),
-              reference: fund.reference || '',
-              method: fund.method || ''
-            }))
-            : []
-        );
-
-        setInvoices(siteInvoices);
-        setSupervisorInvoices(supervisorInvoices);
-      } catch (error) {
-        console.error('Unexpected error:', error);
-        toast({
-          title: "Error",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAllData();
-  }, [toast]);
-
-  const handleAddSite = async (newSite: Omit<Site, 'id' | 'createdAt'>) => {
-    setIsLoading(true);
+    fetchExpenses();
+  }, [user, statusFilter]);
+  
+  const fetchExpenses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('sites')
-        .insert([
-          {
-            name: newSite.name,
-            job_name: newSite.jobName,
-            pos_no: newSite.posNo,
-            location: newSite.location,
-            start_date: newSite.startDate.toISOString(),
-            completion_date: newSite.completionDate?.toISOString() || null,
-            supervisor_id: newSite.supervisorId,
-            is_completed: newSite.isCompleted || false,
-            funds: newSite.funds || 0,
-            total_funds: newSite.totalFunds || 0,
-            created_by: user?.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding site:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add site. Please try again.",
-          variant: "destructive",
-        })
-        return;
-      }
-
-      const addedSite: Site = {
-        id: data.id,
-        name: data.name,
-        jobName: data.job_name || '',
-        posNo: data.pos_no || '',
-        location: data.location,
-        startDate: new Date(data.start_date || Date.now()),
-        completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
-        supervisorId: data.supervisor_id || '',
-        createdAt: new Date(data.created_at || Date.now()),
-        isCompleted: data.is_completed || false,
-        funds: data.funds || 0,
-        totalFunds: data.total_funds || 0
-      };
-
-      setSites([...sites, addedSite]);
-      setIsSiteFormOpen(false);
-      toast({
-        title: "Success",
-        description: "Site added successfully.",
-      })
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSiteUpdate = async (siteId: string, key: string, value: any) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('sites')
-        .update({ [key]: value })
-        .eq('id', siteId);
-
-      if (error) {
-        console.error(`Error updating site ${key}:`, error);
-        toast({
-          title: "Error",
-          description: `Failed to update site ${key}. Please try again.`,
-          variant: "destructive",
-        })
-        return;
-      }
-
-      setSites(
-        sites.map((site) =>
-          site.id === siteId ? { ...site, [key]: value } : site
-        )
-      );
-      toast({
-        title: "Success",
-        description: `Site ${key} updated successfully.`,
-      })
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleCompleteSite = async (siteId: string, completionDate: Date) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('sites')
-        .update({ is_completed: true, completion_date: completionDate.toISOString() })
-        .eq('id', siteId);
-
-      if (error) {
-        console.error('Error completing site:', error);
-        toast({
-          title: "Error",
-          description: "Failed to complete site. Please try again.",
-          variant: "destructive",
-        })
-        return;
-      }
-
-      setSites(
-        sites.map((site) =>
-          site.id === siteId ? { ...site, isCompleted: true, completionDate } : site
-        )
-      );
-      toast({
-        title: "Success",
-        description: "Site completed successfully.",
-      })
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddExpense = async (expense: Partial<Expense>) => {
-    setIsLoading(true);
-    try {
-      // Ensure all required fields are provided
-      if (!expense.amount || !expense.category) {
-        toast({
-          title: "Error",
-          description: "Amount and category are required fields.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      let query = supabase
         .from('expenses')
-        .insert([
-          {
-            date: expense.date?.toISOString() || new Date().toISOString(),
-            description: expense.description || '',
-            category: expense.category,
-            amount: expense.amount,
-            site_id: expense.siteId,
-            created_by: user?.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding expense:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add expense. Please try again.",
-          variant: "destructive",
-        })
-        return;
+        .select(`
+          *,
+          users (
+            name
+          )
+        `)
+        .order('created_at', { ascending: false });
+      
+      // Apply filters
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter);
       }
-
-      const addedExpense: Expense = {
-        id: data.id,
-        date: new Date(data.date),
-        description: data.description || '',
-        category: data.category as ExpenseCategory,
-        amount: Number(data.amount),
-        status: ApprovalStatus.APPROVED,
-        createdBy: data.created_by || '',
-        createdAt: new Date(data.created_at || Date.now()),
-        siteId: data.site_id || '',
-        supervisorId: ''
-      };
-
-      setExpenses([...expenses, addedExpense]);
-      toast({
-        title: "Success",
-        description: "Expense added successfully.",
-      })
+      
+      // If not admin, only show user's own expenses
+      if (user?.role !== UserRole.ADMIN) {
+        query = query.eq('user_id', user?.id);
+      }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      if (data) {
+        const formattedExpenses = data.map(expense => ({
+          ...expense,
+          user_name: expense.users?.name || 'Unknown User'
+        }));
+        setExpenses(formattedExpenses);
+      }
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
+      console.error('Error fetching expenses:', error);
+      toast.error('Failed to load expenses');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
-  const handleAddAdvance = async (advance: Partial<Advance>) => {
-    setIsLoading(true);
+  
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      // Ensure all required fields are provided
-      if (!advance.amount || !advance.recipientName || !advance.recipientType || !advance.purpose) {
-        toast({
-          title: "Error",
-          description: "All required fields must be provided.",
-          variant: "destructive",
-        });
+      if (!title || !amount || !category) {
+        toast.error('Please fill in all required fields');
         return;
       }
-
-      const { data, error } = await supabase
-        .from('advances')
-        .insert([
-          {
-            date: advance.date?.toISOString() || new Date().toISOString(),
-            recipient_name: advance.recipientName,
-            recipient_type: advance.recipientType,
-            purpose: advance.purpose,
-            amount: advance.amount,
-            remarks: advance.remarks || '',
-            status: advance.status || ApprovalStatus.PENDING,
-            site_id: advance.siteId,
-            created_by: user?.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding advance:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add advance. Please try again.",
-          variant: "destructive",
-        })
+      
+      const numericAmount = parseFloat(amount);
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        toast.error('Please enter a valid amount');
         return;
       }
-
-      const addedAdvance: Advance = {
-        id: data.id,
-        date: new Date(data.date),
-        recipientId: '',
-        recipientName: data.recipient_name,
-        recipientType: data.recipient_type as RecipientType,
-        purpose: data.purpose as AdvancePurpose,
-        amount: Number(data.amount),
-        remarks: data.remarks || '',
-        status: data.status as ApprovalStatus,
-        createdBy: data.created_by || '',
-        createdAt: new Date(data.created_at),
-        siteId: data.site_id || ''
+      
+      const expenseData = {
+        title,
+        amount: numericAmount,
+        category,
+        description,
+        status: 'pending' as ExpenseStatus,
+        user_id: user?.id
       };
-
-      setAdvances([...advances, addedAdvance]);
-      toast({
-        title: "Success",
-        description: "Advance added successfully.",
-      })
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddFunds = async (funds: Partial<FundsReceived>) => {
-    setIsLoading(true);
-    try {
-      // Ensure all required fields are provided
-      if (!funds.amount || !funds.siteId) {
-        toast({
-          title: "Error",
-          description: "Amount and site ID are required fields.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('funds_received')
-        .insert([
-          {
-            date: funds.date?.toISOString() || new Date().toISOString(),
-            amount: funds.amount,
-            site_id: funds.siteId,
-            reference: funds.reference || null,
-            method: funds.method || null,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding funds:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add funds. Please try again.",
-          variant: "destructive",
-        })
-        return;
-      }
-
-      const addedFunds: FundsReceived = {
-        id: data.id,
-        date: new Date(data.date),
-        amount: Number(data.amount),
-        siteId: data.site_id,
-        createdAt: new Date(data.created_at),
-        reference: data.reference || '',
-        method: data.method || ''
-      };
-
-      setFundsReceived([...fundsReceived, addedFunds]);
-      toast({
-        title: "Success",
-        description: "Funds added successfully.",
-      })
-    } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    setIsLoading(true);
-    try {
-      // Stringify material_items and bank_details
-      const materialItemsString = JSON.stringify(invoice.materialItems || []);
-      const bankDetailsString = JSON.stringify(invoice.bankDetails || {});
-
-      // Ensure required fields
-      if (!invoice.netAmount || !invoice.material || !invoice.partyName) {
-        toast({
-          title: "Error",
-          description: "All required fields must be provided.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('site_invoices')
-        .insert([
-          {
-            date: invoice.date.toISOString(),
-            party_id: invoice.partyId,
-            party_name: invoice.partyName,
-            material: invoice.material,
-            quantity: invoice.quantity,
-            rate: invoice.rate,
-            gst_percentage: invoice.gstPercentage,
-            gross_amount: invoice.grossAmount,
-            net_amount: invoice.netAmount,
-            material_items: materialItemsString,
-            bank_details: bankDetailsString,
-            bill_url: invoice.billUrl || null,
-            payment_status: invoice.paymentStatus || PaymentStatus.PENDING,
-            approver_type: invoice.approverType || 'ho',
-            site_id: invoice.siteId || null,
-            created_by: user?.id,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding invoice:', error);
-        toast({
-          title: "Error",
-          description: "Failed to add invoice. Please try again.",
-          variant: "destructive",
-        })
-        return;
-      }
-
-      // Parse the material_items and bank_details back to objects
-      let parsedMaterialItems: any[] = [];
-      try {
-        parsedMaterialItems = JSON.parse(data.material_items as string) as any[];
-      } catch (e) {
-        console.error('Error parsing material items:', e);
-      }
-
-      let parsedBankDetails: any = {};
-      try {
-        parsedBankDetails = JSON.parse(data.bank_details as string) as any;
-      } catch (e) {
-        console.error('Error parsing bank details:', e);
-      }
-
-      const addedInvoice: Invoice = {
-        id: data.id,
-        date: new Date(data.date),
-        partyId: data.party_id,
-        partyName: data.party_name,
-        material: data.material,
-        quantity: Number(data.quantity),
-        rate: Number(data.rate),
-        gstPercentage: Number(data.gst_percentage),
-        grossAmount: Number(data.gross_amount),
-        netAmount: Number(data.net_amount),
-        materialItems: parsedMaterialItems,
-        bankDetails: parsedBankDetails,
-        billUrl: data.bill_url,
-        paymentStatus: data.payment_status as PaymentStatus,
-        createdBy: data.created_by || '',
-        createdAt: new Date(data.created_at),
-        approverType: data.approver_type as "ho" | "supervisor" || "ho",
-        siteId: data.site_id || '',
-        // Additional fields required by Invoice type
-        vendorName: data.party_name,
-        invoiceNumber: data.id,
-        amount: Number(data.net_amount)
-      };
-
-      if (addedInvoice.approverType === 'supervisor') {
-        setSupervisorInvoices([...supervisorInvoices, addedInvoice]);
+      
+      if (editingExpense) {
+        // Update existing expense
+        const { error } = await supabase
+          .from('expenses')
+          .update(expenseData)
+          .eq('id', editingExpense.id);
+          
+        if (error) throw error;
+        toast.success('Expense updated successfully');
       } else {
-        setInvoices([...invoices, addedInvoice]);
+        // Create new expense
+        const { error } = await supabase
+          .from('expenses')
+          .insert(expenseData);
+          
+        if (error) throw error;
+        toast.success('Expense submitted successfully');
       }
-      toast({
-        title: "Success",
-        description: "Invoice added successfully.",
-      })
+      
+      // Reset form and close dialog
+      resetForm();
+      setOpenDialog(false);
+      fetchExpenses();
+      
     } catch (error) {
-      console.error('Unexpected error:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
+      console.error('Error submitting expense:', error);
+      toast.error('Failed to submit expense');
     }
   };
-
-  const getSiteById = (siteId: string) => {
-    return sites.find((site) => site.id === siteId);
+  
+  const handleEdit = (expense: Expense) => {
+    setEditingExpense(expense);
+    setTitle(expense.title);
+    setAmount(expense.amount.toString());
+    setCategory(expense.category);
+    setDescription(expense.description || '');
+    setOpenDialog(true);
   };
-
-  const calculateSiteBalanceSummary = (
-    siteId: string,
-    siteExpenses: Expense[],
-    siteAdvances: Advance[],
-    siteFunds: FundsReceived[],
-    supervisorInvoices: Invoice[]
-  ): BalanceSummary => {
-    // Filter advances to separate regular advances from debits to worker
-    const DEBIT_ADVANCE_PURPOSES = [
-      AdvancePurpose.SAFETY_SHOES,
-      AdvancePurpose.TOOLS,
-      AdvancePurpose.OTHER
-    ];
-    
-    const regularAdvances = siteAdvances.filter(advance => 
-      !DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
-    );
-    
-    const debitAdvances = siteAdvances.filter(advance => 
-      DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
-    );
-
-    const totalFunds = siteFunds.reduce((sum, fund) => sum + fund.amount, 0);
-    const totalExpenses = siteExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-    const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-    const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
-    
-    // Calculate pending invoices (those with pending status)
-    const pendingInvoicesTotal = supervisorInvoices
-      .filter(invoice => invoice.paymentStatus === 'pending')
-      .reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
-
-    // Updated balance calculation according to the requirement:
-    // current balance = Funds Received from HO - Total Expenses - Total Regular Advances - Invoices paid by supervisor
-    // (note: debits to worker are tracked separately but not subtracted from balance)
-    const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
-
-    console.log('Balance calculation data:', {
-      totalFunds,
-      totalExpenses,
-      totalRegularAdvances,
-      totalDebitToWorker,
-      supervisorInvoiceTotal,
-      pendingInvoicesTotal,
-      totalBalance
+  
+  const handleDelete = async (id: string) => {
+    if (confirm('Are you sure you want to delete this expense?')) {
+      try {
+        const { error } = await supabase
+          .from('expenses')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+        
+        toast.success('Expense deleted successfully');
+        fetchExpenses();
+      } catch (error) {
+        console.error('Error deleting expense:', error);
+        toast.error('Failed to delete expense');
+      }
+    }
+  };
+  
+  const handleStatusChange = async (id: string, status: ExpenseStatus) => {
+    try {
+      const { error } = await supabase
+        .from('expenses')
+        .update({ status })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast.success(`Expense marked as ${status}`);
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error updating expense status:', error);
+      toast.error('Failed to update expense status');
+    }
+  };
+  
+  const resetForm = () => {
+    setTitle('');
+    setAmount('');
+    setCategory('');
+    setDescription('');
+    setEditingExpense(null);
+  };
+  
+  const getStatusBadge = (status: ExpenseStatus) => {
+    switch (status) {
+      case 'pending':
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>;
+      case 'approved':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approved</Badge>;
+      case 'rejected':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejected</Badge>;
+      case 'paid':
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Paid</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+  
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
-
-    return {
-      fundsReceived: totalFunds,
-      totalExpenditure: totalExpenses,
-      totalAdvances: totalRegularAdvances,
-      debitsToWorker: totalDebitToWorker,
-      invoicesPaid: supervisorInvoiceTotal,
-      pendingInvoices: pendingInvoicesTotal,
-      totalBalance
-    };
   };
-
-  const selectedSite = selectedSiteId ? getSiteById(selectedSiteId) : null;
-
-  const siteExpenses = selectedSiteId
-    ? expenses.filter((expense) => expense.siteId === selectedSiteId)
-    : [];
-  const siteAdvances = selectedSiteId
-    ? advances.filter((advance) => advance.siteId === selectedSiteId)
-    : [];
-  const siteFunds = selectedSiteId
-    ? fundsReceived.filter((fund) => fund.siteId === selectedSiteId)
-    : [];
-  const siteInvoices = selectedSiteId
-    ? invoices.filter((invoice) => invoice.siteId === selectedSiteId)
-    : [];
-  const siteSupervisorInvoices = selectedSiteId
-    ? supervisorInvoices.filter((invoice) => invoice.siteId === selectedSiteId)
-    : [];
-
-  const balanceSummary = selectedSiteId
-    ? calculateSiteBalanceSummary(
-      selectedSiteId,
-      siteExpenses,
-      siteAdvances,
-      siteFunds,
-      siteSupervisorInvoices
-    )
-    : {
-      fundsReceived: 0,
-      totalExpenditure: 0,
-      totalAdvances: 0,
-      debitsToWorker: 0,
-      invoicesPaid: 0,
-      pendingInvoices: 0,
-      totalBalance: 0,
-    };
-
+  
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
+  };
+  
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Sites & Expenses</h1>
-        {user?.role === UserRole.ADMIN && (
-          <Button onClick={() => setIsSiteFormOpen(true)} className="flex items-center">
-            <Plus className="mr-2 h-4 w-4" />
-            Add New Site
-          </Button>
-        )}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Expense Management</h1>
+        <Button onClick={() => { resetForm(); setOpenDialog(true); }}>
+          <Plus className="mr-2 h-4 w-4" /> Add Expense
+        </Button>
       </div>
-
-      <Drawer open={isSiteFormOpen} onOpenChange={setIsSiteFormOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Create New Site</DrawerTitle>
-            <DrawerDescription>
-              Fill in the details to create a new construction site.
-            </DrawerDescription>
-          </DrawerHeader>
-          <SiteForm 
-            onSubmit={handleAddSite} 
-            onClose={() => setIsSiteFormOpen(false)} 
-            isOpen={isSiteFormOpen}
-          />
-          <DrawerFooter>
-            <Button variant="outline" onClick={() => setIsSiteFormOpen(false)}>Cancel</Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-
-      <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          title="Total Sites"
-          value={sites.length}
-          icon={Building2}
-          isLoading={isLoading}
-        />
-        <StatCard
-          title="Total Funds Allocated"
-          value={
-            sites.reduce((sum, site) => sum + (site.totalFunds || 0), 0)
-          }
-          icon={Coins}
-          isLoading={isLoading}
-          valuePrefix="₹"
-        />
-        <StatCard
-          title="Total Expenses"
-          value={expenses.reduce((sum, expense) => sum + expense.amount, 0)}
-          icon={Wallet}
-          isLoading={isLoading}
-          valuePrefix="₹"
-        />
-      </div>
-
-      <div className="mb-6">
-        <Label htmlFor="site">Select Site</Label>
-        <Select onValueChange={setSelectedSiteId}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a site" />
-          </SelectTrigger>
-          <SelectContent>
-            {sites.map((site) => (
-              <SelectItem key={site.id} value={site.id}>
-                {site.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {selectedSite ? (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-semibold">Site Details: {selectedSite.name}</h2>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">Delete</Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete your site
-                    and remove your data from our servers.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction>Continue</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Expenses</CardTitle>
+          <CardDescription>
+            View and manage all expenses
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <Label htmlFor="status-filter">Filter by Status</Label>
+            <Select 
+              value={statusFilter} 
+              onValueChange={(value) => setStatusFilter(value as ExpenseStatus | 'all')}
+            >
+              <SelectTrigger id="status-filter" className="w-[180px]">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle>Site Information</CardTitle>
-                <CardDescription>Details about the selected site.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div>
-                    <Label>Name</Label>
-                    <Input
-                      type="text"
-                      value={selectedSite.name}
-                      disabled={isLoading}
-                      onChange={(e) => handleSiteUpdate(selectedSite.id, 'name', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Job Name</Label>
-                    <Input
-                      type="text"
-                      value={selectedSite.jobName || ''}
-                      disabled={isLoading}
-                      onChange={(e) => handleSiteUpdate(selectedSite.id, 'job_name', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Location</Label>
-                    <Input
-                      type="text"
-                      value={selectedSite.location}
-                      disabled={isLoading}
-                      onChange={(e) => handleSiteUpdate(selectedSite.id, 'location', e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label>Start Date</Label>
-                    <Input
-                      type="date"
-                      value={format(selectedSite.startDate, 'yyyy-MM-dd')}
-                      disabled={isLoading}
-                      onChange={(e) =>
-                        handleSiteUpdate(
-                          selectedSite.id,
-                          'start_date',
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>Completion Date</Label>
-                    <Input
-                      type="date"
-                      value={
-                        selectedSite.completionDate
-                          ? format(selectedSite.completionDate, 'yyyy-MM-dd')
-                          : ''
-                      }
-                      disabled={isLoading}
-                      onChange={(e) =>
-                        handleSiteUpdate(
-                          selectedSite.id,
-                          'completion_date',
-                          e.target.value
-                        )
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>Total Funds</Label>
-                    <Input
-                      type="number"
-                      value={selectedSite.totalFunds || 0}
-                      disabled={isLoading}
-                      onChange={(e) =>
-                        handleSiteUpdate(
-                          selectedSite.id,
-                          'total_funds',
-                          Number(e.target.value)
-                        )
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>Is Completed</Label>
-                    <Input
-                      type="checkbox"
-                      checked={selectedSite.isCompleted}
-                      disabled={isLoading}
-                      onChange={(e) =>
-                        handleSiteUpdate(
-                          selectedSite.id,
-                          'is_completed',
-                          e.target.checked
-                        )
-                      }
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Balance Summary</CardTitle>
-                <CardDescription>Financial overview of the selected site.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div>
-                    <Label>Funds Received</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.fundsReceived)}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <Label>Total Expenditure</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.totalExpenditure)}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <Label>Total Advances</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.totalAdvances || 0)}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <Label>Debits to Worker</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.debitsToWorker || 0)}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <Label>Invoices Paid</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.invoicesPaid || 0)}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <Label>Pending Invoices</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.pendingInvoices || 0)}
-                      disabled
-                    />
-                  </div>
-                  <div>
-                    <Label>Total Balance</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(balanceSummary.totalBalance)}
-                      disabled
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Expenses</CardTitle>
-                <CardDescription>List of expenses for the selected site.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Amount</TableHead>
+          
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+            </div>
+          ) : expenses.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No expenses found. Create your first expense by clicking the "Add Expense" button.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Date</TableHead>
+                    {user?.role === UserRole.ADMIN && (
+                      <TableHead>Submitted By</TableHead>
+                    )}
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {expenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                      <TableCell className="font-medium">{expense.title}</TableCell>
+                      <TableCell>{formatCurrency(expense.amount)}</TableCell>
+                      <TableCell>{expense.category}</TableCell>
+                      <TableCell>{formatDate(expense.created_at)}</TableCell>
+                      {user?.role === UserRole.ADMIN && (
+                        <TableCell>{expense.user_name}</TableCell>
+                      )}
+                      <TableCell>{getStatusBadge(expense.status)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {/* Only allow editing of pending expenses */}
+                          {expense.status === 'pending' && (
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(expense)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Only allow deletion of pending expenses */}
+                          {expense.status === 'pending' && (
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(expense.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          
+                          {/* Admin actions for expense approval */}
+                          {user?.role === UserRole.ADMIN && expense.status === 'pending' && (
+                            <>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="bg-green-50 text-green-700 hover:bg-green-100"
+                                onClick={() => handleStatusChange(expense.id, 'approved')}
+                              >
+                                Approve
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="bg-red-50 text-red-700 hover:bg-red-100"
+                                onClick={() => handleStatusChange(expense.id, 'rejected')}
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          
+                          {/* Admin action to mark as paid */}
+                          {user?.role === UserRole.ADMIN && expense.status === 'approved' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="bg-blue-50 text-blue-700 hover:bg-blue-100"
+                              onClick={() => handleStatusChange(expense.id, 'paid')}
+                            >
+                              Mark Paid
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {siteExpenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell>{format(expense.date, 'yyyy-MM-dd')}</TableCell>
-                        <TableCell>{expense.category}</TableCell>
-                        <TableCell>{formatCurrency(expense.amount)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      ) : (
-        <p>Please select a site to view details.</p>
-      )}
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      
+      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingExpense ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
+            <DialogDescription>
+              {editingExpense 
+                ? 'Update the expense details below' 
+                : 'Fill in the expense details to submit for approval'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="title">Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Expense title"
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="amount">Amount</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="category">Category</Label>
+                <Select 
+                  value={category} 
+                  onValueChange={setCategory}
+                  required
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="travel">Travel</SelectItem>
+                    <SelectItem value="meals">Meals</SelectItem>
+                    <SelectItem value="supplies">Supplies</SelectItem>
+                    <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="services">Services</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Provide details about this expense"
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setOpenDialog(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                {editingExpense ? 'Update Expense' : 'Submit Expense'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
