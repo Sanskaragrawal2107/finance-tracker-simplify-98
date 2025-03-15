@@ -1,3 +1,4 @@
+
 // User related types
 export enum UserRole {
   ADMIN = "admin",
@@ -155,12 +156,11 @@ export interface BankDetails {
 
 export interface MaterialItem {
   id?: string;
-  material?: string;
-  itemName?: string;
+  material: string;
   quantity: number | null;
   rate: number | null;
-  gstPercentage?: number | null;
-  amount?: number | null;
+  gstPercentage: number | null;
+  amount: number | null;
 }
 
 export interface Invoice {
