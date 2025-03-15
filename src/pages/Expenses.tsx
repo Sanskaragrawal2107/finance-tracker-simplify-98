@@ -628,7 +628,6 @@ const Expenses: React.FC = () => {
 
     const totalFunds = siteFunds.reduce((sum, fund) => sum + fund.amount, 0);
     const totalExpenses = siteExpenses.reduce((sum, expense) => sum + expense.amount, 0);
-    const totalAdvances = siteAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
@@ -637,14 +636,14 @@ const Expenses: React.FC = () => {
       .reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
 
     // Updated balance calculation according to the requirement:
-    // current balance = Funds Received from HO - Total Expenses - Total Advances - Invoices paid
+    // current balance = Funds Received from HO - Total Expenses - Total Regular Advances - Invoices paid by supervisor
     // (note: debits to worker are tracked separately but not subtracted from balance)
-    const totalBalance = totalFunds - totalExpenses - totalAdvances - supervisorInvoiceTotal;
+    const totalBalance = totalFunds - totalExpenses - totalRegularAdvances - supervisorInvoiceTotal;
 
     return {
       fundsReceived: totalFunds,
       totalExpenditure: totalExpenses,
-      totalAdvances: totalAdvances,
+      totalAdvances: totalRegularAdvances,
       debitsToWorker: totalDebitToWorker,
       invoicesPaid: supervisorInvoiceTotal,
       pendingInvoices: pendingInvoicesTotal,

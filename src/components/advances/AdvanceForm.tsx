@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -77,6 +78,13 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+// Define debit advance purposes - these will be categorized as debits to worker
+const DEBIT_ADVANCE_PURPOSES = [
+  AdvancePurpose.SAFETY_SHOES,
+  AdvancePurpose.TOOLS,
+  AdvancePurpose.OTHER
+];
 
 const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, siteId }) => {
   const [recipientOptions, setRecipientOptions] = useState<any[]>([]);
@@ -171,7 +179,13 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
         onSubmit(advanceWithId);
         form.reset();
         onClose();
-        toast.success("Advance added successfully");
+        
+        // Show different toast message based on purpose type
+        if (DEBIT_ADVANCE_PURPOSES.includes(values.purpose)) {
+          toast.success("Debit to worker added successfully");
+        } else {
+          toast.success("Advance added successfully");
+        }
       }
     } catch (error: any) {
       console.error('Submission error:', error);
@@ -399,7 +413,7 @@ const AdvanceForm: React.FC<AdvanceFormProps> = ({ isOpen, onClose, onSubmit, si
               </Button>
               <Button type="submit">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Advance
+                {DEBIT_ADVANCE_PURPOSES.includes(form.watch("purpose") as AdvancePurpose) ? "Add Debit" : "Add Advance"}
               </Button>
             </DialogFooter>
           </form>
