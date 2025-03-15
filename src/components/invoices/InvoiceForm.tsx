@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { PaymentStatus, Invoice, MaterialItem } from '@/lib/types';
+import { PaymentStatus, Invoice, MaterialItem, BankDetails } from '@/lib/types';
 import { Calendar as CalendarIcon, Upload, Loader2, Camera, Plus, Trash2, FileText, User, AlertTriangle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -37,6 +38,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [date, setDate] = useState<Date>(initialData?.date || new Date());
+  const [isDateFixed, setIsDateFixed] = useState<boolean>(false);
   const [partyId, setPartyId] = useState<string>(initialData?.partyId || '');
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
@@ -90,6 +92,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     setGrandGrossAmount(totalGross);
     setGrandNetAmount(totalNet);
 
+    // Auto-select "ho" for amounts > 5000
     if (totalNet > 5000) {
       setApproverType("ho");
     }
@@ -150,10 +153,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   };
 
   const validateIfsc = (code: string) => {
-    if (code.length !== 11) {
-      return false;
-    }
-    return code[4] === '0';
+    return code.length === 11;
   };
 
   const handleIfscChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -168,12 +168,6 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const handleIfscBlur = async () => {
     if (ifscCode.length !== 11) {
       setIfscValidationMessage('IFSC code must be 11 characters');
-      return;
-    }
-
-    if (ifscCode[4] !== '0') {
-      setIfscValidationMessage('5th digit of IFSC code must be 0');
-      setBankName('');
       return;
     }
 
@@ -216,6 +210,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     if (newDate) {
       setDate(newDate);
       setIsCalendarOpen(false);
+      setIsDateFixed(true);
     }
   };
 
@@ -277,7 +272,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     if (approverType === "ho" && !validateIfsc(ifscCode)) {
       toast({
         title: "Invalid IFSC code",
-        description: "Please provide a valid IFSC code with 5th digit as '0'",
+        description: "Please provide a valid IFSC code",
         variant: "destructive"
       });
       return;
@@ -291,7 +286,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
 
       const primaryMaterial = materialItems[0];
 
-      const bankDetails = {
+      const bankDetails: BankDetails = {
         accountNumber: approverType === "ho" ? accountNumber : "",
         bankName: approverType === "ho" ? bankName : "",
         ifscCode: approverType === "ho" ? ifscCode : "",
@@ -309,8 +304,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         gstPercentage: primaryMaterial.gstPercentage || 18,
         grossAmount: grandGrossAmount,
         netAmount: grandNetAmount,
-        materialItems: JSON.stringify(materialItems),
-        bankDetails: JSON.stringify(bankDetails),
+        materialItems: materialItems,
+        bankDetails: bankDetails,
         billUrl: fileUrl,
         paymentStatus,
         createdBy: 'Current User',
@@ -371,6 +366,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
       setEmail('');
       setMobile('');
       setApproverType("ho");
+      setIsDateFixed(false);
       
       if (onClose) onClose();
     } catch (error) {
@@ -395,9 +391,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="date">Invoice Date</Label>
-              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <Popover open={isCalendarOpen && !isDateFixed} onOpenChange={(open) => !isDateFixed && setIsCalendarOpen(open)}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                  <Button 
+                    variant="outline" 
+                    className={cn(
+                      "w-full justify-start text-left font-normal", 
+                      !date && "text-muted-foreground",
+                      isDateFixed && "bg-muted"
+                    )}
+                    disabled={isDateFixed}
+                  >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {date ? format(date, "PPP") : <span>Pick a date</span>}
                   </Button>
@@ -412,6 +416,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                   />
                 </PopoverContent>
               </Popover>
+              {isDateFixed && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-1"
+                  onClick={() => setIsDateFixed(false)}
+                >
+                  Change Date
+                </Button>
+              )}
             </div>
 
             <div className="space-y-2 relative">
@@ -577,7 +592,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                       </div>}
                     {ifscValidationMessage && <p className="text-red-500 text-sm mt-1">{ifscValidationMessage}</p>}
                     <p className="text-xs text-muted-foreground mt-1">
-                      Must be 11 characters and 5th digit must be '0'
+                      Must be 11 characters
                     </p>
                   </div>
                 </div>

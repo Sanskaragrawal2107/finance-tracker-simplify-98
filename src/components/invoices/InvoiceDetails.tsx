@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Invoice, PaymentStatus } from '@/lib/types';
+import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
 import { Download, Calendar, IndianRupee, User, MapPin, Phone, Mail, Receipt, FileText, CreditCard, Eye } from 'lucide-react';
@@ -48,27 +48,45 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
     };
   }, []);
   
-  const materials = Array.isArray(invoice.materialItems) 
-    ? invoice.materialItems 
-    : invoice.material.split(', ').map((material, index) => {
-        if (index === 0) {
-          return {
-            material,
-            quantity: invoice.quantity,
-            rate: invoice.rate,
-            gstPercentage: invoice.gstPercentage,
-            amount: invoice.quantity * invoice.rate
-          };
-        } else {
-          return {
-            material,
-            quantity: null,
-            rate: null,
-            gstPercentage: null,
-            amount: null
-          };
-        }
-      });
+  // Parse material items if they're stored as a string
+  const getMaterialItems = (): MaterialItem[] => {
+    if (Array.isArray(invoice.materialItems)) {
+      return invoice.materialItems;
+    }
+    
+    if (typeof invoice.materialItems === 'string') {
+      try {
+        return JSON.parse(invoice.materialItems) as MaterialItem[];
+      } catch (e) {
+        console.error('Error parsing material items:', e);
+      }
+    }
+    
+    // Fallback to generating from invoice properties
+    return invoice.material.split(', ').map((material, index) => {
+      if (index === 0) {
+        return {
+          id: `default-${index}`,
+          material,
+          quantity: invoice.quantity,
+          rate: invoice.rate,
+          gstPercentage: invoice.gstPercentage,
+          amount: invoice.quantity * invoice.rate
+        };
+      } else {
+        return {
+          id: `default-${index}`,
+          material,
+          quantity: null,
+          rate: null,
+          gstPercentage: null,
+          amount: null
+        };
+      }
+    });
+  };
+
+  const materials = getMaterialItems();
 
   const handleDownload = () => {
     if (invoice.billUrl) {
@@ -242,7 +260,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
                 </thead>
                 <tbody>
                   {materials.map((material, index) => (
-                    <tr key={index} className="border-t">
+                    <tr key={material.id || index} className="border-t">
                       <td className="py-3 px-4">{index + 1}</td>
                       <td className="py-3 px-4">{material.material}</td>
                       <td className="py-3 px-4 text-right">{material.quantity !== null ? material.quantity : '-'}</td>
@@ -272,7 +290,7 @@ const InvoiceDetails: React.FC<InvoiceDetailsProps> = ({ invoice, isOpen, onClos
             </div>
           </div>
           
-          {invoice.approverType === "ho" && (
+          {invoice.approverType === "ho" && invoice.bankDetails && (
             <div>
               <h4 className="font-medium mb-2">Bank Details</h4>
               <div className="bg-muted rounded-md p-4 space-y-2">

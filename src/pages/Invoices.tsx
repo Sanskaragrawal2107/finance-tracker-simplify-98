@@ -251,6 +251,27 @@ const Invoices: React.FC = () => {
     setIsCreateDialogOpen(false);
   };
 
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = (invoice: Invoice) => {
+    if (invoice.billUrl) {
+      window.open(invoice.billUrl, '_blank');
+      toast({
+        title: "Download initiated",
+        description: "The bill download has been initiated."
+      });
+    } else {
+      toast({
+        title: "No bill available",
+        description: "There is no bill attachment available for this invoice.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleMakePayment = async (invoice: Invoice) => {
     try {
       // Update payment status in Supabase
@@ -359,7 +380,7 @@ const Invoices: React.FC = () => {
                 <tbody>
                   {filteredInvoices.map((invoice) => (
                     <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                      <td className="py-4 pl-4 text-sm">{format(invoice.date, 'MMM dd, yyyy')}</td>
+                      <td className="py-4 pl-4 text-sm">{format(invoice.date, 'dd/MM/yyyy')}</td>
                       <td className="py-4 text-sm">{invoice.partyName}</td>
                       <td className="py-4 text-sm">{invoice.material}</td>
                       <td className="py-4 text-sm">₹{invoice.grossAmount.toLocaleString()}</td>
