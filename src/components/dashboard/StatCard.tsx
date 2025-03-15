@@ -3,6 +3,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { LucideIcon } from 'lucide-react';
 import CustomCard from '../ui/CustomCard';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface StatCardProps {
   title: string;
@@ -16,6 +17,7 @@ interface StatCardProps {
   className?: string;
   valuePrefix?: string;
   valueSuffix?: string;
+  isLoading?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
@@ -26,6 +28,7 @@ const StatCard: React.FC<StatCardProps> = ({
   className,
   valuePrefix = '',
   valueSuffix = '',
+  isLoading = false,
 }) => {
   return (
     <CustomCard 
@@ -35,11 +38,15 @@ const StatCard: React.FC<StatCardProps> = ({
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <h3 className="mt-1 text-2xl font-semibold">
-            {valuePrefix}{typeof value === 'number' ? value.toLocaleString() : value}{valueSuffix}
-          </h3>
+          {isLoading ? (
+            <Skeleton className="h-8 w-24 mt-1" />
+          ) : (
+            <h3 className="mt-1 text-2xl font-semibold">
+              {valuePrefix}{typeof value === 'number' ? value.toLocaleString() : value}{valueSuffix}
+            </h3>
+          )}
           
-          {trend && (
+          {trend && !isLoading && (
             <p className={cn(
               "mt-2 text-sm font-medium flex items-center",
               trend.isPositive ? "text-green-600" : "text-red-600"

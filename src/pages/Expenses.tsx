@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format, subDays } from 'date-fns';
 import {
@@ -9,7 +10,10 @@ import {
   BalanceSummary,
   ExpenseCategory,
   AdvancePurpose,
-  UserRole
+  UserRole,
+  ApprovalStatus,
+  RecipientType,
+  PaymentStatus
 } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -47,7 +51,6 @@ import { useUser } from '@/hooks/use-user';
 import { useNavigate } from 'react-router-dom';
 import StatCard from '@/components/dashboard/StatCard';
 import {
-  Bank,
   Building2,
   Calendar,
   Coins,
@@ -285,11 +288,15 @@ const Expenses = () => {
               materialItems: parsedMaterialItems,
               bankDetails: parsedBankDetails,
               billUrl: invoice.bill_url,
-              paymentStatus: invoice.payment_status as any,
+              paymentStatus: invoice.payment_status as PaymentStatus,
               createdBy: invoice.created_by || '',
               createdAt: new Date(invoice.created_at),
               approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
               siteId: invoice.site_id || '',
+              // Add required fields to match the Invoice type
+              vendorName: invoice.party_name,
+              invoiceNumber: invoice.id,
+              amount: Number(invoice.net_amount)
             };
           })
           : [];
@@ -302,46 +309,78 @@ const Expenses = () => {
           (invoice) => invoice.approverType === 'supervisor'
         );
 
-        // Convert date strings to Date objects
+        // Convert date strings to Date objects and map to correct Type interfaces
         setSites(
           sitesData
             ? sitesData.map((site) => ({
-              ...site,
-              startDate: new Date(site.start_date),
+              id: site.id,
+              name: site.name,
+              jobName: site.job_name || '',
+              posNo: site.pos_no || '',
+              location: site.location,
+              startDate: new Date(site.start_date || Date.now()),
               completionDate: site.completion_date
                 ? new Date(site.completion_date)
                 : undefined,
-              createdAt: new Date(site.created_at),
+              supervisorId: site.supervisor_id || '',
+              createdAt: new Date(site.created_at || Date.now()),
+              isCompleted: site.is_completed || false,
+              funds: site.funds || 0,
+              totalFunds: site.total_funds || 0
             }))
             : []
         );
+
         setExpenses(
           expensesData
             ? expensesData.map((expense) => ({
-              ...expense,
+              id: expense.id,
               date: new Date(expense.date),
+              description: expense.description || '',
+              category: expense.category as ExpenseCategory,
+              amount: Number(expense.amount),
+              status: ApprovalStatus.APPROVED, // Default value since it's required
+              createdBy: expense.created_by || '',
               createdAt: new Date(expense.created_at || Date.now()),
+              siteId: expense.site_id || '',
+              supervisorId: '' // Default value since it's required
             }))
             : []
         );
+
         setAdvances(
           advancesData
             ? advancesData.map((advance) => ({
-              ...advance,
+              id: advance.id,
               date: new Date(advance.date),
+              recipientId: '',
+              recipientName: advance.recipient_name,
+              recipientType: advance.recipient_type as RecipientType,
+              purpose: advance.purpose as AdvancePurpose,
+              amount: Number(advance.amount),
+              remarks: advance.remarks || '',
+              status: advance.status as ApprovalStatus,
+              createdBy: advance.created_by || '',
               createdAt: new Date(advance.created_at),
+              siteId: advance.site_id || ''
             }))
             : []
         );
+
         setFundsReceived(
           fundsData
             ? fundsData.map((fund) => ({
-              ...fund,
+              id: fund.id,
               date: new Date(fund.date),
+              amount: Number(fund.amount),
+              siteId: fund.site_id,
               createdAt: new Date(fund.created_at),
+              reference: fund.reference || '',
+              method: fund.method || ''
             }))
             : []
         );
+
         setInvoices(siteInvoices);
         setSupervisorInvoices(supervisorInvoices);
       } catch (error) {
@@ -366,9 +405,16 @@ const Expenses = () => {
         .from('sites')
         .insert([
           {
-            ...newSite,
+            name: newSite.name,
+            job_name: newSite.jobName,
+            pos_no: newSite.posNo,
+            location: newSite.location,
             start_date: newSite.startDate.toISOString(),
             completion_date: newSite.completionDate?.toISOString() || null,
+            supervisor_id: newSite.supervisorId,
+            is_completed: newSite.isCompleted || false,
+            funds: newSite.funds || 0,
+            total_funds: newSite.totalFunds || 0,
             created_by: user?.id,
           },
         ])
@@ -385,13 +431,19 @@ const Expenses = () => {
         return;
       }
 
-      const addedSite = {
-        ...data,
-        startDate: new Date(data.start_date),
-        completionDate: data.completion_date
-          ? new Date(data.completion_date)
-          : undefined,
-        createdAt: new Date(data.created_at),
+      const addedSite: Site = {
+        id: data.id,
+        name: data.name,
+        jobName: data.job_name || '',
+        posNo: data.pos_no || '',
+        location: data.location,
+        startDate: new Date(data.start_date || Date.now()),
+        completionDate: data.completion_date ? new Date(data.completion_date) : undefined,
+        supervisorId: data.supervisor_id || '',
+        createdAt: new Date(data.created_at || Date.now()),
+        isCompleted: data.is_completed || false,
+        funds: data.funds || 0,
+        totalFunds: data.total_funds || 0
       };
 
       setSites([...sites, addedSite]);
@@ -493,12 +545,25 @@ const Expenses = () => {
   const handleAddExpense = async (expense: Partial<Expense>) => {
     setIsLoading(true);
     try {
+      // Ensure all required fields are provided
+      if (!expense.amount || !expense.category) {
+        toast({
+          title: "Error",
+          description: "Amount and category are required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('expenses')
         .insert([
           {
-            ...expense,
-            date: expense.date?.toISOString(),
+            date: expense.date?.toISOString() || new Date().toISOString(),
+            description: expense.description || '',
+            category: expense.category,
+            amount: expense.amount,
+            site_id: expense.siteId,
             created_by: user?.id,
           },
         ])
@@ -515,10 +580,17 @@ const Expenses = () => {
         return;
       }
 
-      const addedExpense = {
-        ...data,
+      const addedExpense: Expense = {
+        id: data.id,
         date: new Date(data.date),
-        createdAt: new Date(data.created_at),
+        description: data.description || '',
+        category: data.category as ExpenseCategory,
+        amount: Number(data.amount),
+        status: ApprovalStatus.APPROVED,
+        createdBy: data.created_by || '',
+        createdAt: new Date(data.created_at || Date.now()),
+        siteId: data.site_id || '',
+        supervisorId: ''
       };
 
       setExpenses([...expenses, addedExpense]);
@@ -541,12 +613,28 @@ const Expenses = () => {
   const handleAddAdvance = async (advance: Partial<Advance>) => {
     setIsLoading(true);
     try {
+      // Ensure all required fields are provided
+      if (!advance.amount || !advance.recipientName || !advance.recipientType || !advance.purpose) {
+        toast({
+          title: "Error",
+          description: "All required fields must be provided.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('advances')
         .insert([
           {
-            ...advance,
-            date: advance.date?.toISOString(),
+            date: advance.date?.toISOString() || new Date().toISOString(),
+            recipient_name: advance.recipientName,
+            recipient_type: advance.recipientType,
+            purpose: advance.purpose,
+            amount: advance.amount,
+            remarks: advance.remarks || '',
+            status: advance.status || ApprovalStatus.PENDING,
+            site_id: advance.siteId,
             created_by: user?.id,
           },
         ])
@@ -563,10 +651,19 @@ const Expenses = () => {
         return;
       }
 
-      const addedAdvance = {
-        ...data,
+      const addedAdvance: Advance = {
+        id: data.id,
         date: new Date(data.date),
+        recipientId: '',
+        recipientName: data.recipient_name,
+        recipientType: data.recipient_type as RecipientType,
+        purpose: data.purpose as AdvancePurpose,
+        amount: Number(data.amount),
+        remarks: data.remarks || '',
+        status: data.status as ApprovalStatus,
+        createdBy: data.created_by || '',
         createdAt: new Date(data.created_at),
+        siteId: data.site_id || ''
       };
 
       setAdvances([...advances, addedAdvance]);
@@ -589,12 +686,25 @@ const Expenses = () => {
   const handleAddFunds = async (funds: Partial<FundsReceived>) => {
     setIsLoading(true);
     try {
+      // Ensure all required fields are provided
+      if (!funds.amount || !funds.siteId) {
+        toast({
+          title: "Error",
+          description: "Amount and site ID are required fields.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('funds_received')
         .insert([
           {
-            ...funds,
-            date: funds.date?.toISOString(),
+            date: funds.date?.toISOString() || new Date().toISOString(),
+            amount: funds.amount,
+            site_id: funds.siteId,
+            reference: funds.reference || null,
+            method: funds.method || null,
           },
         ])
         .select()
@@ -610,10 +720,14 @@ const Expenses = () => {
         return;
       }
 
-      const addedFunds = {
-        ...data,
+      const addedFunds: FundsReceived = {
+        id: data.id,
         date: new Date(data.date),
+        amount: Number(data.amount),
+        siteId: data.site_id,
         createdAt: new Date(data.created_at),
+        reference: data.reference || '',
+        method: data.method || ''
       };
 
       setFundsReceived([...fundsReceived, addedFunds]);
@@ -637,17 +751,38 @@ const Expenses = () => {
     setIsLoading(true);
     try {
       // Stringify material_items and bank_details
-      const materialItemsString = JSON.stringify(invoice.materialItems);
-      const bankDetailsString = JSON.stringify(invoice.bankDetails);
+      const materialItemsString = JSON.stringify(invoice.materialItems || []);
+      const bankDetailsString = JSON.stringify(invoice.bankDetails || {});
+
+      // Ensure required fields
+      if (!invoice.netAmount || !invoice.material || !invoice.partyName) {
+        toast({
+          title: "Error",
+          description: "All required fields must be provided.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const { data, error } = await supabase
         .from('site_invoices')
         .insert([
           {
-            ...invoice,
             date: invoice.date.toISOString(),
+            party_id: invoice.partyId,
+            party_name: invoice.partyName,
+            material: invoice.material,
+            quantity: invoice.quantity,
+            rate: invoice.rate,
+            gst_percentage: invoice.gstPercentage,
+            gross_amount: invoice.grossAmount,
+            net_amount: invoice.netAmount,
             material_items: materialItemsString,
             bank_details: bankDetailsString,
+            bill_url: invoice.billUrl || null,
+            payment_status: invoice.paymentStatus || PaymentStatus.PENDING,
+            approver_type: invoice.approverType || 'ho',
+            site_id: invoice.siteId || null,
             created_by: user?.id,
           },
         ])
@@ -664,6 +799,21 @@ const Expenses = () => {
         return;
       }
 
+      // Parse the material_items and bank_details back to objects
+      let parsedMaterialItems: any[] = [];
+      try {
+        parsedMaterialItems = JSON.parse(data.material_items as string) as any[];
+      } catch (e) {
+        console.error('Error parsing material items:', e);
+      }
+
+      let parsedBankDetails: any = {};
+      try {
+        parsedBankDetails = JSON.parse(data.bank_details as string) as any;
+      } catch (e) {
+        console.error('Error parsing bank details:', e);
+      }
+
       const addedInvoice: Invoice = {
         id: data.id,
         date: new Date(data.date),
@@ -675,17 +825,25 @@ const Expenses = () => {
         gstPercentage: Number(data.gst_percentage),
         grossAmount: Number(data.gross_amount),
         netAmount: Number(data.net_amount),
-        materialItems: invoice.materialItems,
-        bankDetails: invoice.bankDetails,
+        materialItems: parsedMaterialItems,
+        bankDetails: parsedBankDetails,
         billUrl: data.bill_url,
-        paymentStatus: data.payment_status as any,
+        paymentStatus: data.payment_status as PaymentStatus,
         createdBy: data.created_by || '',
         createdAt: new Date(data.created_at),
         approverType: data.approver_type as "ho" | "supervisor" || "ho",
         siteId: data.site_id || '',
+        // Additional fields required by Invoice type
+        vendorName: data.party_name,
+        invoiceNumber: data.id,
+        amount: Number(data.net_amount)
       };
 
-      setInvoices([...invoices, addedInvoice]);
+      if (addedInvoice.approverType === 'supervisor') {
+        setSupervisorInvoices([...supervisorInvoices, addedInvoice]);
+      } else {
+        setInvoices([...invoices, addedInvoice]);
+      }
       toast({
         title: "Success",
         description: "Invoice added successfully.",
@@ -821,7 +979,11 @@ const Expenses = () => {
               Fill in the details to create a new construction site.
             </DrawerDescription>
           </DrawerHeader>
-          <SiteForm onSubmit={handleAddSite} onClose={() => setIsSiteFormOpen(false)} />
+          <SiteForm 
+            onSubmit={handleAddSite} 
+            onClose={() => setIsSiteFormOpen(false)} 
+            isOpen={isSiteFormOpen}
+          />
           <DrawerFooter>
             <Button variant="outline" onClick={() => setIsSiteFormOpen(false)}>Cancel</Button>
           </DrawerFooter>
