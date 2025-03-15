@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
@@ -233,16 +234,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
         
         <TabsContent value="transactions">
           <SiteDetailTransactions 
-            siteId={site.id} 
-            expenses={expenses} 
-            advances={advances} 
-            fundsReceived={fundsReceived} 
-            invoices={invoices} 
-            supervisorInvoices={supervisorInvoices}
-            onAddExpense={onAddExpense} 
-            onAddAdvance={onAddAdvance} 
-            onAddFunds={onAddFunds} 
-            onAddInvoice={onAddInvoice} 
+            site={site}
           />
         </TabsContent>
       </Tabs>

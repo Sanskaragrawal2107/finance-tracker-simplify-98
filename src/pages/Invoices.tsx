@@ -116,29 +116,49 @@ const Invoices: React.FC = () => {
         
         if (data) {
           const mappedInvoices: Invoice[] = data.map(invoice => {
-            // Parse material_items and bank_details from JSON strings
+            // Parse material_items with proper type checking and conversion
             let parsedMaterialItems: MaterialItem[] = [];
             try {
               if (typeof invoice.material_items === 'object' && invoice.material_items !== null) {
                 if (Array.isArray(invoice.material_items)) {
-                  parsedMaterialItems = invoice.material_items as MaterialItem[];
+                  // Explicitly cast with type guard to ensure we have necessary properties
+                  parsedMaterialItems = (invoice.material_items as any[]).map(item => ({
+                    id: item.id || undefined,
+                    material: item.material || '',
+                    quantity: typeof item.quantity === 'number' ? item.quantity : null,
+                    rate: typeof item.rate === 'number' ? item.rate : null,
+                    gstPercentage: typeof item.gstPercentage === 'number' ? item.gstPercentage : null,
+                    amount: typeof item.amount === 'number' ? item.amount : null
+                  }));
                 } else {
                   parsedMaterialItems = [];
                   console.warn('material_items is an object but not an array:', invoice.material_items);
                 }
               } else if (invoice.material_items) {
-                parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
+                const parsedItems = JSON.parse(invoice.material_items as string);
+                if (Array.isArray(parsedItems)) {
+                  parsedMaterialItems = parsedItems.map(item => ({
+                    id: item.id || undefined,
+                    material: item.material || '',
+                    quantity: typeof item.quantity === 'number' ? item.quantity : null,
+                    rate: typeof item.rate === 'number' ? item.rate : null,
+                    gstPercentage: typeof item.gstPercentage === 'number' ? item.gstPercentage : null,
+                    amount: typeof item.amount === 'number' ? item.amount : null
+                  }));
+                }
               }
             } catch (e) {
               console.error('Error parsing material items:', e);
               parsedMaterialItems = [];
             }
             
+            // Parse bank_details with proper type checking and conversion
             let parsedBankDetails: BankDetails = {
               accountNumber: '',
               bankName: '',
               ifscCode: ''
             };
+            
             try {
               if (typeof invoice.bank_details === 'object' && invoice.bank_details !== null) {
                 const typedBankDetails = invoice.bank_details as Record<string, any>;
@@ -148,7 +168,12 @@ const Invoices: React.FC = () => {
                   ifscCode: typedBankDetails.ifscCode || ''
                 };
               } else if (invoice.bank_details) {
-                parsedBankDetails = JSON.parse(invoice.bank_details as string);
+                const parsedDetails = JSON.parse(invoice.bank_details as string);
+                parsedBankDetails = {
+                  accountNumber: parsedDetails.accountNumber || '',
+                  bankName: parsedDetails.bankName || '',
+                  ifscCode: parsedDetails.ifscCode || ''
+                };
               }
             } catch (e) {
               console.error('Error parsing bank details:', e);
@@ -229,7 +254,66 @@ const Invoices: React.FC = () => {
       }
       
       if (data && data.length > 0) {
-        // Create a new invoice object from the returned data
+        // Create a new invoice object with proper type handling for material_items and bank_details
+        let materialItems: MaterialItem[] = [];
+        try {
+          if (typeof data[0].material_items === 'object' && data[0].material_items !== null) {
+            if (Array.isArray(data[0].material_items)) {
+              // Explicitly cast with type guard to ensure we have necessary properties
+              materialItems = (data[0].material_items as any[]).map(item => ({
+                id: item.id || undefined,
+                material: item.material || '',
+                quantity: typeof item.quantity === 'number' ? item.quantity : null,
+                rate: typeof item.rate === 'number' ? item.rate : null,
+                gstPercentage: typeof item.gstPercentage === 'number' ? item.gstPercentage : null,
+                amount: typeof item.amount === 'number' ? item.amount : null
+              }));
+            }
+          } else if (data[0].material_items) {
+            const parsedItems = JSON.parse(data[0].material_items as string || '[]');
+            if (Array.isArray(parsedItems)) {
+              materialItems = parsedItems.map(item => ({
+                id: item.id || undefined,
+                material: item.material || '',
+                quantity: typeof item.quantity === 'number' ? item.quantity : null,
+                rate: typeof item.rate === 'number' ? item.rate : null,
+                gstPercentage: typeof item.gstPercentage === 'number' ? item.gstPercentage : null,
+                amount: typeof item.amount === 'number' ? item.amount : null
+              }));
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing material items:', e);
+          materialItems = [];
+        }
+        
+        // Parse bank_details with proper type checking and conversion
+        let bankDetails: BankDetails = {
+          accountNumber: '',
+          bankName: '',
+          ifscCode: ''
+        };
+        
+        try {
+          if (typeof data[0].bank_details === 'object' && data[0].bank_details !== null) {
+            const typedBankDetails = data[0].bank_details as Record<string, any>;
+            bankDetails = {
+              accountNumber: typedBankDetails.accountNumber || '',
+              bankName: typedBankDetails.bankName || '',
+              ifscCode: typedBankDetails.ifscCode || ''
+            };
+          } else if (data[0].bank_details) {
+            const parsedDetails = JSON.parse(data[0].bank_details as string || '{}');
+            bankDetails = {
+              accountNumber: parsedDetails.accountNumber || '',
+              bankName: parsedDetails.bankName || '',
+              ifscCode: parsedDetails.ifscCode || ''
+            };
+          }
+        } catch (e) {
+          console.error('Error parsing bank details:', e);
+        }
+        
         const newInvoice: Invoice = {
           id: data[0].id,
           date: new Date(data[0].date),
@@ -241,18 +325,8 @@ const Invoices: React.FC = () => {
           gstPercentage: Number(data[0].gst_percentage),
           grossAmount: Number(data[0].gross_amount),
           netAmount: Number(data[0].net_amount),
-          materialItems: typeof data[0].material_items === 'object' && data[0].material_items !== null 
-            ? (Array.isArray(data[0].material_items) 
-                ? data[0].material_items as MaterialItem[] 
-                : [])
-            : JSON.parse(data[0].material_items as string || '[]') as MaterialItem[],
-          bankDetails: typeof data[0].bank_details === 'object' && data[0].bank_details !== null
-            ? {
-                accountNumber: (data[0].bank_details as Record<string, any>).accountNumber || '',
-                bankName: (data[0].bank_details as Record<string, any>).bankName || '',
-                ifscCode: (data[0].bank_details as Record<string, any>).ifscCode || ''
-              }
-            : JSON.parse(data[0].bank_details as string || '{}') as BankDetails,
+          materialItems: materialItems,
+          bankDetails: bankDetails,
           billUrl: data[0].bill_url,
           paymentStatus: data[0].payment_status as PaymentStatus,
           createdBy: data[0].created_by || '',

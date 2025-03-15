@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,66 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({ site })
       }
       
       if (data && data.length > 0) {
+        // Properly handle material_items with type checking and conversion
+        let materialItems: MaterialItem[] = [];
+        try {
+          if (typeof data[0].material_items === 'object' && data[0].material_items !== null) {
+            if (Array.isArray(data[0].material_items)) {
+              // Explicitly cast with type guard to ensure we have necessary properties
+              materialItems = (data[0].material_items as any[]).map(item => ({
+                id: item.id || undefined,
+                material: item.material || '',
+                quantity: typeof item.quantity === 'number' ? item.quantity : null,
+                rate: typeof item.rate === 'number' ? item.rate : null,
+                gstPercentage: typeof item.gstPercentage === 'number' ? item.gstPercentage : null,
+                amount: typeof item.amount === 'number' ? item.amount : null
+              }));
+            }
+          } else if (data[0].material_items) {
+            const parsedItems = JSON.parse(data[0].material_items as string || '[]');
+            if (Array.isArray(parsedItems)) {
+              materialItems = parsedItems.map(item => ({
+                id: item.id || undefined,
+                material: item.material || '',
+                quantity: typeof item.quantity === 'number' ? item.quantity : null,
+                rate: typeof item.rate === 'number' ? item.rate : null,
+                gstPercentage: typeof item.gstPercentage === 'number' ? item.gstPercentage : null,
+                amount: typeof item.amount === 'number' ? item.amount : null
+              }));
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing material items:', e);
+          materialItems = [];
+        }
+        
+        // Properly handle bank_details with type checking and conversion
+        let bankDetails: BankDetails = {
+          accountNumber: '',
+          bankName: '',
+          ifscCode: ''
+        };
+        
+        try {
+          if (typeof data[0].bank_details === 'object' && data[0].bank_details !== null) {
+            const typedBankDetails = data[0].bank_details as Record<string, any>;
+            bankDetails = {
+              accountNumber: typedBankDetails.accountNumber || '',
+              bankName: typedBankDetails.bankName || '',
+              ifscCode: typedBankDetails.ifscCode || ''
+            };
+          } else if (data[0].bank_details) {
+            const parsedDetails = JSON.parse(data[0].bank_details as string || '{}');
+            bankDetails = {
+              accountNumber: parsedDetails.accountNumber || '',
+              bankName: parsedDetails.bankName || '',
+              ifscCode: parsedDetails.ifscCode || ''
+            };
+          }
+        } catch (e) {
+          console.error('Error parsing bank details:', e);
+        }
+        
         const newInvoice: Invoice = {
           id: data[0].id,
           date: new Date(data[0].date),
@@ -113,16 +174,8 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({ site })
           gstPercentage: Number(data[0].gst_percentage),
           grossAmount: Number(data[0].gross_amount),
           netAmount: Number(data[0].net_amount),
-          materialItems: typeof data[0].material_items === 'object' && data[0].material_items !== null 
-            ? (Array.isArray(data[0].material_items) ? data[0].material_items as MaterialItem[] : [])
-            : JSON.parse(data[0].material_items as string || '[]') as MaterialItem[],
-          bankDetails: typeof data[0].bank_details === 'object' && data[0].bank_details !== null
-            ? {
-                accountNumber: (data[0].bank_details as Record<string, any>).accountNumber || '',
-                bankName: (data[0].bank_details as Record<string, any>).bankName || '',
-                ifscCode: (data[0].bank_details as Record<string, any>).ifscCode || ''
-              }
-            : JSON.parse(data[0].bank_details as string || '{}') as BankDetails,
+          materialItems: materialItems,
+          bankDetails: bankDetails,
           billUrl: data[0].bill_url,
           paymentStatus: data[0].payment_status as PaymentStatus,
           createdBy: data[0].created_by || '',
