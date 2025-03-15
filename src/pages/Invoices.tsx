@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
@@ -120,7 +119,9 @@ const Invoices: React.FC = () => {
             let parsedMaterialItems: MaterialItem[] = [];
             try {
               if (typeof invoice.material_items === 'object' && invoice.material_items !== null) {
-                parsedMaterialItems = invoice.material_items;
+                parsedMaterialItems = Array.isArray(invoice.material_items) 
+                  ? invoice.material_items 
+                  : [];
               } else if (invoice.material_items) {
                 parsedMaterialItems = JSON.parse(invoice.material_items as string);
               }
@@ -136,7 +137,12 @@ const Invoices: React.FC = () => {
             };
             try {
               if (typeof invoice.bank_details === 'object' && invoice.bank_details !== null) {
-                parsedBankDetails = invoice.bank_details;
+                const typedBankDetails = invoice.bank_details as Record<string, any>;
+                parsedBankDetails = {
+                  accountNumber: typedBankDetails.accountNumber || '',
+                  bankName: typedBankDetails.bankName || '',
+                  ifscCode: typedBankDetails.ifscCode || ''
+                };
               } else if (invoice.bank_details) {
                 parsedBankDetails = JSON.parse(invoice.bank_details as string);
               }
@@ -230,11 +236,15 @@ const Invoices: React.FC = () => {
           gstPercentage: Number(data[0].gst_percentage),
           grossAmount: Number(data[0].gross_amount),
           netAmount: Number(data[0].net_amount),
-          materialItems: typeof data[0].material_items === 'object' 
-            ? data[0].material_items 
+          materialItems: typeof data[0].material_items === 'object' && data[0].material_items !== null 
+            ? (Array.isArray(data[0].material_items) ? data[0].material_items : [])
             : JSON.parse(data[0].material_items as string) as MaterialItem[],
-          bankDetails: typeof data[0].bank_details === 'object'
-            ? data[0].bank_details
+          bankDetails: typeof data[0].bank_details === 'object' && data[0].bank_details !== null
+            ? {
+                accountNumber: (data[0].bank_details as Record<string, any>).accountNumber || '',
+                bankName: (data[0].bank_details as Record<string, any>).bankName || '',
+                ifscCode: (data[0].bank_details as Record<string, any>).ifscCode || ''
+              }
             : JSON.parse(data[0].bank_details as string) as BankDetails,
           billUrl: data[0].bill_url,
           paymentStatus: data[0].payment_status as PaymentStatus,

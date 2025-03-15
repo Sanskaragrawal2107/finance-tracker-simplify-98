@@ -41,7 +41,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isUploading, setIsUploading] = useState(isUploading);
 
   const [materialInput, setMaterialInput] = useState<string>('');
   const [quantityInput, setQuantityInput] = useState<number>(0);
@@ -309,8 +309,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         gstPercentage: primaryMaterial.gstPercentage || 18,
         grossAmount: grandGrossAmount,
         netAmount: grandNetAmount,
-        materialItems: JSON.stringify(materialItems),
-        bankDetails: JSON.stringify(bankDetails),
+        materialItems: materialItems,
+        bankDetails: bankDetails,
         billUrl: fileUrl,
         paymentStatus,
         createdBy: 'Current User',

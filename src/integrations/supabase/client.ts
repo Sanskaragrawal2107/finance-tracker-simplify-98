@@ -66,11 +66,13 @@ export const fetchSiteInvoices = async (siteId: string) => {
     // Map the data to the correct format
     return data.map(invoice => {
       // Handle material_items JSON parsing safely
-      let materialItems = [];
+      let materialItems: any[] = [];
       try {
         // Check if material_items is already an object (not a string)
         if (typeof invoice.material_items === 'object' && invoice.material_items !== null) {
-          materialItems = invoice.material_items;
+          materialItems = Array.isArray(invoice.material_items) 
+            ? invoice.material_items 
+            : [];
         } else if (invoice.material_items) {
           materialItems = JSON.parse(invoice.material_items as string);
         }
@@ -87,7 +89,12 @@ export const fetchSiteInvoices = async (siteId: string) => {
       try {
         // Check if bank_details is already an object (not a string)
         if (typeof invoice.bank_details === 'object' && invoice.bank_details !== null) {
-          bankDetails = invoice.bank_details;
+          const typedBankDetails = invoice.bank_details as Record<string, any>;
+          bankDetails = {
+            accountNumber: typedBankDetails.accountNumber || '',
+            bankName: typedBankDetails.bankName || '',
+            ifscCode: typedBankDetails.ifscCode || ''
+          };
         } else if (invoice.bank_details) {
           bankDetails = JSON.parse(invoice.bank_details as string);
         }
