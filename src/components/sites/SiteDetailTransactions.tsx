@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Clock, FileText, ArrowUpDown, Truck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose } from '@/lib/types';
+import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose, MaterialItem, BankDetails } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import AdvanceForm from '@/components/advances/AdvanceForm';
@@ -89,26 +90,48 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         }
         
         if (data && data.length > 0) {
-          const mappedInvoices = data.map(invoice => ({
-            id: invoice.id,
-            date: new Date(invoice.date),
-            partyId: invoice.party_id,
-            partyName: invoice.party_name,
-            material: invoice.material,
-            quantity: Number(invoice.quantity),
-            rate: Number(invoice.rate),
-            gstPercentage: Number(invoice.gst_percentage),
-            grossAmount: Number(invoice.gross_amount),
-            netAmount: Number(invoice.net_amount),
-            materialItems: invoice.material_items,
-            bankDetails: invoice.bank_details,
-            billUrl: invoice.bill_url,
-            paymentStatus: invoice.payment_status as any,
-            createdBy: invoice.created_by,
-            createdAt: new Date(invoice.created_at),
-            approverType: invoice.approver_type as any,
-            siteId: invoice.site_id
-          }));
+          const mappedInvoices: Invoice[] = data.map(invoice => {
+            // Parse material_items and bank_details from JSON strings
+            let parsedMaterialItems: MaterialItem[] = [];
+            try {
+              parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
+            } catch (e) {
+              console.error('Error parsing material items:', e);
+              parsedMaterialItems = [];
+            }
+            
+            let parsedBankDetails: BankDetails = {
+              accountNumber: '',
+              bankName: '',
+              ifscCode: ''
+            };
+            try {
+              parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+            } catch (e) {
+              console.error('Error parsing bank details:', e);
+            }
+            
+            return {
+              id: invoice.id,
+              date: new Date(invoice.date),
+              partyId: invoice.party_id,
+              partyName: invoice.party_name,
+              material: invoice.material,
+              quantity: Number(invoice.quantity),
+              rate: Number(invoice.rate),
+              gstPercentage: Number(invoice.gst_percentage),
+              grossAmount: Number(invoice.gross_amount),
+              netAmount: Number(invoice.net_amount),
+              materialItems: parsedMaterialItems,
+              bankDetails: parsedBankDetails,
+              billUrl: invoice.bill_url,
+              paymentStatus: invoice.payment_status as any,
+              createdBy: invoice.created_by || '',
+              createdAt: new Date(invoice.created_at),
+              approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
+              siteId: invoice.site_id || ''
+            };
+          });
           
           setSiteInvoices(mappedInvoices);
         }
@@ -279,26 +302,48 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       }
       
       if (data && data.length > 0) {
-        const mappedInvoices = data.map(invoice => ({
-          id: invoice.id,
-          date: new Date(invoice.date),
-          partyId: invoice.party_id,
-          partyName: invoice.party_name,
-          material: invoice.material,
-          quantity: Number(invoice.quantity),
-          rate: Number(invoice.rate),
-          gstPercentage: Number(invoice.gst_percentage),
-          grossAmount: Number(invoice.gross_amount),
-          netAmount: Number(invoice.net_amount),
-          materialItems: invoice.material_items,
-          bankDetails: invoice.bank_details,
-          billUrl: invoice.bill_url,
-          paymentStatus: invoice.payment_status as any,
-          createdBy: invoice.created_by,
-          createdAt: new Date(invoice.created_at),
-          approverType: invoice.approver_type as any,
-          siteId: invoice.site_id
-        }));
+        const mappedInvoices: Invoice[] = data.map(invoice => {
+          // Parse material_items and bank_details from JSON strings
+          let parsedMaterialItems: MaterialItem[] = [];
+          try {
+            parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
+          } catch (e) {
+            console.error('Error parsing material items:', e);
+            parsedMaterialItems = [];
+          }
+          
+          let parsedBankDetails: BankDetails = {
+            accountNumber: '',
+            bankName: '',
+            ifscCode: ''
+          };
+          try {
+            parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+          } catch (e) {
+            console.error('Error parsing bank details:', e);
+          }
+          
+          return {
+            id: invoice.id,
+            date: new Date(invoice.date),
+            partyId: invoice.party_id,
+            partyName: invoice.party_name,
+            material: invoice.material,
+            quantity: Number(invoice.quantity),
+            rate: Number(invoice.rate),
+            gstPercentage: Number(invoice.gst_percentage),
+            grossAmount: Number(invoice.gross_amount),
+            netAmount: Number(invoice.net_amount),
+            materialItems: parsedMaterialItems,
+            bankDetails: parsedBankDetails,
+            billUrl: invoice.bill_url,
+            paymentStatus: invoice.payment_status as any,
+            createdBy: invoice.created_by || '',
+            createdAt: new Date(invoice.created_at),
+            approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
+            siteId: invoice.site_id || ''
+          };
+        });
         
         setSiteInvoices(mappedInvoices);
       }
