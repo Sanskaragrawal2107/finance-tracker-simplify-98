@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,7 +42,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
   const [partyName, setPartyName] = useState<string>(initialData?.partyName || '');
   const [partyNameFixed, setPartyNameFixed] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(isUploading);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [materialInput, setMaterialInput] = useState<string>('');
   const [quantityInput, setQuantityInput] = useState<number>(0);
