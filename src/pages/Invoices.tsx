@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, fetchSiteInvoices } from '@/integrations/supabase/client';
 import { 
   Form, 
   FormField, 
@@ -119,7 +119,11 @@ const Invoices: React.FC = () => {
             // Parse material_items and bank_details from JSON strings
             let parsedMaterialItems: MaterialItem[] = [];
             try {
-              parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
+              if (typeof invoice.material_items === 'object' && invoice.material_items !== null) {
+                parsedMaterialItems = invoice.material_items;
+              } else if (invoice.material_items) {
+                parsedMaterialItems = JSON.parse(invoice.material_items as string);
+              }
             } catch (e) {
               console.error('Error parsing material items:', e);
               parsedMaterialItems = [];
@@ -131,7 +135,11 @@ const Invoices: React.FC = () => {
               ifscCode: ''
             };
             try {
-              parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
+              if (typeof invoice.bank_details === 'object' && invoice.bank_details !== null) {
+                parsedBankDetails = invoice.bank_details;
+              } else if (invoice.bank_details) {
+                parsedBankDetails = JSON.parse(invoice.bank_details as string);
+              }
             } catch (e) {
               console.error('Error parsing bank details:', e);
             }
@@ -222,8 +230,12 @@ const Invoices: React.FC = () => {
           gstPercentage: Number(data[0].gst_percentage),
           grossAmount: Number(data[0].gross_amount),
           netAmount: Number(data[0].net_amount),
-          materialItems: JSON.parse(data[0].material_items as string) as MaterialItem[],
-          bankDetails: JSON.parse(data[0].bank_details as string) as BankDetails,
+          materialItems: typeof data[0].material_items === 'object' 
+            ? data[0].material_items 
+            : JSON.parse(data[0].material_items as string) as MaterialItem[],
+          bankDetails: typeof data[0].bank_details === 'object'
+            ? data[0].bank_details
+            : JSON.parse(data[0].bank_details as string) as BankDetails,
           billUrl: data[0].bill_url,
           paymentStatus: data[0].payment_status as PaymentStatus,
           createdBy: data[0].created_by || '',
@@ -297,6 +309,19 @@ const Invoices: React.FC = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = (invoice: Invoice) => {
+    // Implementation for downloading invoice
+    toast({
+      title: "Download Started",
+      description: `Download for invoice ${invoice.partyId} has started.`,
+    });
   };
 
   return (

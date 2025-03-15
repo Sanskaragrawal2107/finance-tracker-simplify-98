@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, fetchSiteInvoices } from '@/integrations/supabase/client';
 
 interface SiteDetailTransactionsProps {
   siteId: string;
@@ -45,7 +44,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   onAddFunds,
   onAddInvoice
 }) => {
-  const isMobile = useIsMobile();
+  const [isMobile] = useIsMobile();
   const [isExpenseFormOpen, setIsExpenseFormOpen] = useState(false);
   const [isAdvanceFormOpen, setIsAdvanceFormOpen] = useState(false);
   const [isFundsFormOpen, setIsFundsFormOpen] = useState(false);
@@ -74,75 +73,27 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   // Fetch invoices from Supabase
   useEffect(() => {
-    const fetchInvoices = async () => {
+    const getInvoices = async () => {
       if (!siteId) return;
       
       setIsLoadingSiteInvoices(true);
       try {
-        const { data, error } = await supabase
-          .from('site_invoices')
-          .select('*')
-          .eq('site_id', siteId);
-          
-        if (error) {
-          console.error('Error fetching invoices:', error);
-          return;
-        }
-        
-        if (data && data.length > 0) {
-          const mappedInvoices: Invoice[] = data.map(invoice => {
-            // Parse material_items and bank_details from JSON strings
-            let parsedMaterialItems: MaterialItem[] = [];
-            try {
-              parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
-            } catch (e) {
-              console.error('Error parsing material items:', e);
-              parsedMaterialItems = [];
-            }
-            
-            let parsedBankDetails: BankDetails = {
-              accountNumber: '',
-              bankName: '',
-              ifscCode: ''
-            };
-            try {
-              parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
-            } catch (e) {
-              console.error('Error parsing bank details:', e);
-            }
-            
-            return {
-              id: invoice.id,
-              date: new Date(invoice.date),
-              partyId: invoice.party_id,
-              partyName: invoice.party_name,
-              material: invoice.material,
-              quantity: Number(invoice.quantity),
-              rate: Number(invoice.rate),
-              gstPercentage: Number(invoice.gst_percentage),
-              grossAmount: Number(invoice.gross_amount),
-              netAmount: Number(invoice.net_amount),
-              materialItems: parsedMaterialItems,
-              bankDetails: parsedBankDetails,
-              billUrl: invoice.bill_url,
-              paymentStatus: invoice.payment_status as any,
-              createdBy: invoice.created_by || '',
-              createdAt: new Date(invoice.created_at),
-              approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
-              siteId: invoice.site_id || ''
-            };
-          });
-          
-          setSiteInvoices(mappedInvoices);
+        console.log("Fetching invoices for site:", siteId);
+        const invoices = await fetchSiteInvoices(siteId);
+        if (invoices && invoices.length > 0) {
+          console.log(`Found ${invoices.length} invoices for site ${siteId}`);
+          setSiteInvoices(invoices);
+        } else {
+          console.log("No invoices found for site:", siteId);
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching invoices:', error);
       } finally {
         setIsLoadingSiteInvoices(false);
       }
     };
     
-    fetchInvoices();
+    getInvoices();
   }, [siteId]);
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
@@ -289,66 +240,13 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const handleAddInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
     onAddInvoice(invoice);
     
+    // Refresh invoices after adding a new one
     setIsLoadingSiteInvoices(true);
     try {
-      const { data, error } = await supabase
-        .from('site_invoices')
-        .select('*')
-        .eq('site_id', siteId);
-        
-      if (error) {
-        console.error('Error fetching invoices:', error);
-        return;
-      }
-      
-      if (data && data.length > 0) {
-        const mappedInvoices: Invoice[] = data.map(invoice => {
-          // Parse material_items and bank_details from JSON strings
-          let parsedMaterialItems: MaterialItem[] = [];
-          try {
-            parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
-          } catch (e) {
-            console.error('Error parsing material items:', e);
-            parsedMaterialItems = [];
-          }
-          
-          let parsedBankDetails: BankDetails = {
-            accountNumber: '',
-            bankName: '',
-            ifscCode: ''
-          };
-          try {
-            parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
-          } catch (e) {
-            console.error('Error parsing bank details:', e);
-          }
-          
-          return {
-            id: invoice.id,
-            date: new Date(invoice.date),
-            partyId: invoice.party_id,
-            partyName: invoice.party_name,
-            material: invoice.material,
-            quantity: Number(invoice.quantity),
-            rate: Number(invoice.rate),
-            gstPercentage: Number(invoice.gst_percentage),
-            grossAmount: Number(invoice.gross_amount),
-            netAmount: Number(invoice.net_amount),
-            materialItems: parsedMaterialItems,
-            bankDetails: parsedBankDetails,
-            billUrl: invoice.bill_url,
-            paymentStatus: invoice.payment_status as any,
-            createdBy: invoice.created_by || '',
-            createdAt: new Date(invoice.created_at),
-            approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
-            siteId: invoice.site_id || ''
-          };
-        });
-        
-        setSiteInvoices(mappedInvoices);
-      }
+      const invoices = await fetchSiteInvoices(siteId);
+      setSiteInvoices(invoices);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error refreshing invoices:', error);
     } finally {
       setIsLoadingSiteInvoices(false);
     }
@@ -373,7 +271,7 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
                 <span className="sm:hidden">ADV</span>
               </TabsTrigger>
               <TabsTrigger value="invoices" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">
-                <span className="hidden sm:inline">PURCHASED INVOICE</span>
+                <span className="hidden sm:inline">SUPPLIER INVOICES</span>
                 <span className="sm:hidden">INV</span>
               </TabsTrigger>
               <TabsTrigger value="funds" className="flex-1 data-[state=active]:bg-primary data-[state=active]:text-white text-xs sm:text-sm">

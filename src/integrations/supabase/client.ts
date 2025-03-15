@@ -35,3 +35,114 @@ export const incrementValue = async (value: number, rowId: string, columnName: s
     throw error;
   }
 };
+
+// Helper function to fetch invoices for a specific site
+export const fetchSiteInvoices = async (siteId: string) => {
+  if (!siteId) {
+    console.error("No site ID provided to fetchSiteInvoices");
+    return [];
+  }
+  
+  console.log("Fetching invoices for site:", siteId);
+  
+  try {
+    const { data, error } = await supabase
+      .from('site_invoices')
+      .select('*')
+      .eq('site_id', siteId);
+      
+    if (error) {
+      console.error('Error fetching site invoices:', error);
+      return [];
+    }
+    
+    if (!data || data.length === 0) {
+      console.log("No invoices found for site:", siteId);
+      return [];
+    }
+    
+    console.log(`Found ${data.length} invoices for site ${siteId}`);
+    
+    // Map the data to the correct format
+    return data.map(invoice => {
+      // Handle material_items JSON parsing safely
+      let materialItems = [];
+      try {
+        // Check if material_items is already an object (not a string)
+        if (typeof invoice.material_items === 'object' && invoice.material_items !== null) {
+          materialItems = invoice.material_items;
+        } else if (invoice.material_items) {
+          materialItems = JSON.parse(invoice.material_items as string);
+        }
+      } catch (e) {
+        console.error('Error parsing material items:', e);
+      }
+      
+      // Handle bank_details JSON parsing safely
+      let bankDetails = {
+        accountNumber: '',
+        bankName: '',
+        ifscCode: ''
+      };
+      try {
+        // Check if bank_details is already an object (not a string)
+        if (typeof invoice.bank_details === 'object' && invoice.bank_details !== null) {
+          bankDetails = invoice.bank_details;
+        } else if (invoice.bank_details) {
+          bankDetails = JSON.parse(invoice.bank_details as string);
+        }
+      } catch (e) {
+        console.error('Error parsing bank details:', e);
+      }
+      
+      return {
+        id: invoice.id,
+        date: new Date(invoice.date),
+        partyId: invoice.party_id,
+        partyName: invoice.party_name,
+        material: invoice.material,
+        quantity: Number(invoice.quantity),
+        rate: Number(invoice.rate),
+        gstPercentage: Number(invoice.gst_percentage),
+        grossAmount: Number(invoice.gross_amount),
+        netAmount: Number(invoice.net_amount),
+        materialItems: materialItems,
+        bankDetails: bankDetails,
+        billUrl: invoice.bill_url,
+        paymentStatus: invoice.payment_status as any,
+        createdBy: invoice.created_by || '',
+        createdAt: new Date(invoice.created_at),
+        approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
+        siteId: invoice.site_id || ''
+      };
+    });
+  } catch (error) {
+    console.error('Error in fetchSiteInvoices:', error);
+    return [];
+  }
+};
+
+// Helper function to calculate the total amount of paid invoices for a site
+export const calculatePaidInvoicesTotalForSite = async (siteId: string) => {
+  if (!siteId) {
+    console.error("No site ID provided to calculatePaidInvoicesTotalForSite");
+    return 0;
+  }
+  
+  try {
+    const invoices = await fetchSiteInvoices(siteId);
+    
+    // Filter for paid invoices
+    const paidInvoices = invoices.filter(invoice => invoice.paymentStatus === 'paid');
+    
+    // Calculate the total amount
+    const total = paidInvoices.reduce((sum, invoice) => sum + invoice.netAmount, 0);
+    
+    console.log(`Calculated paid invoices total for site ${siteId}: ${total}`);
+    return total;
+  } catch (error) {
+    console.error('Error calculating paid invoices total:', error);
+    return 0;
+  }
+};
+

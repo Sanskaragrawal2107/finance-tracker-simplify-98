@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
@@ -155,7 +154,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </div>
         </CustomCard>
 
-        <BalanceCard balanceData={balanceSummary} />
+        <BalanceCard balanceData={balanceSummary} siteId={site.id} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
