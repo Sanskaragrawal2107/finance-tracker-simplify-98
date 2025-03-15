@@ -35,3 +35,19 @@ export const incrementValue = async (value: number, rowId: string, columnName: s
     throw error;
   }
 };
+
+// Helper function to fetch site invoices
+export const fetchSiteInvoices = async (siteId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('site_invoices')
+      .select('*')
+      .eq('site_id', siteId);
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching site invoices:", error);
+    return [];
+  }
+};

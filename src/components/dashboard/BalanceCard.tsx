@@ -8,22 +8,27 @@ import { BalanceSummary } from '@/lib/types';
 interface BalanceCardProps {
   balanceData: BalanceSummary;
   className?: string;
+  isLoading?: boolean;
 }
 
 const BalanceCard: React.FC<BalanceCardProps> = ({ 
   balanceData,
-  className 
+  className,
+  isLoading = false
 }) => {
   // Ensure all properties have default values to prevent TypeScript errors
   const safeBalanceData = {
-    fundsReceived: balanceData.fundsReceived || 0,
-    totalExpenditure: balanceData.totalExpenditure || 0,
-    totalAdvances: balanceData.totalAdvances || 0,
-    debitsToWorker: balanceData.debitsToWorker || 0,
-    invoicesPaid: balanceData.invoicesPaid || 0,
-    pendingInvoices: balanceData.pendingInvoices || 0,
-    totalBalance: balanceData.totalBalance || 0
+    fundsReceived: balanceData?.fundsReceived || 0,
+    totalExpenditure: balanceData?.totalExpenditure || 0,
+    totalAdvances: balanceData?.totalAdvances || 0,
+    debitsToWorker: balanceData?.debitsToWorker || 0,
+    invoicesPaid: balanceData?.invoicesPaid || 0,
+    pendingInvoices: balanceData?.pendingInvoices || 0,
+    totalBalance: balanceData?.totalBalance || 0
   };
+
+  // For debugging
+  console.log("Balance card data:", safeBalanceData);
 
   return (
     <CustomCard 
@@ -40,33 +45,57 @@ const BalanceCard: React.FC<BalanceCardProps> = ({
       <div className="space-y-3">
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Funds Received from HO:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.fundsReceived.toLocaleString()}</p>
+          {isLoading ? (
+            <div className="h-5 w-20 bg-white/20 animate-pulse rounded"></div>
+          ) : (
+            <p className="text-lg font-semibold">₹{safeBalanceData.fundsReceived.toLocaleString()}</p>
+          )}
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Total Expenses paid by supervisor:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.totalExpenditure.toLocaleString()}</p>
+          {isLoading ? (
+            <div className="h-5 w-20 bg-white/20 animate-pulse rounded"></div>
+          ) : (
+            <p className="text-lg font-semibold">₹{safeBalanceData.totalExpenditure.toLocaleString()}</p>
+          )}
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Total Advances paid by supervisor:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.totalAdvances.toLocaleString()}</p>
+          {isLoading ? (
+            <div className="h-5 w-20 bg-white/20 animate-pulse rounded"></div>
+          ) : (
+            <p className="text-lg font-semibold">₹{safeBalanceData.totalAdvances.toLocaleString()}</p>
+          )}
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Debits TO worker:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.debitsToWorker.toLocaleString()}</p>
+          {isLoading ? (
+            <div className="h-5 w-20 bg-white/20 animate-pulse rounded"></div>
+          ) : (
+            <p className="text-lg font-semibold">₹{safeBalanceData.debitsToWorker.toLocaleString()}</p>
+          )}
         </div>
         
         <div className="flex justify-between items-center">
           <p className="text-sm opacity-80 uppercase">Invoices paid by supervisor:</p>
-          <p className="text-lg font-semibold">₹{safeBalanceData.invoicesPaid.toLocaleString()}</p>
+          {isLoading ? (
+            <div className="h-5 w-20 bg-white/20 animate-pulse rounded"></div>
+          ) : (
+            <p className="text-lg font-semibold">₹{safeBalanceData.invoicesPaid.toLocaleString()}</p>
+          )}
         </div>
         
         <div className="pt-3 border-t border-white/20">
           <div className="flex justify-between items-center">
             <p className="text-sm opacity-80 uppercase">Current Balance:</p>
-            <p className="text-xl font-bold">₹{safeBalanceData.totalBalance.toLocaleString()}</p>
+            {isLoading ? (
+              <div className="h-6 w-24 bg-white/20 animate-pulse rounded"></div>
+            ) : (
+              <p className="text-xl font-bold">₹{safeBalanceData.totalBalance.toLocaleString()}</p>
+            )}
           </div>
         </div>
       </div>

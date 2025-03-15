@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
-import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary, AdvancePurpose, ApprovalStatus } from '@/lib/types';
+import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary, AdvancePurpose, ApprovalStatus, PaymentStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SiteDetailTransactions from './SiteDetailTransactions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import BalanceCard from '../dashboard/BalanceCard';
+import { fetchSiteInvoices } from '@/integrations/supabase/client';
 
 interface SiteDetailProps {
   site: Site;
@@ -54,7 +54,28 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [siteInvoices, setSiteInvoices] = useState<any[]>([]);
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    const loadSiteInvoices = async () => {
+      if (site && site.id) {
+        setIsLoadingInvoices(true);
+        try {
+          const invoices = await fetchSiteInvoices(site.id);
+          console.log("Fetched site invoices:", invoices);
+          setSiteInvoices(invoices || []);
+        } catch (error) {
+          console.error("Error loading site invoices:", error);
+        } finally {
+          setIsLoadingInvoices(false);
+        }
+      }
+    };
+    
+    loadSiteInvoices();
+  }, [site]);
 
   // Calculate these from the passed balanceSummary to ensure consistent calculation
   const totalExpenses = balanceSummary.totalExpenditure;
@@ -155,7 +176,10 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </div>
         </CustomCard>
 
-        <BalanceCard balanceData={balanceSummary} />
+        <BalanceCard 
+          balanceData={balanceSummary} 
+          isLoading={isLoadingInvoices}
+        />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -213,7 +237,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Invoice Entries</span>
-                  <span className="font-medium">{invoices.length}</span>
+                  <span className="font-medium">{siteInvoices.length || 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Funds Received Entries</span>

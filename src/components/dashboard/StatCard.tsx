@@ -16,6 +16,7 @@ interface StatCardProps {
   className?: string;
   valuePrefix?: string;
   valueSuffix?: string;
+  isLoading?: boolean;
 }
 
 const StatCard: React.FC<StatCardProps> = ({ 
@@ -26,6 +27,7 @@ const StatCard: React.FC<StatCardProps> = ({
   className,
   valuePrefix = '',
   valueSuffix = '',
+  isLoading = false,
 }) => {
   return (
     <CustomCard 
@@ -35,9 +37,13 @@ const StatCard: React.FC<StatCardProps> = ({
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <h3 className="mt-1 text-2xl font-semibold">
-            {valuePrefix}{typeof value === 'number' ? value.toLocaleString() : value}{valueSuffix}
-          </h3>
+          {isLoading ? (
+            <div className="h-6 w-24 mt-1 bg-gray-200 animate-pulse rounded"></div>
+          ) : (
+            <h3 className="mt-1 text-2xl font-semibold">
+              {valuePrefix}{typeof value === 'number' ? value.toLocaleString() : value}{valueSuffix}
+            </h3>
+          )}
           
           {trend && (
             <p className={cn(

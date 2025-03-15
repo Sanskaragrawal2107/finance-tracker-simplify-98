@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Building, User, Users, CheckSquare } from 'lucide-react';
+import { Search, Filter, Building, Users, CheckSquare } from 'lucide-react';
 import { 
   Expense, 
   ExpenseCategory, 
@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, fetchSiteInvoices } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
 
 import { supervisors } from '@/data/supervisors';
@@ -49,6 +49,7 @@ const Expenses: React.FC = () => {
   const [advances, setAdvances] = useState<Advance[]>(initialAdvances);
   const [fundsReceived, setFundsReceived] = useState<FundsReceived[]>(initialFunds);
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [siteInvoices, setSiteInvoices] = useState<any[]>([]);
   const [isSiteFormOpen, setIsSiteFormOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
@@ -82,14 +83,14 @@ const Expenses: React.FC = () => {
         const transformedSites: Site[] = data.map(site => ({
           id: site.id,
           name: site.name,
-          jobName: site.job_name,
-          posNo: site.pos_no,
+          jobName: site.job_name || '',
+          posNo: site.pos_no || '',
           location: site.location,
-          startDate: new Date(site.start_date),
+          startDate: new Date(site.start_date || new Date()),
           completionDate: site.completion_date ? new Date(site.completion_date) : undefined,
-          supervisorId: site.supervisor_id,
-          createdAt: new Date(site.created_at),
-          isCompleted: site.is_completed,
+          supervisorId: site.supervisor_id || '',
+          createdAt: new Date(site.created_at || new Date()),
+          isCompleted: site.is_completed || false,
           funds: site.funds || 0,
           totalFunds: site.total_funds || 0
         }));
@@ -147,13 +148,13 @@ const Expenses: React.FC = () => {
       if (data) {
         const transformedExpenses: Expense[] = data.map(expense => ({
           id: expense.id,
-          siteId: expense.site_id,
+          siteId: expense.site_id || '',
           date: new Date(expense.date),
           description: expense.description || '',
           category: expense.category as ExpenseCategory,
           amount: Number(expense.amount),
           status: ApprovalStatus.APPROVED,
-          createdAt: new Date(expense.created_at),
+          createdAt: new Date(expense.created_at || new Date()),
           createdBy: expense.created_by || '',
           supervisorId: user?.id || '',
         }));
@@ -181,7 +182,7 @@ const Expenses: React.FC = () => {
       if (data) {
         const transformedAdvances: Advance[] = data.map(advance => ({
           id: advance.id,
-          siteId: advance.site_id,
+          siteId: advance.site_id || '',
           date: new Date(advance.date),
           recipientName: advance.recipient_name,
           recipientType: advance.recipient_type as RecipientType,
@@ -237,21 +238,14 @@ const Expenses: React.FC = () => {
 
   const fetchSiteInvoices = async (siteId: string) => {
     try {
-      setInvoices([]);
-      return;
+      const invoicesData = await fetchSiteInvoices(siteId);
+      console.log("Fetched site invoices in Expenses.tsx:", invoicesData);
       
-      /* This code will be enabled once the invoices table has the correct structure
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('site_id', siteId);
-      
-      if (error) throw error;
-      
-      if (data) {
-        const transformedInvoices: Invoice[] = data.map(invoice => ({
+      if (invoicesData && invoicesData.length > 0) {
+        setSiteInvoices(invoicesData);
+        
+        const transformedInvoices: Invoice[] = invoicesData.map((invoice: any) => ({
           id: invoice.id,
-          siteId: invoice.site_id,
           date: new Date(invoice.date),
           partyId: invoice.party_id,
           partyName: invoice.party_name,
@@ -261,18 +255,18 @@ const Expenses: React.FC = () => {
           gstPercentage: invoice.gst_percentage,
           grossAmount: invoice.gross_amount,
           netAmount: invoice.net_amount,
+          bankDetails: invoice.bank_details || {},
           paymentStatus: invoice.payment_status as PaymentStatus,
-          bankDetails: invoice.bank_details,
-          createdBy: invoice.created_by,
+          createdBy: invoice.created_by || '',
           createdAt: new Date(invoice.created_at),
-          approverType: invoice.approver_type,
+          approverType: invoice.approver_type as "ho" | "supervisor" | undefined,
+          siteId: invoice.site_id,
         }));
         
         setInvoices(transformedInvoices);
       } else {
         setInvoices([]);
       }
-      */
     } catch (error) {
       console.error('Error fetching invoices:', error);
       toast.error('Failed to load invoices for this site');
@@ -492,7 +486,6 @@ const Expenses: React.FC = () => {
         
         setFundsReceived(prevFunds => [fundWithId, ...prevFunds]);
         
-        // Update the site's funds directly
         const updatedFunds = (sites.find(site => site.id === selectedSiteId)?.funds || 0) + Number(fundWithId.amount);
         
         const { error: updateError } = await supabase
@@ -591,11 +584,10 @@ const Expenses: React.FC = () => {
   const siteExpenses = expenses.filter(expense => expense.siteId === selectedSiteId);
   const siteAdvances = advances.filter(advance => advance.siteId === selectedSiteId);
   const siteFunds = fundsReceived.filter(fund => fund.siteId === selectedSiteId);
-  const siteInvoices = invoices.filter(invoice => invoice.siteId === selectedSiteId);
   
-  const allSiteInvoices = siteInvoices;
+  const siteInvoicesList = invoices.filter(invoice => invoice.siteId === selectedSiteId);
   
-  const supervisorInvoices = siteInvoices.filter(invoice => 
+  const supervisorInvoices = siteInvoicesList.filter(invoice => 
     invoice.approverType === "supervisor" || !invoice.approverType
   );
 
@@ -610,8 +602,8 @@ const Expenses: React.FC = () => {
       advance.siteId === siteId && advance.status === ApprovalStatus.APPROVED
     );
     
-    const siteInvoices = invoices.filter(invoice => 
-      invoice.siteId === siteId && invoice.paymentStatus === PaymentStatus.PAID
+    const filteredSiteInvoices = siteInvoices.filter(invoice => 
+      invoice.site_id === siteId && invoice.payment_status === 'paid'
     );
 
     const regularAdvances = siteAdvances.filter(advance => 
@@ -622,7 +614,7 @@ const Expenses: React.FC = () => {
       DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose)
     );
 
-    const supervisorInvoices = siteInvoices.filter(invoice => 
+    const supervisorInvoices = filteredSiteInvoices.filter(invoice => 
       invoice.approverType === "supervisor" || !invoice.approverType
     );
 
@@ -631,14 +623,18 @@ const Expenses: React.FC = () => {
     const totalAdvances = siteAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalRegularAdvances = regularAdvances.reduce((sum, advance) => sum + advance.amount, 0);
     const totalDebitToWorker = debitAdvances.reduce((sum, advance) => sum + advance.amount, 0);
-    const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
-    const pendingInvoicesTotal = siteInvoices
-      .filter(invoice => invoice.paymentStatus === PaymentStatus.PENDING)
-      .reduce((sum, invoice) => sum + (invoice.netAmount || 0), 0);
+    
+    const supervisorInvoiceTotal = supervisorInvoices.reduce((sum, invoice) => {
+      console.log(`Adding invoice ${invoice.id} with amount ${invoice.net_amount}`);
+      return sum + (Number(invoice.net_amount) || 0);
+    }, 0);
+    
+    console.log("Supervisor invoice total:", supervisorInvoiceTotal);
+    
+    const pendingInvoicesTotal = filteredSiteInvoices
+      .filter(invoice => invoice.payment_status === 'pending')
+      .reduce((sum, invoice) => sum + (Number(invoice.net_amount) || 0), 0);
 
-    // Updated balance calculation according to the requirement:
-    // current balance = Funds Received from HO - Total Expenses - Total Advances - Invoices paid
-    // (note: debits to worker are tracked separately but not subtracted from balance)
     const totalBalance = totalFunds - totalExpenses - totalAdvances - supervisorInvoiceTotal;
 
     return {
@@ -674,7 +670,7 @@ const Expenses: React.FC = () => {
             expenses={siteExpenses}
             advances={siteAdvances}
             fundsReceived={siteFunds}
-            invoices={allSiteInvoices}
+            invoices={siteInvoicesList}
             supervisorInvoices={supervisorInvoices}
             onBack={() => setSelectedSiteId(null)}
             onAddExpense={handleAddExpense}
