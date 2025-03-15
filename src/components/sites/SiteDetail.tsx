@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
-import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary, AdvancePurpose, ApprovalStatus, PaymentStatus } from '@/lib/types';
+import { Expense, Site, Advance, FundsReceived, Invoice, BalanceSummary, AdvancePurpose, ApprovalStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import SiteDetailTransactions from './SiteDetailTransactions';
 import { useIsMobile } from '@/hooks/use-mobile';
 import BalanceCard from '../dashboard/BalanceCard';
-import { fetchSiteInvoices, supabase } from '@/integrations/supabase/client';
 
 interface SiteDetailProps {
   site: Site;
@@ -55,49 +54,15 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('summary');
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
-  const [siteInvoices, setSiteInvoices] = useState<Invoice[]>([]);
-  const [updatedBalanceSummary, setUpdatedBalanceSummary] = useState<BalanceSummary>(balanceSummary);
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    const loadSiteInvoices = async () => {
-      if (site && site.id) {
-        setIsLoadingInvoices(true);
-        try {
-          const invoices = await fetchSiteInvoices(site.id);
-          console.log("Fetched site invoices:", invoices);
-          setSiteInvoices(invoices || []);
-
-          // Calculate total invoices amount for paid invoices
-          const totalInvoicesPaid = invoices
-            .filter(inv => inv.paymentStatus === 'paid')
-            .reduce((sum, inv) => sum + inv.netAmount, 0);
-
-          console.log("Total invoices paid:", totalInvoicesPaid);
-
-          // Update balance summary with the correct invoices amount
-          setUpdatedBalanceSummary(prev => ({
-            ...prev,
-            invoicesPaid: totalInvoicesPaid,
-            // Recalculate the total balance
-            totalBalance: prev.fundsReceived - 
-                         prev.totalExpenditure - 
-                         prev.totalAdvances - 
-                         totalInvoicesPaid + 
-                         (prev.debitsToWorker || 0)
-          }));
-        } catch (error) {
-          console.error("Error loading site invoices:", error);
-        } finally {
-          setIsLoadingInvoices(false);
-        }
-      }
-    };
-    
-    loadSiteInvoices();
-  }, [site, balanceSummary]);
-
+  // Calculate these from the passed balanceSummary to ensure consistent calculation
+  const totalExpenses = balanceSummary.totalExpenditure;
+  const totalAdvances = balanceSummary.totalAdvances || 0;
+  const totalDebitToWorker = balanceSummary.debitsToWorker || 0;
+  const totalFundsReceived = balanceSummary.fundsReceived;
+  const totalInvoices = balanceSummary.invoicesPaid || 0;
+  
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
     setIsMarkingComplete(false);
@@ -190,10 +155,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
           </div>
         </CustomCard>
 
-        <BalanceCard 
-          balanceData={updatedBalanceSummary} 
-          isLoading={isLoadingInvoices}
-        />
+        <BalanceCard balanceData={balanceSummary} />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -209,29 +171,29 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Expenses</span>
-                  <span className="font-medium">₹{updatedBalanceSummary.totalExpenditure.toLocaleString()}</span>
+                  <span className="font-medium">₹{totalExpenses.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Advances</span>
-                  <span className="font-medium">₹{updatedBalanceSummary.totalAdvances?.toLocaleString() || '0'}</span>
+                  <span className="font-medium">₹{totalAdvances.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Invoices</span>
-                  <span className="font-medium">₹{updatedBalanceSummary.invoicesPaid?.toLocaleString() || '0'}</span>
+                  <span className="font-medium">₹{totalInvoices.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Debits to Worker</span>
-                  <span className="font-medium">₹{updatedBalanceSummary.debitsToWorker?.toLocaleString() || '0'}</span>
+                  <span className="font-medium">₹{totalDebitToWorker.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Total Funds Received</span>
-                  <span className="font-medium">₹{updatedBalanceSummary.fundsReceived.toLocaleString()}</span>
+                  <span className="font-medium">₹{totalFundsReceived.toLocaleString()}</span>
                 </div>
                 <div className="pt-2 border-t">
                   <div className="flex justify-between items-center font-medium">
                     <span>Current Balance</span>
-                    <span className={updatedBalanceSummary.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}>
-                      ₹{updatedBalanceSummary.totalBalance.toLocaleString()}
+                    <span className={balanceSummary.totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}>
+                      ₹{balanceSummary.totalBalance.toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -251,7 +213,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Invoice Entries</span>
-                  <span className="font-medium">{siteInvoices.length || 0}</span>
+                  <span className="font-medium">{invoices.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Funds Received Entries</span>
@@ -277,7 +239,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
             advances={advances} 
             fundsReceived={fundsReceived} 
             invoices={invoices} 
-            supervisorInvoices={siteInvoices}
+            supervisorInvoices={supervisorInvoices}
             onAddExpense={onAddExpense} 
             onAddAdvance={onAddAdvance} 
             onAddFunds={onAddFunds} 
