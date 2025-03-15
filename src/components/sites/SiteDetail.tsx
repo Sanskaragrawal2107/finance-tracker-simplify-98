@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ArrowLeft, Building2, Calendar, Check, Edit, ExternalLink, User } from 'lucide-react';
@@ -28,6 +29,7 @@ interface SiteDetailProps {
   onCompleteSite: (siteId: string, completionDate: Date) => void;
 }
 
+// Define DEBIT_ADVANCE_PURPOSES here for consistency
 const DEBIT_ADVANCE_PURPOSES = [
   AdvancePurpose.SAFETY_SHOES,
   AdvancePurpose.TOOLS,
@@ -54,15 +56,13 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
   const isMobile = useIsMobile();
 
+  // Calculate these from the passed balanceSummary to ensure consistent calculation
   const totalExpenses = balanceSummary.totalExpenditure;
   const totalAdvances = balanceSummary.totalAdvances || 0;
   const totalDebitToWorker = balanceSummary.debitsToWorker || 0;
   const totalFundsReceived = balanceSummary.fundsReceived;
   const totalInvoices = balanceSummary.invoicesPaid || 0;
   
-  console.log('SiteDetail balanceSummary:', balanceSummary);
-  console.log('SiteDetail supervisorInvoices:', supervisorInvoices);
-
   const handleMarkComplete = () => {
     onCompleteSite(site.id, new Date());
     setIsMarkingComplete(false);
@@ -213,7 +213,7 @@ const SiteDetail: React.FC<SiteDetailProps> = ({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Invoice Entries</span>
-                  <span className="font-medium">{invoices.length + (supervisorInvoices?.length || 0)}</span>
+                  <span className="font-medium">{invoices.length}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-muted-foreground">Funds Received Entries</span>
