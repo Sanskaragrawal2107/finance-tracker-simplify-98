@@ -73,24 +73,28 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   // Fetch invoices from Supabase
   useEffect(() => {
-    const fetchInvoices = async () => {
+    const loadSiteInvoices = async () => {
       if (!siteId) return;
       
       setIsLoadingSiteInvoices(true);
       try {
+        console.log("Fetching invoices for site:", siteId);
         const invoicesData = await fetchSiteInvoices(siteId);
         
         if (invoicesData && invoicesData.length > 0) {
+          console.log("Successfully loaded invoices:", invoicesData.length);
           setSiteInvoices(invoicesData);
+        } else {
+          console.log("No invoices found for site");
         }
       } catch (error) {
-        console.error('Error:', error);
+        console.error('Error loading invoices:', error);
       } finally {
         setIsLoadingSiteInvoices(false);
       }
     };
     
-    fetchInvoices();
+    loadSiteInvoices();
   }, [siteId]);
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
@@ -237,66 +241,15 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const handleAddInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
     onAddInvoice(invoice);
     
+    // Reload invoices after adding a new one
     setIsLoadingSiteInvoices(true);
     try {
-      const { data, error } = await supabase
-        .from('site_invoices')
-        .select('*')
-        .eq('site_id', siteId);
-        
-      if (error) {
-        console.error('Error fetching invoices:', error);
-        return;
-      }
-      
-      if (data && data.length > 0) {
-        const mappedInvoices: Invoice[] = data.map(invoice => {
-          // Parse material_items and bank_details from JSON strings
-          let parsedMaterialItems: MaterialItem[] = [];
-          try {
-            parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
-          } catch (e) {
-            console.error('Error parsing material items:', e);
-            parsedMaterialItems = [];
-          }
-          
-          let parsedBankDetails: BankDetails = {
-            accountNumber: '',
-            bankName: '',
-            ifscCode: ''
-          };
-          try {
-            parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
-          } catch (e) {
-            console.error('Error parsing bank details:', e);
-          }
-          
-          return {
-            id: invoice.id,
-            date: new Date(invoice.date),
-            partyId: invoice.party_id,
-            partyName: invoice.party_name,
-            material: invoice.material,
-            quantity: Number(invoice.quantity),
-            rate: Number(invoice.rate),
-            gstPercentage: Number(invoice.gst_percentage),
-            grossAmount: Number(invoice.gross_amount),
-            netAmount: Number(invoice.net_amount),
-            materialItems: parsedMaterialItems,
-            bankDetails: parsedBankDetails,
-            billUrl: invoice.bill_url,
-            paymentStatus: invoice.payment_status as any,
-            createdBy: invoice.created_by || '',
-            createdAt: new Date(invoice.created_at),
-            approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
-            siteId: invoice.site_id || ''
-          };
-        });
-        
-        setSiteInvoices(mappedInvoices);
+      const invoicesData = await fetchSiteInvoices(siteId);
+      if (invoicesData && invoicesData.length > 0) {
+        setSiteInvoices(invoicesData);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error refreshing invoices:', error);
     } finally {
       setIsLoadingSiteInvoices(false);
     }
