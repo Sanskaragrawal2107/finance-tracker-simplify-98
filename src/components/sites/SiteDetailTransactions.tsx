@@ -1,8 +1,7 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Plus, Clock, FileText, ArrowUpDown, Truck } from 'lucide-react';
+import { Plus, Clock, FileText, ArrowUpDown, Truck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
@@ -12,6 +11,7 @@ import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SiteDetailTransactionsProps {
   siteId: string;
@@ -51,18 +51,76 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const [isInvoiceFormOpen, setIsInvoiceFormOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [activeTab, setActiveTab] = useState("expenses");
+  const [isLoadingSiteInvoices, setIsLoadingSiteInvoices] = useState(false);
+  const [siteInvoices, setSiteInvoices] = useState<Invoice[]>([]);
 
   const displayExpenses = expenses;
   
   // Show all advances in the advances tab, including debits to worker
   const displayAdvances = advances;
   
-  const displayInvoices = supervisorInvoices.length > 0 ? supervisorInvoices : invoices;
+  // Use site invoices if available, otherwise fall back to the passed in invoices
+  const displayInvoices = siteInvoices.length > 0 
+    ? siteInvoices 
+    : supervisorInvoices.length > 0 
+      ? supervisorInvoices 
+      : invoices;
 
   // Helper function to determine if an advance is a debit to worker (for display purposes only)
   const isDebitToWorker = (advance: Advance) => {
     return DEBIT_ADVANCE_PURPOSES.includes(advance.purpose as AdvancePurpose);
   };
+
+  // Fetch invoices from Supabase
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      if (!siteId) return;
+      
+      setIsLoadingSiteInvoices(true);
+      try {
+        const { data, error } = await supabase
+          .from('site_invoices')
+          .select('*')
+          .eq('site_id', siteId);
+          
+        if (error) {
+          console.error('Error fetching invoices:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          const mappedInvoices = data.map(invoice => ({
+            id: invoice.id,
+            date: new Date(invoice.date),
+            partyId: invoice.party_id,
+            partyName: invoice.party_name,
+            material: invoice.material,
+            quantity: Number(invoice.quantity),
+            rate: Number(invoice.rate),
+            gstPercentage: Number(invoice.gst_percentage),
+            grossAmount: Number(invoice.gross_amount),
+            netAmount: Number(invoice.net_amount),
+            materialItems: invoice.material_items,
+            bankDetails: invoice.bank_details,
+            billUrl: invoice.bill_url,
+            paymentStatus: invoice.payment_status as any,
+            createdBy: invoice.created_by,
+            createdAt: new Date(invoice.created_at),
+            approverType: invoice.approver_type as any,
+            siteId: invoice.site_id
+          }));
+          
+          setSiteInvoices(mappedInvoices);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoadingSiteInvoices(false);
+      }
+    };
+    
+    fetchInvoices();
+  }, [siteId]);
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
     return (
@@ -204,6 +262,52 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
       </div>
     </div>
   );
+
+  const handleAddInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    onAddInvoice(invoice);
+    
+    setIsLoadingSiteInvoices(true);
+    try {
+      const { data, error } = await supabase
+        .from('site_invoices')
+        .select('*')
+        .eq('site_id', siteId);
+        
+      if (error) {
+        console.error('Error fetching invoices:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const mappedInvoices = data.map(invoice => ({
+          id: invoice.id,
+          date: new Date(invoice.date),
+          partyId: invoice.party_id,
+          partyName: invoice.party_name,
+          material: invoice.material,
+          quantity: Number(invoice.quantity),
+          rate: Number(invoice.rate),
+          gstPercentage: Number(invoice.gst_percentage),
+          grossAmount: Number(invoice.gross_amount),
+          netAmount: Number(invoice.net_amount),
+          materialItems: invoice.material_items,
+          bankDetails: invoice.bank_details,
+          billUrl: invoice.bill_url,
+          paymentStatus: invoice.payment_status as any,
+          createdBy: invoice.created_by,
+          createdAt: new Date(invoice.created_at),
+          approverType: invoice.approver_type as any,
+          siteId: invoice.site_id
+        }));
+        
+        setSiteInvoices(mappedInvoices);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsLoadingSiteInvoices(false);
+    }
+  };
 
   return <div className="grid grid-cols-1 gap-6">
       <CustomCard className="bg-white">
@@ -386,7 +490,12 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
           </TabsContent>
           
           <TabsContent value="invoices" className="space-y-4 bg-white">
-            {displayInvoices.length > 0 ? (
+            {isLoadingSiteInvoices ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <span className="ml-2">Loading invoices...</span>
+              </div>
+            ) : displayInvoices.length > 0 ? (
               <>
                 <div className="hidden sm:block rounded-md overflow-hidden border border-gray-200">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -491,10 +600,12 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
         siteId
       })} />
       
-      <InvoiceForm isOpen={isInvoiceFormOpen} onClose={() => setIsInvoiceFormOpen(false)} onSubmit={invoice => onAddInvoice({
-        ...invoice,
-        siteId
-      })} />
+      <InvoiceForm 
+        isOpen={isInvoiceFormOpen} 
+        onClose={() => setIsInvoiceFormOpen(false)} 
+        onSubmit={handleAddInvoice} 
+        siteId={siteId}
+      />
       
       {selectedInvoice && <InvoiceDetails invoice={selectedInvoice} isOpen={!!selectedInvoice} onClose={() => setSelectedInvoice(null)} />}
     </div>;

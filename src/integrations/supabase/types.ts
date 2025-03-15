@@ -243,6 +243,77 @@ export type Database = {
           },
         ]
       }
+      site_invoices: {
+        Row: {
+          approver_type: string | null
+          bank_details: Json | null
+          bill_url: string | null
+          created_at: string
+          created_by: string | null
+          date: string
+          gross_amount: number
+          gst_percentage: number
+          id: string
+          material: string
+          material_items: Json | null
+          net_amount: number
+          party_id: string
+          party_name: string
+          payment_status: string
+          quantity: number
+          rate: number
+          site_id: string | null
+        }
+        Insert: {
+          approver_type?: string | null
+          bank_details?: Json | null
+          bill_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          gross_amount: number
+          gst_percentage: number
+          id?: string
+          material: string
+          material_items?: Json | null
+          net_amount: number
+          party_id: string
+          party_name: string
+          payment_status?: string
+          quantity: number
+          rate: number
+          site_id?: string | null
+        }
+        Update: {
+          approver_type?: string | null
+          bank_details?: Json | null
+          bill_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          gross_amount?: number
+          gst_percentage?: number
+          id?: string
+          material?: string
+          material_items?: Json | null
+          net_amount?: number
+          party_id?: string
+          party_name?: string
+          payment_status?: string
+          quantity?: number
+          rate?: number
+          site_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_invoices_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sites: {
         Row: {
           completion_date: string | null

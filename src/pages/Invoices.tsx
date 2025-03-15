@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
-import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle, ArrowLeft, Check } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/compone
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Form, 
   FormField, 
@@ -41,139 +43,6 @@ const paymentFormSchema = z.object({
   bankOption: z.enum(["sbi", "hdfc", "icici", "axis"]),
   rememberChoice: z.boolean().optional()
 });
-
-const initialInvoices: Invoice[] = [
-  {
-    id: '1',
-    date: new Date('2023-07-05'),
-    partyId: '101',
-    partyName: 'Steel Suppliers Ltd',
-    material: 'TMT Steel Bars',
-    quantity: 5,
-    rate: 50000,
-    gstPercentage: 18,
-    grossAmount: 250000,
-    netAmount: 295000,
-    materialItems: [
-      {
-        material: 'TMT Steel Bars',
-        quantity: 5,
-        rate: 50000,
-        gstPercentage: 18,
-        amount: 250000
-      }
-    ],
-    bankDetails: {
-      accountNumber: '12345678901',
-      bankName: 'State Bank of India',
-      ifscCode: 'SBIN0001234',
-      email: 'accounts@steelsuppliers.com',
-      mobile: '9876543210',
-    },
-    billUrl: 'https://sample-files.com/pdf/sample.pdf',
-    paymentStatus: PaymentStatus.PAID,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-07-05'),
-    approverType: 'ho',
-  },
-  {
-    id: '2',
-    date: new Date('2023-07-04'),
-    partyId: '102',
-    partyName: 'Cement Corporation',
-    material: 'Portland Cement, White Cement',
-    quantity: 100,
-    rate: 350,
-    gstPercentage: 18,
-    grossAmount: 45000,
-    netAmount: 53100,
-    materialItems: [
-      {
-        material: 'Portland Cement',
-        quantity: 100,
-        rate: 350,
-        gstPercentage: 18,
-        amount: 35000
-      },
-      {
-        material: 'White Cement',
-        quantity: 20,
-        rate: 500,
-        gstPercentage: 18,
-        amount: 10000
-      }
-    ],
-    bankDetails: {
-      accountNumber: '98765432101',
-      bankName: 'HDFC Bank',
-      ifscCode: 'HDFC0001234',
-      email: 'accounts@cementcorp.com',
-      mobile: '8765432109',
-    },
-    billUrl: 'https://sample-files.com/pdf/sample.pdf',
-    paymentStatus: PaymentStatus.PAID,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-04'),
-    approverType: 'supervisor',
-  },
-  {
-    id: '3',
-    date: new Date('2023-07-03'),
-    partyId: '103',
-    partyName: 'Brick Manufacturers',
-    material: 'Red Bricks',
-    quantity: 10000,
-    rate: 8,
-    gstPercentage: 12,
-    grossAmount: 80000,
-    netAmount: 89600,
-    materialItems: [
-      {
-        material: 'Red Bricks',
-        quantity: 10000,
-        rate: 8,
-        gstPercentage: 12,
-        amount: 80000
-      }
-    ],
-    bankDetails: {
-      accountNumber: '45678901234',
-      bankName: 'ICICI Bank',
-      ifscCode: 'ICIC0001234',
-      email: 'accounts@brickmanufacturers.com',
-      mobile: '7654321098',
-    },
-    billUrl: 'https://sample-files.com/pdf/sample.pdf',
-    paymentStatus: PaymentStatus.PENDING,
-    createdBy: 'Supervisor',
-    createdAt: new Date('2023-07-03'),
-    approverType: 'supervisor',
-  },
-  {
-    id: '4',
-    date: new Date('2023-07-02'),
-    partyId: '104',
-    partyName: 'Electrical Solutions',
-    material: 'Wiring & Fixtures',
-    quantity: 1,
-    rate: 125000,
-    gstPercentage: 18,
-    grossAmount: 125000,
-    netAmount: 147500,
-    bankDetails: {
-      accountNumber: '56789012345',
-      bankName: 'Axis Bank',
-      ifscCode: 'UTIB0001234',
-      email: 'accounts@electricalsolutions.com',
-      mobile: '6543210987',
-    },
-    billUrl: '#',
-    paymentStatus: PaymentStatus.PENDING,
-    createdBy: 'Admin',
-    createdAt: new Date('2023-07-02'),
-    approverType: 'ho',
-  },
-];
 
 const bankDetails = {
   sbi: {
@@ -210,7 +79,8 @@ const Invoices: React.FC = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isBankPageOpen, setIsBankPageOpen] = useState(false);
   const [selectedBank, setSelectedBank] = useState<string | null>(null);
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [paymentProcessing, setPaymentProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
@@ -224,25 +94,137 @@ const Invoices: React.FC = () => {
     },
   });
 
+  // Fetch invoices from Supabase
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('site_invoices')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error('Error fetching invoices:', error);
+          toast({
+            title: "Failed to fetch invoices",
+            description: error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (data) {
+          const mappedInvoices: Invoice[] = data.map(invoice => ({
+            id: invoice.id,
+            date: new Date(invoice.date),
+            partyId: invoice.party_id,
+            partyName: invoice.party_name,
+            material: invoice.material,
+            quantity: Number(invoice.quantity),
+            rate: Number(invoice.rate),
+            gstPercentage: Number(invoice.gst_percentage),
+            grossAmount: Number(invoice.gross_amount),
+            netAmount: Number(invoice.net_amount),
+            materialItems: invoice.material_items,
+            bankDetails: invoice.bank_details,
+            billUrl: invoice.bill_url,
+            paymentStatus: invoice.payment_status as PaymentStatus,
+            createdBy: invoice.created_by,
+            createdAt: new Date(invoice.created_at),
+            approverType: invoice.approver_type as "ho" | "supervisor",
+            siteId: invoice.site_id
+          }));
+          
+          setInvoices(mappedInvoices);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchInvoices();
+  }, [toast]);
+
   const filteredInvoices = invoices.filter(invoice => 
     invoice.partyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.material.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.id.includes(searchTerm)
   );
 
-  const handleCreateInvoice = (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
-    const newInvoice: Invoice = {
-      ...invoice,
-      id: (invoices.length + 1).toString(),
-      createdAt: new Date(),
-    };
-    
-    setInvoices([newInvoice, ...invoices]);
-    
-    toast({
-      title: "Invoice Created",
-      description: `Invoice for ${invoice.partyName} has been created successfully.`,
-    });
+  const handleCreateInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('site_invoices')
+        .insert({
+          date: invoice.date.toISOString(),
+          party_id: invoice.partyId,
+          party_name: invoice.partyName,
+          material: invoice.material,
+          quantity: invoice.quantity,
+          rate: invoice.rate,
+          gst_percentage: invoice.gstPercentage,
+          gross_amount: invoice.grossAmount,
+          net_amount: invoice.netAmount,
+          material_items: invoice.materialItems,
+          bank_details: invoice.bankDetails,
+          bill_url: invoice.billUrl,
+          payment_status: invoice.paymentStatus,
+          created_by: invoice.createdBy,
+          approver_type: invoice.approverType,
+          site_id: invoice.siteId
+        })
+        .select();
+        
+      if (error) {
+        console.error('Error creating invoice:', error);
+        toast({
+          title: "Invoice Creation Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const newInvoice: Invoice = {
+          id: data[0].id,
+          date: new Date(data[0].date),
+          partyId: data[0].party_id,
+          partyName: data[0].party_name,
+          material: data[0].material,
+          quantity: Number(data[0].quantity),
+          rate: Number(data[0].rate),
+          gstPercentage: Number(data[0].gst_percentage),
+          grossAmount: Number(data[0].gross_amount),
+          netAmount: Number(data[0].net_amount),
+          materialItems: data[0].material_items,
+          bankDetails: data[0].bank_details,
+          billUrl: data[0].bill_url,
+          paymentStatus: data[0].payment_status as PaymentStatus,
+          createdBy: data[0].created_by,
+          createdAt: new Date(data[0].created_at),
+          approverType: data[0].approver_type as "ho" | "supervisor",
+          siteId: data[0].site_id
+        };
+        
+        setInvoices([newInvoice, ...invoices]);
+        
+        toast({
+          title: "Invoice Created",
+          description: `Invoice for ${invoice.partyName} has been created successfully.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create invoice. Please try again.",
+        variant: "destructive"
+      });
+    }
     
     setIsCreateDialogOpen(false);
   };
@@ -268,25 +250,52 @@ const Invoices: React.FC = () => {
     }
   };
   
-  const handleMakePayment = (invoice: Invoice) => {
-    // Update the invoice payment status
-    const updatedInvoices = invoices.map(inv => {
-      if (inv.id === invoice.id) {
-        return {
-          ...inv,
-          paymentStatus: PaymentStatus.PAID
-        };
+  const handleMakePayment = async (invoice: Invoice) => {
+    try {
+      // Update payment status in Supabase
+      const { error } = await supabase
+        .from('site_invoices')
+        .update({ 
+          payment_status: PaymentStatus.PAID 
+        })
+        .eq('id', invoice.id);
+        
+      if (error) {
+        console.error('Error updating payment status:', error);
+        toast({
+          title: "Payment Failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
       }
-      return inv;
-    });
-    
-    setInvoices(updatedInvoices);
-    setIsViewDialogOpen(false);
-    
-    toast({
-      title: "Payment Successful",
-      description: `Payment of ₹${invoice.netAmount.toLocaleString()} has been processed successfully.`,
-    });
+      
+      // Update the invoice in state
+      const updatedInvoices = invoices.map(inv => {
+        if (inv.id === invoice.id) {
+          return {
+            ...inv,
+            paymentStatus: PaymentStatus.PAID
+          };
+        }
+        return inv;
+      });
+      
+      setInvoices(updatedInvoices);
+      setIsViewDialogOpen(false);
+      
+      toast({
+        title: "Payment Successful",
+        description: `Payment of ₹${invoice.netAmount.toLocaleString()} has been processed successfully.`,
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process payment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -325,70 +334,79 @@ const Invoices: React.FC = () => {
       </div>
       
       <CustomCard>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b text-left">
-                <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
-                <th className="pb-3 font-medium text-muted-foreground">Party Name</th>
-                <th className="pb-3 font-medium text-muted-foreground">Material</th>
-                <th className="pb-3 font-medium text-muted-foreground">Net Taxable Amount</th>
-                <th className="pb-3 font-medium text-muted-foreground">GST</th>
-                <th className="pb-3 font-medium text-muted-foreground">Grand Net Total</th>
-                <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredInvoices.map((invoice) => (
-                <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                  <td className="py-4 pl-4 text-sm">{format(invoice.date, 'MMM dd, yyyy')}</td>
-                  <td className="py-4 text-sm">{invoice.partyName}</td>
-                  <td className="py-4 text-sm">{invoice.material}</td>
-                  <td className="py-4 text-sm">₹{invoice.grossAmount.toLocaleString()}</td>
-                  <td className="py-4 text-sm">{invoice.gstPercentage}%</td>
-                  <td className="py-4 text-sm font-medium">₹{invoice.netAmount.toLocaleString()}</td>
-                  <td className="py-4 text-sm">
-                    <span className={`${getStatusColor(invoice.paymentStatus)} px-2 py-1 rounded-full text-xs font-medium`}>
-                      {invoice.paymentStatus}
-                    </span>
-                  </td>
-                  <td className="py-4 pr-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadInvoice(invoice)}>
-                      <Download className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    {invoice.paymentStatus === PaymentStatus.PENDING && invoice.approverType === "ho" && (
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8" 
-                        onClick={() => handleViewInvoice(invoice)}
-                      >
-                        <CreditCard className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        <div className="flex items-center justify-between mt-4 border-t pt-4">
-          <p className="text-sm text-muted-foreground">Showing 1-{filteredInvoices.length} of {filteredInvoices.length} entries</p>
-          <div className="flex items-center space-x-2">
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronLeft className="h-5 w-5 text-muted-foreground" />
-            </button>
-            <button className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm">1</button>
-            <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </button>
+        {isLoading ? (
+          <div className="flex items-center justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="ml-2">Loading invoices...</span>
           </div>
-        </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-3 pl-4 font-medium text-muted-foreground">Date</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Party Name</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Material</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Net Taxable Amount</th>
+                    <th className="pb-3 font-medium text-muted-foreground">GST</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Grand Net Total</th>
+                    <th className="pb-3 font-medium text-muted-foreground">Status</th>
+                    <th className="pb-3 pr-4 font-medium text-muted-foreground text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInvoices.map((invoice) => (
+                    <tr key={invoice.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                      <td className="py-4 pl-4 text-sm">{format(invoice.date, 'MMM dd, yyyy')}</td>
+                      <td className="py-4 text-sm">{invoice.partyName}</td>
+                      <td className="py-4 text-sm">{invoice.material}</td>
+                      <td className="py-4 text-sm">₹{invoice.grossAmount.toLocaleString()}</td>
+                      <td className="py-4 text-sm">{invoice.gstPercentage}%</td>
+                      <td className="py-4 text-sm font-medium">₹{invoice.netAmount.toLocaleString()}</td>
+                      <td className="py-4 text-sm">
+                        <span className={`${getStatusColor(invoice.paymentStatus)} px-2 py-1 rounded-full text-xs font-medium`}>
+                          {invoice.paymentStatus}
+                        </span>
+                      </td>
+                      <td className="py-4 pr-4 text-right">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleViewInvoice(invoice)}>
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownloadInvoice(invoice)}>
+                          <Download className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        {invoice.paymentStatus === PaymentStatus.PENDING && invoice.approverType === "ho" && (
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8" 
+                            onClick={() => handleViewInvoice(invoice)}
+                          >
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="flex items-center justify-between mt-4 border-t pt-4">
+              <p className="text-sm text-muted-foreground">Showing 1-{filteredInvoices.length} of {filteredInvoices.length} entries</p>
+              <div className="flex items-center space-x-2">
+                <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
+                  <ChevronLeft className="h-5 w-5 text-muted-foreground" />
+                </button>
+                <button className="px-3 py-1 rounded-md bg-primary text-primary-foreground text-sm">1</button>
+                <button className="p-1 rounded-md hover:bg-muted transition-colors" disabled>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </CustomCard>
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
