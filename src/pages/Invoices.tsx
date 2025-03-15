@@ -4,7 +4,7 @@ import PageTitle from '@/components/common/PageTitle';
 import CustomCard from '@/components/ui/CustomCard';
 import { Search, Filter, Plus, Eye, Download, ChevronLeft, ChevronRight, CreditCard, Building, AlertTriangle, ArrowLeft, Check, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Invoice, PaymentStatus, MaterialItem, BankDetails } from '@/lib/types';
+import { Invoice, PaymentStatus, MaterialItem } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
@@ -115,48 +115,26 @@ const Invoices: React.FC = () => {
         }
         
         if (data) {
-          const mappedInvoices: Invoice[] = data.map(invoice => {
-            // Parse material_items and bank_details from JSON strings
-            let parsedMaterialItems: MaterialItem[] = [];
-            try {
-              parsedMaterialItems = JSON.parse(invoice.material_items as string) as MaterialItem[];
-            } catch (e) {
-              console.error('Error parsing material items:', e);
-              parsedMaterialItems = [];
-            }
-            
-            let parsedBankDetails: BankDetails = {
-              accountNumber: '',
-              bankName: '',
-              ifscCode: ''
-            };
-            try {
-              parsedBankDetails = JSON.parse(invoice.bank_details as string) as BankDetails;
-            } catch (e) {
-              console.error('Error parsing bank details:', e);
-            }
-            
-            return {
-              id: invoice.id,
-              date: new Date(invoice.date),
-              partyId: invoice.party_id,
-              partyName: invoice.party_name,
-              material: invoice.material,
-              quantity: Number(invoice.quantity),
-              rate: Number(invoice.rate),
-              gstPercentage: Number(invoice.gst_percentage),
-              grossAmount: Number(invoice.gross_amount),
-              netAmount: Number(invoice.net_amount),
-              materialItems: parsedMaterialItems,
-              bankDetails: parsedBankDetails,
-              billUrl: invoice.bill_url,
-              paymentStatus: invoice.payment_status as PaymentStatus,
-              createdBy: invoice.created_by || '',
-              createdAt: new Date(invoice.created_at),
-              approverType: invoice.approver_type as "ho" | "supervisor" || "ho",
-              siteId: invoice.site_id || ''
-            };
-          });
+          const mappedInvoices: Invoice[] = data.map(invoice => ({
+            id: invoice.id,
+            date: new Date(invoice.date),
+            partyId: invoice.party_id,
+            partyName: invoice.party_name,
+            material: invoice.material,
+            quantity: Number(invoice.quantity),
+            rate: Number(invoice.rate),
+            gstPercentage: Number(invoice.gst_percentage),
+            grossAmount: Number(invoice.gross_amount),
+            netAmount: Number(invoice.net_amount),
+            materialItems: invoice.material_items,
+            bankDetails: invoice.bank_details,
+            billUrl: invoice.bill_url,
+            paymentStatus: invoice.payment_status as PaymentStatus,
+            createdBy: invoice.created_by,
+            createdAt: new Date(invoice.created_at),
+            approverType: invoice.approver_type as "ho" | "supervisor",
+            siteId: invoice.site_id
+          }));
           
           setInvoices(mappedInvoices);
         }
@@ -190,8 +168,8 @@ const Invoices: React.FC = () => {
           gst_percentage: invoice.gstPercentage,
           gross_amount: invoice.grossAmount,
           net_amount: invoice.netAmount,
-          material_items: JSON.stringify(invoice.materialItems),
-          bank_details: JSON.stringify(invoice.bankDetails),
+          material_items: invoice.materialItems,
+          bank_details: invoice.bankDetails,
           bill_url: invoice.billUrl,
           payment_status: invoice.paymentStatus,
           created_by: invoice.createdBy,
@@ -222,14 +200,14 @@ const Invoices: React.FC = () => {
           gstPercentage: Number(data[0].gst_percentage),
           grossAmount: Number(data[0].gross_amount),
           netAmount: Number(data[0].net_amount),
-          materialItems: JSON.parse(data[0].material_items as string) as MaterialItem[],
-          bankDetails: JSON.parse(data[0].bank_details as string) as BankDetails,
+          materialItems: data[0].material_items,
+          bankDetails: data[0].bank_details,
           billUrl: data[0].bill_url,
           paymentStatus: data[0].payment_status as PaymentStatus,
-          createdBy: data[0].created_by || '',
+          createdBy: data[0].created_by,
           createdAt: new Date(data[0].created_at),
-          approverType: data[0].approver_type as "ho" | "supervisor" || "ho",
-          siteId: data[0].site_id || ''
+          approverType: data[0].approver_type as "ho" | "supervisor",
+          siteId: data[0].site_id
         };
         
         setInvoices([newInvoice, ...invoices]);
@@ -251,6 +229,27 @@ const Invoices: React.FC = () => {
     setIsCreateDialogOpen(false);
   };
 
+  const handleViewInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleDownloadInvoice = (invoice: Invoice) => {
+    if (invoice.billUrl) {
+      window.open(invoice.billUrl, '_blank');
+      toast({
+        title: "Download Initiated",
+        description: "The invoice download has been initiated.",
+      });
+    } else {
+      toast({
+        title: "No Bill Available",
+        description: "There is no bill attachment available for this invoice.",
+        variant: "destructive"
+      });
+    }
+  };
+  
   const handleMakePayment = async (invoice: Invoice) => {
     try {
       // Update payment status in Supabase

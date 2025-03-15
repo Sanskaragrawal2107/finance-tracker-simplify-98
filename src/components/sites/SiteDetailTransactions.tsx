@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus, Clock, FileText, ArrowUpDown, Truck, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose, MaterialItem, BankDetails } from '@/lib/types';
+import { Expense, Advance, FundsReceived, Invoice, ApprovalStatus, AdvancePurpose } from '@/lib/types';
 import CustomCard from '@/components/ui/CustomCard';
 import ExpenseForm from '@/components/expenses/ExpenseForm';
 import AdvanceForm from '@/components/advances/AdvanceForm';
@@ -11,7 +11,7 @@ import FundsReceivedForm from '@/components/funds/FundsReceivedForm';
 import InvoiceForm from '@/components/invoices/InvoiceForm';
 import InvoiceDetails from '@/components/invoices/InvoiceDetails';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { supabase, fetchSiteInvoices } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SiteDetailTransactionsProps {
   siteId: string;
@@ -73,28 +73,53 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
 
   // Fetch invoices from Supabase
   useEffect(() => {
-    const loadSiteInvoices = async () => {
+    const fetchInvoices = async () => {
       if (!siteId) return;
       
       setIsLoadingSiteInvoices(true);
       try {
-        console.log("Fetching invoices for site:", siteId);
-        const invoicesData = await fetchSiteInvoices(siteId);
+        const { data, error } = await supabase
+          .from('site_invoices')
+          .select('*')
+          .eq('site_id', siteId);
+          
+        if (error) {
+          console.error('Error fetching invoices:', error);
+          return;
+        }
         
-        if (invoicesData && invoicesData.length > 0) {
-          console.log("Successfully loaded invoices:", invoicesData.length);
-          setSiteInvoices(invoicesData);
-        } else {
-          console.log("No invoices found for site");
+        if (data && data.length > 0) {
+          const mappedInvoices = data.map(invoice => ({
+            id: invoice.id,
+            date: new Date(invoice.date),
+            partyId: invoice.party_id,
+            partyName: invoice.party_name,
+            material: invoice.material,
+            quantity: Number(invoice.quantity),
+            rate: Number(invoice.rate),
+            gstPercentage: Number(invoice.gst_percentage),
+            grossAmount: Number(invoice.gross_amount),
+            netAmount: Number(invoice.net_amount),
+            materialItems: invoice.material_items,
+            bankDetails: invoice.bank_details,
+            billUrl: invoice.bill_url,
+            paymentStatus: invoice.payment_status as any,
+            createdBy: invoice.created_by,
+            createdAt: new Date(invoice.created_at),
+            approverType: invoice.approver_type as any,
+            siteId: invoice.site_id
+          }));
+          
+          setSiteInvoices(mappedInvoices);
         }
       } catch (error) {
-        console.error('Error loading invoices:', error);
+        console.error('Error:', error);
       } finally {
         setIsLoadingSiteInvoices(false);
       }
     };
     
-    loadSiteInvoices();
+    fetchInvoices();
   }, [siteId]);
 
   const renderMobileTable = (columns: string[], data: any[], renderRow: (item: any) => React.ReactNode) => {
@@ -241,15 +266,44 @@ const SiteDetailTransactions: React.FC<SiteDetailTransactionsProps> = ({
   const handleAddInvoice = async (invoice: Omit<Invoice, 'id' | 'createdAt'>) => {
     onAddInvoice(invoice);
     
-    // Reload invoices after adding a new one
     setIsLoadingSiteInvoices(true);
     try {
-      const invoicesData = await fetchSiteInvoices(siteId);
-      if (invoicesData && invoicesData.length > 0) {
-        setSiteInvoices(invoicesData);
+      const { data, error } = await supabase
+        .from('site_invoices')
+        .select('*')
+        .eq('site_id', siteId);
+        
+      if (error) {
+        console.error('Error fetching invoices:', error);
+        return;
+      }
+      
+      if (data && data.length > 0) {
+        const mappedInvoices = data.map(invoice => ({
+          id: invoice.id,
+          date: new Date(invoice.date),
+          partyId: invoice.party_id,
+          partyName: invoice.party_name,
+          material: invoice.material,
+          quantity: Number(invoice.quantity),
+          rate: Number(invoice.rate),
+          gstPercentage: Number(invoice.gst_percentage),
+          grossAmount: Number(invoice.gross_amount),
+          netAmount: Number(invoice.net_amount),
+          materialItems: invoice.material_items,
+          bankDetails: invoice.bank_details,
+          billUrl: invoice.bill_url,
+          paymentStatus: invoice.payment_status as any,
+          createdBy: invoice.created_by,
+          createdAt: new Date(invoice.created_at),
+          approverType: invoice.approver_type as any,
+          siteId: invoice.site_id
+        }));
+        
+        setSiteInvoices(mappedInvoices);
       }
     } catch (error) {
-      console.error('Error refreshing invoices:', error);
+      console.error('Error:', error);
     } finally {
       setIsLoadingSiteInvoices(false);
     }

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,8 +25,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserProfile = async (userId: string) => {
     try {
       console.log("Fetching user profile for ID:", userId);
-      const { data, error } = await supabase
-        .from('users')
+      // Use type assertion to bypass TypeScript errors with Supabase
+      const { data, error } = await (supabase
+        .from('users') as any)
         .select('*')
         .eq('id', userId)
         .single();
